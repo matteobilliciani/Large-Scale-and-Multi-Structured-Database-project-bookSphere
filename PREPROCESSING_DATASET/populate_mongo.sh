@@ -7,7 +7,7 @@
 DB_NAME="booksphere"
 
 # Percorso ai file JSONL
-DATA_DIR="DATASET/MONGODB"
+DATA_DIR="PREPROCESSING_DATASET/DATASET/MONGODB"
 
 echo "==========================================="
 echo "Popolamento MongoDB - BookSphere"

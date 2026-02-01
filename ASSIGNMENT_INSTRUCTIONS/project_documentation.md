@@ -27,17 +27,17 @@ o	Unregistered User: users that can explore the platform as viewers but can’t 
 Functional Requirements
 Generic User
 1.	The System must permit a User to search for a book, author or genre (different filters are available in the search).
-2.	The System must allow any User to search other ones and view their activity (reviews and favourite books)
-3.	The System must enable any User to read book’s reviews.
+2.	The System must allow any User to search other ones and view their activity (reviews and favourite books) 
+3.	The System must enable any User to read book’s reviews. 
 4.	The System must compute, for every newly added book, the Trending Probability Index (TPI) (i.e. how the book is likely to go viral).
 5.	The System must compute an Author Versatility Index in terms of covered genre of his works.
 6.	The System must enable an Unregistered User to create an account (sign-in).
 7.	The System must compute the “How Far a Book Travels” (internationality) index, used to measure how much a book/author is spread across the globe.
-8.	The System must generate different kind of rankings, for example: bestsellers; classics; most reviewed books etc…
+8.	The System must generate different kind of rankings, for example: bestsellers; classics; most reviewed books etc…  
 9.	The System must calculate the average ratings for authors and books for every year.
 10.	The System must find the trending books by genre/author/year; the ranking is based on the number of like of each book.
 
-Registered User
+Registered User 
 1.	The System must provide suggestions based on the Registered User interaction with application (i.e. favourite genres, authors and books) and global trends.
 2.	The System must allow a Registered User to review one or more books; the reviews are evaluations and an optional written comment.
 3.	The System must enable a Registered User to follow others and view their newest activities.
@@ -60,76 +60,76 @@ Admin
 6.	The System must enable an Admin to delete any review.
 7.	The System must enable an Admin to ban any Registered User.
 8.	The system must identify influencers inside the application
-      Non-Functional Requirements
+Non-Functional Requirements
 1.	The System must follow RESTful design principles
 2.	The System must avoid permanent data loss
 3.	The System must encrypt the Registered User’s password
 4.	The System must be highly available and fault tolerant.
 5.	The System must enforce Eventual Consistency between the Databases
-      Analytics
-      Queries
-
+Analytics
+Queries
+ 
 Functional Requirement	Main Database	Secondary	UML Entities involved	Notes
-
+				
 
 DocumentDB Queries (3)
 1.	Compute the average ratings for an author/book.
-      AvgRating totale e per anno fatto da: somma delle stelle e contatore delle recensioni. Va tenuto aggiornato per ogni review aggiunta con eventual consistency.
-      a.	Rank books in descending rating order for a specified author/genre.
-      b.	Find the highest rated books of a specific year, based on the reviews of that period (book publication year is not relevant).
-2.	Generate yearly wrapped that includes
-      a.	Highest and lowest rated books
-      b.	Most read authors (from list)
-      c.	Most read genres (from list)
+AvgRating totale e per anno fatto da: somma delle stelle e contatore delle recensioni. Va tenuto aggiornato per ogni review aggiunta con eventual consistency. 
+a.	Rank books in descending rating order for a specified author/genre.
+b.	Find the highest rated books of a specific year, based on the reviews of that period (book publication year is not relevant).
+2.	Generate yearly wrapped that includes 
+a.	Highest and lowest rated books
+b.	Most read authors (from list)
+c.	Most read genres (from list)
 3.	Popularity prediction of a book
-      a.	Rating of the publications of the same author
-      b.	Genre of the book appearance on rankings
-      c.	(GRAPH) like to its books
+a.	Rating of the publications of the same author
+b.	Genre of the book appearance on rankings
+c.	(GRAPH) like to its books
 4.	Trending Books/Genres/Authors
-      a.	Bookshelves list of the users
-      b.	Recent/popular reviews snapshots
-      Document Indexes (da definire quando le query sono implementate)
-      •	Book: titolo & autore (per ricerca)
-      •	Book: genre & trending (per trending book)
-      •	Book: stats_per_year (ranking)
-      •	Review: sono già parzialmente embedded
-      •	User: email (per il login)
+a.	Bookshelves list of the users
+b.	Recent/popular reviews snapshots
+Document Indexes (da definire quando le query sono implementate)
+•	Book: titolo & autore (per ricerca)
+•	Book: genre & trending (per trending book)
+•	Book: stats_per_year (ranking)
+•	Review: sono già parzialmente embedded
+•	User: email (per il login)
 
 GraphDB Queries (2)
 Domain-specific	Graph-centric
+	
 
-
-1.	Generate User suggestions and recommendation based on similar books of
-      a.	Followed users’ tastes
-      b.	Followed authors
-      c.	Likes to book and reviews
-      d.	Favourite genres
-      e.	Reviews done
+1.	Generate User suggestions and recommendation based on similar books of 
+a.	Followed users’ tastes
+b.	Followed authors
+c.	Likes to book and reviews
+d.	Favourite genres
+e.	Reviews done
 2.	Calculate “How far a Book travels” (internationality index) (also af an author).
-      a.	From where and how much likes were originated
-      b.	From where and how much reviews were originated
+a.	From where and how much likes were originated
+b.	From where and how much reviews were originated
 3.	Find the most popular review for a specified book.
 4.	Identify influencer users for a specific genre
 2. "The Real Influencer" (Quality over Quantity)
-   Business Goal: "Chi sono gli utenti che dettano legge in un genere? Non chi ha più follower, ma chi scrive recensioni che ricevono più Like." Perché è Killer: Incrocia 4 entità diverse (Genre -> Book -> Review -> User).
-   Cypher
-   // Partiamo dal genere Fantasy
-   MATCH (g:Genre {name: "Fantasy"})<-[:BELONGS_TO]-(b:Book)<-[:REFER_TO]-(r:Review)
-   // Chi ha scritto la review?
-   MATCH (author:User)-[:POSTED]->(r)
-   // Chi ha messo like alla review?
-   MATCH (r)<-[:LIKES]-(fan:User)
+Business Goal: "Chi sono gli utenti che dettano legge in un genere? Non chi ha più follower, ma chi scrive recensioni che ricevono più Like." Perché è Killer: Incrocia 4 entità diverse (Genre -> Book -> Review -> User).
+Cypher
+// Partiamo dal genere Fantasy
+MATCH (g:Genre {name: "Fantasy"})<-[:BELONGS_TO]-(b:Book)<-[:REFER_TO]-(r:Review)
+// Chi ha scritto la review?
+MATCH (author:User)-[:POSTED]->(r)
+// Chi ha messo like alla review?
+MATCH (r)<-[:LIKES]-(fan:User)
 
 WITH author, count(DISTINCT fan) as total_likes, count(DISTINCT r) as num_reviews
 // Filtro per evitare chi ha avuto fortuna con una sola review
-WHERE num_reviews > 1
-RETURN author.username,
-total_likes,
-(total_likes / num_reviews) as avg_likes_per_review
+WHERE num_reviews > 1 
+RETURN author.username, 
+       total_likes, 
+       (total_likes / num_reviews) as avg_likes_per_review
 ORDER BY total_likes DESC
 LIMIT 5
 Cosa dire all'esame: "Identifichiamo gli Influencer basandoci sull'Engagement reale (Likes received) e non solo sulla topologia (Followers), segmentando per Genere."
-5.
+5.	
 
 GRAPH indexes
 •	Vincoli di unicità
@@ -142,7 +142,7 @@ MIXED QUERY
 1.	To Ban  (moderation) a REVIEW from DocDB and GraphDB
 2.	Find authors that have written books of different genres (versatility).
 
-
+ 
 
 
 
@@ -182,18 +182,16 @@ Amazon Books Reviews
 
 
 Source	Description	Volume
-goodbooks10k
-Contains six million user ratings for the 10,000 books. It also includes books metadatas (title, author, etc.).	~ 90MB
+goodbooks10k	Contains six million user ratings for the 10,000 books. It also includes books metadatas (title, author, etc.).	~ 90MB
 Randomuser API
 Dynamic creation of fake users and reviews. This API allows to generate fully fictional user data on demand.	Dynamic creation of fake users and reviews
-Amazon Reviews dataset
-Amazon review Dataset contains product reviews and metadata from Amazon, spanning May 1996 - July 2014.	~ 5GB
+Amazon Reviews dataset	Amazon review Dataset contains product reviews and metadata from Amazon, spanning May 1996 - July 2014.	~ 5GB
 
 Variety: the data are collected from different sources such APIs, real reviews from Amazon, and randomly generated user data
 Velocity/Variability: Old reviews (1 year) are not meaningful for some operations based on a specific period, such as the end year recap
 
 
-Aggiungere degli utenti ad hoc per mostrare query specifiche:
+Aggiungere degli utenti ad hoc per mostrare query specifiche: 
 -	Wrapped (dell’anno corrente non lo fa fare)
 -	Influencer (follower) vs. real influencer
 
@@ -225,162 +223,167 @@ Aggiungere degli utenti ad hoc per mostrare query specifiche:
 
 
 
-1)
+1)	
 
 NEW DOCUMENT
 BOOK
 {
-"_id": ObjectId("65b3f..."),
-"title": "The Fellowship of the Ring",
-"publication_year": 1954,
-"description": "A gripping read...",
-"source": "amazon_master", // o "bookcrossing"
-"bc_score": 150, // Punteggio popolarità usato per il ranking
+  "_id": ObjectId("65b3f..."),
+  "title": "The Fellowship of the Ring",
+  "publication_year": 1954,
+  "description": "A gripping read...",
+  "source": "amazon_master", // o "bookcrossing"
 
-// PATTERN: Extended Reference (Autore embeddato per evitare join in lettura)
-"author": {
-"id": ObjectId("65b3a..."),
-"name": "J.R.R. Tolkien"
-},
+  // PATTERN: Extended Reference (Autore embeddato per evitare join in lettura)
+  "author": {
+    "id": ObjectId("65b3a..."),
+    "name": "J.R.R. Tolkien"
+  },
 
-// PATTERN: Attribute (Array semplice per query veloci sui generi)
-"genres": ["Fantasy", "Adventure", "Classic"],
+  // PATTERN: Attribute (Array semplice per query veloci sui generi)
+  "genres": ["Fantasy", "Adventure", "Classic"],
 
-"external_ids": {
-"isbns": ["978-0547928210", "0345339703"] // Multipli ISBN (Amazon + BC)
-},
+  "external_ids": {
+    "isbns": ["978-0547928210", "0345339703"] // Multipli ISBN (Amazon + BC)
+  },
 
-// PATTERN: Subset (Le 3 recensioni più recenti per la card del libro)
-"recent_reviews_snapshot": [
-{
-"_id": ObjectId("65c1..."),
-"username": "BookLover",
-"rating": 5,
-"snippet": "Assolutamente incredibile...",
-"date": ISODate("2025-11-10T14:30:00Z")
-}
-],
+  // PATTERN: Subset (Le 3 recensioni più recenti per la card del libro)
+  "recent_reviews_snapshot": [
+    {
+      "_id": ObjectId("65c1..."),
+      "username": "BookLover",
+      "rating": 5,
+      "snippet": "Assolutamente incredibile...",
+      "date": ISODate("2025-11-10T14:30:00Z")
+    }
+  ],
 
-// PATTERN: Subset (Le 3 recensioni con più like)
-"popular_reviews_snapshot": [
-{
-"_id": ObjectId("65c2..."),
-"username": "MarioRossi",
-"rating": 4,
-"num_of_like": 45, // Campo denormalizzato per ordinamento
-"snippet": "Bello ma lungo...",
-"date": ISODate("2025-05-20T09:00:00Z")
-}
-],
+  // PATTERN: Subset (Le 3 recensioni con più like)
+  "popular_reviews_snapshot": [
+    {
+      "_id": ObjectId("65c2..."),
+      "username": "MarioRossi",
+      "rating": 4,
+      "num_of_like": 45, // Campo denormalizzato per ordinamento
+      "snippet": "Bello ma lungo...",
+      "date": ISODate("2025-05-20T09:00:00Z")
+    }
+  ],
 
-// PATTERN: Computed / Bucketing (Statistiche aggregate per anno)
-"stats_per_year": [
-{
-"year": 2023,
-"average_rating": 4.2,
-"ratings_count": 150,
-"sum_rating": 630 // Accumulatore
-},
-{
-"year": 2024,
-"average_rating": 4.5,
-"ratings_count": 200,
-"sum_rating": 900
-}
-],
+  // PATTERN: Computed / Bucketing (Statistiche aggregate per anno)
+  "stats_per_year": [
+    {
+      "year": 2023,
+      "average_rating": 4.2,
+      "ratings_count": 150,
+      "sum_rating": 630 // Accumulatore
+    },
+    {
+      "year": 2024,
+      "average_rating": 4.5,
+      "ratings_count": 200,
+      "sum_rating": 900
+    }
+  ],
 
-// PATTERN: Computed (Score attuale per query "Trending Now")
-"trend_score": {
-"rating": 4.35,
-"updated_at": ISODate("2026-02-01T10:00:00Z")
-}
+  // PATTERN: Computed (Score attuale per query "Trending Now")
+  "trend_score": {
+    "rating": 4.35,
+    "updated_at": ISODate("2026-02-01T10:00:00Z")
+  }
 }
 
 USER
 {
-"_id": ObjectId("65d1..."),
-"username": "User_12345",
-"email": "user_12345@bx.com",
-"password_hashed": "a3f5e...", // SHA-256
-"country": "IT",
-"joined_at": ISODate("2023-05-12T10:00:00Z"),
-"status": "active",
+  "_id": ObjectId("65d1..."),
+  "username": "User_12345",
+  "email": "user_12345@bx.com",
+  "password_hashed": "a3f5e...", // SHA-256
+  "country": "IT",
+  "joined_at": ISODate("2023-05-12T10:00:00Z"),
+  "status": "active",
 
-// PATTERN: Computed (Generati analizzando le letture)
-"favorite_genres": ["Science Fiction", "Thriller"],
+  // PATTERN: Computed (Generati analizzando le letture)
+  "favorite_genres": ["Science Fiction", "Thriller"],
 
-// PATTERN: Bucket (Bookshelf gestita come array di oggetti stato)
-"bookshelf": [
-{
-"book_id": ObjectId("65b3f..."),
-"status": "read",
-"added_at": ISODate("2023-06-01T09:00:00Z")
-},
-{
-"book_id": ObjectId("88a1b..."),
-"status": "want_to_read",
-"added_at": ISODate("2025-12-15T18:30:00Z")
-}
-],
+  // PATTERN: Bucket (Bookshelf gestita come array di oggetti stato)
+  "bookshelf": [
+    {
+      "book_id": ObjectId("65b3f..."),
+      "status": "read",
+      "added_at": ISODate("2023-06-01T09:00:00Z"),
+     "title": "The Hobbit",
+      "author": { "id": { "$oid": "..." }, "name": "J.R.R. Tolkien" }, 
+     "genres": ["Fantasy", "Classic"]
+    },
+    {
+      "book_id": ObjectId("88a1b..."),
+      "status": "want_to_read",
+      "added_at": ISODate("2025-12-15T18:30:00Z")
+      "title": "Funk",
+      "author": { "id": { "$oid": "..." }, "name": "pierino" }, 
+     "genres": ["Fantasy”]
+    }
+  ],
 
-// PATTERN: Subset / Report (Solo le recensioni dell'anno corrente 2025)
-"reviews_year": [
-{
-"id": ObjectId("99a1..."), // ID Recensione
-"rating": 85,
-"book": "Dune" // Titolo denormalizzato
-}
-]
+  // PATTERN: Subset / Report (Solo le recensioni dell'anno corrente 2025)
+  "reviews_year": [
+    {
+      "id": ObjectId("99a1..."), // ID Recensione
+      "rating": 85,
+      "book": "Dune" // Titolo denormalizzato
+    }
+  ]
 }
 
 
 Il link tra REVIEW e USER/BOOK non è usato in modo relazionale ma per poter accedere facilmente alle review di un libro/utente
 REVIEW
 {
-"_id": ObjectId("99a1..."),
-"user_id": ObjectId("65d1..."),
+  "_id": ObjectId("99a1..."),
+  "user_id": ObjectId("65d1..."),
+  
+  // Nota: book_id è rimosso dalla radice e spostato nello snapshot (scelta V5)
+  
+  "rating": 90, // Scala unificata 0-100
+  "source": "amazon", // o "bookcrossing"
+  "text": "Un libro che ti cambia la vita...",
+  "summary": "Must read assoluto", // Solo per Amazon
+  "created_at": ISODate("2025-08-20T15:30:00Z"),
+  
+  // PATTERN: Eventual Consistency (Aggiornato asincronamente rispetto al Grafo)
+  "likes_count": 12, 
+  "is_banned": false,
 
-// Nota: book_id è rimosso dalla radice e spostato nello snapshot (scelta V5)
-
-"rating": 90, // Scala unificata 0-100
-"source": "amazon", // o "bookcrossing"
-"text": "Un libro che ti cambia la vita...",
-"summary": "Must read assoluto", // Solo per Amazon
-"created_at": ISODate("2025-08-20T15:30:00Z"),
-
-// PATTERN: Eventual Consistency (Aggiornato asincronamente rispetto al Grafo)
-"likes_count": 12,
-"is_banned": false,
-
-// PATTERN: Subset (Dati minimi del libro per visualizzare la recensione nel feed utente)
-"book_snapshot": {
-"book_id": ObjectId("65b3f..."),
-"title": "The Fellowship of the Ring"
-}
+  // PATTERN: Subset (Dati minimi del libro per visualizzare la recensione nel feed utente)
+  "book_snapshot": {
+    "book_id": ObjectId("65b3f..."),
+    "title": "The Fellowship of the Ring"
+  }
 }
 
 
 AUTHOR
 {
-"_id": ObjectId("65b3a..."),
-"name": "J.R.R. Tolkien",
+  "_id": ObjectId("65b3a..."),
+  "name": "J.R.R. Tolkien",
+  
+  // PATTERN: Extended Reference (Lista dei libri pubblicati)
+  "published_books": [
+    {
+      "_id": ObjectId("65b3f..."),
+      "title": "The Fellowship of the Ring"
+    },
+    {
+      "_id": ObjectId("65b40..."),
+      "title": "The Two Towers"
+    }
+  ],
 
-// PATTERN: Extended Reference (Lista dei libri pubblicati)
-"published_books": [
-{
-"_id": ObjectId("65b3f..."),
-"title": "The Fellowship of the Ring"
-},
-{
-"_id": ObjectId("65b40..."),
-"title": "The Two Towers"
-}
-],
-
-// PATTERN: Computed (Aggregazioni pre-calcolate da tutte le recensioni dei suoi libri)
-"average_rating": 4.85,
-"ratings_count": 15000, // Totale voti ricevuti (Counter)
-"sum_ratings": 72750    // Somma voti (Accumulatore)
+  // PATTERN: Computed (Aggregazioni pre-calcolate da tutte le recensioni dei suoi libri)
+  "average_rating": 4.85,
+  "ratings_count": 15000, // Totale voti ricevuti (Counter)
+  "sum_ratings": 72750    // Somma voti (Accumulatore)
 }
 
 
@@ -392,7 +395,7 @@ AUTHOR
 
 
 NEO4J
-
+  
 
 
 
@@ -401,16 +404,16 @@ Nodi
 
 Nodo (Label)	Proprietà	Tipo Dato (Neo4j)	Descrizione
 User	mongoId	String	ID di collegamento con MongoDB.
-username	String	Nome visualizzato dell'utente.
-country	String	Codice nazione (es. "US", "IT").
+	username	String	Nome visualizzato dell'utente.
+	country	String	Codice nazione (es. "US", "IT").
 Book	mongoId	String	ID di collegamento con MongoDB.
-title	String	Titolo del libro.
-year	Integer	Anno di pubblicazione (convertito con toInteger).
+	title	String	Titolo del libro.
+	year	Integer	Anno di pubblicazione (convertito con toInteger).
 Review	mongoId	String	ID di collegamento con MongoDB.
-rating	Integer	Voto numerico (es. 0-100).
-createdAt	Datetime	Data e ora della recensione (convertito con datetime()).
+	rating	Integer	Voto numerico (es. 0-100).
+	createdAt	Datetime	Data e ora della recensione (convertito con datetime()).
 Author	mongoId	String	ID di collegamento con MongoDB.
-name	String	Nome dell'autore.
+	name	String	Nome dell'autore.
 Genre	name	String	Nome del genere (Chiave primaria per questo nodo).
 
 
@@ -427,4 +430,317 @@ WROTE	Author ➔ Book	(Nessuna)	-	Relazione strutturale pura.
 BELONGS_TO	Book ➔ Genre	(Nessuna)	-	Relazione strutturale pura.
 POSTED	User ➔ Review	(Nessuna)	-	Relazione strutturale pura.
 REFER_TO	Review ➔ Book	(Nessuna)	-	Relazione strutturale pura.
+
+
+
+
+QUERY MONGO DB
+Certamente. Ecco il documento unico, pronto per essere copiato nella tua documentazione o presentazione.
+Ho strutturato il contenuto in due parti:
+1.	Strategia & Ottimizzazioni: Una spiegazione concettuale per il professore (il "Perché").
+2.	Implementazione Tecnica: Il codice esatto delle query (il "Come").
+________________________________________
+MongoDB Queries & Analytics Strategy
+1. Strategia e Ottimizzazione Dati (Schema V11)
+Per garantire massime performance in lettura ed evitare costose operazioni di JOIN ($lookup), abbiamo adottato i seguenti pattern NoSQL:
+•	Extended Reference Pattern (Denormalizzazione):
+o	Nella collezione users, la bookshelf contiene copie dei dati di Autore e Genere. Questo permette di generare il "Yearly Wrapped" leggendo un solo documento utente, senza unire la collezione libri.
+o	Nella collezione reviews, i dati del libro (Titolo, Generi) sono embedded nel book_snapshot.
+•	Bucket Pattern:
+o	Nella collezione books, usiamo l'array stats_per_year per pre-aggregare i voti annuali. Questo rende le query di Ranking Storico e Ranking per Anno istantanee, evitando di scansionare milioni di recensioni.
+•	Snapshot Pattern:
+o	Nella collezione books, manteniamo recent_reviews_snapshot (ultimi 3 voti). Questo permette di calcolare il Trending Score Real-Time e il Momentum direttamente in memoria, senza query storiche.
+________________________________________
+2. Implementazione Tecnica (Query)
+Query 1: Ranking & Historical Analytics
+Obiettivo: Classifiche basate su dati storici aggregati (Bucket Pattern).
+1a. Ranking Libri per Autore (Media Storica Ponderata)
+Calcola la media esatta sommando i totali annuali.
+JavaScript
+db.books.aggregate([
+    { $match: { "author.name": "J.R.R. Tolkien" } },
+    { $addFields: {
+        // Calcolo media ponderata dai bucket annuali (Bucket Pattern)
+        hist_avg: { 
+            $cond: [
+                { $eq: [{ $sum: "$stats_per_year.ratings_count" }, 0] }, 
+                0, 
+                { $divide: [{ $sum: "$stats_per_year.sum_rating" }, { $sum: "$stats_per_year.ratings_count" }] }
+            ] 
+        }
+    }},
+    { $sort: { hist_avg: -1 } },
+    { $project: { title: 1, hist_avg: { $round: ["$hist_avg", 2] } } }
+]);
+1b. Top Libri dell'anno 2025
+Estrae chirurgicamente i dati del 2025 senza $unwind (usando $filter).
+JavaScript
+db.books.aggregate([
+    { $addFields: {
+        // Estrazione dati 2025 senza esplodere l'array
+        stats_25: { 
+            $arrayElemAt: [{ $filter: { input: "$stats_per_year", as: "s", cond: { $eq: ["$$s.year", 2025] } } }, 0] 
+        }
+    }},
+    { $match: { "stats_25.ratings_count": { $gte: 5 } } }, // Filtro significatività
+    { $sort: { "stats_25.average_rating": -1 } },
+    { $project: { title: 1, rating_2025: "$stats_25.average_rating" } },
+    { $limit: 10 }
+]);
+1c. Top Autori dell'anno 2025
+Aggrega i libri per trovare gli autori dominanti nell'anno corrente.
+JavaScript
+db.books.aggregate([
+    { $addFields: {
+        s25: { $arrayElemAt: [{ $filter: { input: "$stats_per_year", as: "s", cond: { $eq: ["$$s.year", 2025] } } }, 0] }
+    }},
+    { $match: { "s25": { $exists: true } } },
+    { $group: {
+        _id: "$author.name",
+        avg_rating: { $avg: "$s25.average_rating" },
+        total_votes: { $sum: "$s25.ratings_count" }
+    }},
+    { $match: { total_votes: { $gte: 10 } } }, 
+    { $sort: { avg_rating: -1 } },
+    { $limit: 5 }
+]);
+1d. Top Generi dell'anno 2025
+Richiede $unwind sui generi per il conteggio statistico corretto.
+JavaScript
+db.books.aggregate([
+    { $addFields: {
+        s25: { $arrayElemAt: [{ $filter: { input: "$stats_per_year", as: "s", cond: { $eq: ["$$s.year", 2025] } } }, 0] }
+    }},
+    { $match: { "s25": { $exists: true } } },
+    { $unwind: "$genres" }, 
+    { $group: {
+        _id: "$genres",
+        avg_rating: { $avg: "$s25.average_rating" },
+        books_count: { $sum: 1 }
+    }},
+    { $sort: { avg_rating: -1 } },
+    { $limit: 5 }
+]);
+________________________________________
+Query 2: User Yearly Wrapped (2025)
+Obiettivo: Statistiche personali (Top Autori, Top Generi, Best Book).
+Ottimizzazione: Nessun JOIN grazie alla bookshelf arricchita. Uso di $facet per calcoli paralleli.
+JavaScript
+db.users.aggregate([
+    { $match: { username: "User_12345" } },
+
+    // 1. Best & Worst Book (da reviews_year embedded)
+    { $addFields: {
+        sorted_revs: { $sortArray: { input: "$reviews_year", sortBy: { rating: -1 } } }
+    }},
+    { $project: {
+        best_book: { $first: "$sorted_revs" },
+        worst_book: { $last: "$sorted_revs" },
+        // 2. Filtro Bookshelf per l'anno 2025 in memoria
+        books_2025: {
+            $filter: {
+                input: "$bookshelf", as: "b",
+                cond: { $and: [
+                    { $eq: ["$$b.status", "read"] },
+                    { $gte: ["$$b.added_at", ISODate("2025-01-01T00:00:00Z")] },
+                    { $lte: ["$$b.added_at", ISODate("2025-12-31T23:59:59Z")] }
+                ]}
+            }
+        }
+    }},
+    
+    // 3. Unwind necessario solo sui libri filtrati per contare le frequenze
+    { $unwind: "$books_2025" },
+    
+    // 4. Calcolo Parallelo Autori e Generi
+    { $facet: {
+        "top_authors": [
+            { $group: { _id: "$books_2025.author.name", count: { $sum: 1 } } },
+            { $sort: { count: -1 } }, { $limit: 3 }
+        ],
+        "top_genres": [
+            { $unwind: "$books_2025.genres" }, 
+            { $group: { _id: "$books_2025.genres", count: { $sum: 1 } } },
+            { $sort: { count: -1 } }, { $limit: 3 }
+        ],
+        "meta": [{ $limit: 1 }, { $project: { best_book: 1, worst_book: 1 } }]
+    }}
+]);
+________________________________________
+Query 3: Author Popularity Prediction (Hybrid Model)
+Obiettivo: Predire il trend futuro (Rising/Falling).
+Logica: Combina la "Reputazione Storica" (60%) con il "Momentum Recente" (40%).
+JavaScript
+db.books.aggregate([
+    { $match: { "author.name": "Stephen King" } },
+    { $project: {
+        title: 1,
+        // A. Reputazione (Storica)
+        historical: { 
+            $cond: [{ $eq: [{ $sum: "$stats_per_year.ratings_count" }, 0] }, 0, 
+            { $divide: [{ $sum: "$stats_per_year.sum_rating" }, { $sum: "$stats_per_year.ratings_count" }] }] 
+        },
+        // B. Momentum (Recente - Snapshot)
+        momentum: { $avg: { $map: { input: "$recent_reviews_snapshot", as: "r", in: "$$r.rating" } } }
+    }},
+    // Gestione caso nessun dato recente (fallback sullo storico)
+    { $addFields: { momentum: { $ifNull: ["$momentum", "$historical"] } } },
+    { $group: {
+        _id: "$author.name",
+        avg_hist: { $avg: "$historical" },
+        avg_mom: { $avg: "$momentum" }
+    }},
+    { $project: {
+        // Formula Ibrida: 60% Storia, 40% Attualità
+        prediction_index: { $add: [{ $multiply: ["$avg_hist", 0.6] }, { $multiply: ["$avg_mom", 0.4] }] },
+        // Label Business Intelligence
+        trend: { $cond: [{ $gte: ["$avg_mom", "$avg_hist"] }, "RISING 📈", "FALLING 📉"] }
+    }}
+]);
+________________________________________
+Query 4: Trending Score (Real-Time Discovery)
+Obiettivo: Scoprire i trend attuali ignorando il passato.
+Logica: Calcolo in memoria basato solo su recent_reviews_snapshot (ultimi 3 voti).
+JavaScript
+db.books.aggregate([
+    // Considera solo libri con attività recente
+    { $match: { "recent_reviews_snapshot.0": { $exists: true } } },
+    { $project: {
+        title: 1,
+        genres: 1,
+        // Media aritmetica snapshot recente
+        recent_avg: { $avg: { $map: { input: "$recent_reviews_snapshot", as: "r", in: "$$r.rating" } } },
+        volume: { $size: "$recent_reviews_snapshot" }
+    }},
+    // Boosting: Premia chi ha più recensioni recenti (Volume Factor)
+    { $addFields: {
+        score: { $multiply: ["$recent_avg", { $cond: [{ $gte: ["$volume", 3] }, 1.0, 0.8] }] }
+    }},
+    { $sort: { score: -1 } },
+    { $limit: 10 }
+]);
+
+NEO4J QUERIES
+Here is the requested table followed by the individual Cypher implementations, all in English.
+
+### Query Logic Overview
+
+| Domain-Specific Formulation (Business Logic) | Graph-Centric Formulation (Technical Logic) |
+| :--- | :--- |
+| **1. User Recommendations:** Suggest books the user hasn't read yet based on the tastes of followed users, followed authors, and preferred genres. | Find `:Book` nodes reachable from a source `:User` via 2 or 3-hop paths (`FOLLOWS/LIKES`, `LIKES/WROTE`, `LIKES/BELONGS_TO`), excluding books already linked via `:POSTED->:Review->:REFER_TO`. |
+| **2. Internationality Index:** Calculate "how far a book/author travels" by analyzing the geographical distribution of likes and reviews. | Traverse incoming `:REFER_TO` and `:LIKES` relationships to a specific `:Book` or `:Author`, aggregating the `country` property of the source `:User` nodes. |
+| **3. Most Popular Review:** Identify the most impactful review for a specific book based on community engagement. | Locate `:Review` nodes connected to a specific `:Book` via `:REFER_TO` and find the one with the highest in-degree of `:LIKES` relationships. |
+| **4. Genre Influencer:** Identify "Real Influencers" in a genre—users whose reviews consistently receive high engagement rather than just high volume. | Multi-hop traversal: `Genre <- Book <- Review <- User`. Aggregate incoming `:LIKES` for those reviews and calculate the ratio of total likes to the number of reviews posted. |
+
+---
+
+### Cypher Implementations
+
+#### 1. Recommendation Engine
+```cypher
+MATCH (u:User {username: "Alice"})
+// Path A: Books liked by people I follow
+OPTIONAL MATCH (u)-[:FOLLOWS]->(:User)-[:LIKES]->(b1:Book)
+// Path B: Books written by authors I like
+OPTIONAL MATCH (u)-[:LIKES]->(:Author)-[:WROTE]->(b2:Book)
+// Path C: Books belonging to genres I like
+OPTIONAL MATCH (u)-[:LIKES]->(:Genre)<-[:BELONGS_TO]-(b3:Book)
+
+WITH collect(b1) + collect(b2) + collect(b3) AS recommendations, u
+UNWIND recommendations AS book
+// Filter out books the user has already reviewed
+WHERE NOT (u)-[:POSTED]->(:Review)-[:REFER_TO]->(book)
+RETURN book.title, count(*) AS score
+ORDER BY score DESC
+LIMIT 10
+```
+
+#### 2. Internationality Index (Book/Author Travel)
+```cypher
+MATCH (target) 
+WHERE (target:Book {title: "The Name of the Rose"}) OR (target:Author {name: "Umberto Eco"})
+// Match users who interacted via Review or direct Like
+MATCH (u:User)-[:POSTED|LIKES]->(interaction)
+WHERE (interaction)-[:REFER_TO]->(target) OR interaction = target
+RETURN u.country AS Country, 
+       count(DISTINCT u) AS UniqueUsers, 
+       count(interaction) AS TotalInteractions
+ORDER BY UniqueUsers DESC
+```
+
+#### 3. Most Popular Review for a Book
+```cypher
+MATCH (b:Book {title: "1984"})<-[:REFER_TO]-(r:Review)
+MATCH (r)<-[l:LIKES]-(u:User)
+RETURN r.mongoId AS ReviewID, 
+       r.rating AS Rating, 
+       count(l) AS LikeCount,
+       collect(u.username) AS LikedBy
+ORDER BY LikeCount DESC
+LIMIT 1
+```
+
+#### 4. Genre Influencer (Quality over Quantity)
+```cypher
+MATCH (g:Genre {name: "Fantasy"})<-[:BELONGS_TO]-(b:Book)<-[:REFER_TO]-(r:Review)<-[:POSTED]-(influencer:User)
+MATCH (r)<-[:LIKES]-(fan:User)
+WITH influencer, 
+     count(DISTINCT r) AS num_reviews, 
+     count(fan) AS total_likes
+// Filter for users with a minimum activity to ensure statistical relevance
+WHERE num_reviews > 1
+RETURN influencer.username AS Influencer, 
+       total_likes AS TotalEngagement, 
+       (toFloat(total_likes) / num_reviews) AS AvgLikesPerReview
+ORDER BY AvgLikesPerReview DESC
+LIMIT 5
+```
+
+Restful API definition
+
+
+User
+GET
+Search operations
+/api/v1/ search/genres
+/api/v1/ search/authors
+/api/v1/ search/books
+
+Registered User
+GET
+ MongoDB
+User sees his personal activities
+/api/v1/users/{id}/list/myshelf
+/api/v1/users/{id}/list/toread
+/api/v1/users/{id}/liked/books
+/api/v1/users/{id}/myreviews
+
+NEO4J
+/api/v1/users/{id}/reviews
+/api/v1/users/{id}/friends
+/api/v1/users/{id}/followers
+/api/v1/users/{id}/{friendId}/reviews
+/api/v1/users/{id}/friend/likedbooks
+POST
+MongoDB
+Add a like to a review:
+	/api/v1/reviews/{reviewId}/likes
+Create a new list
+/api/v1/users/{id}/lists
+Adding a book to an existing list:
+/api/v1/users/{id}/lists/books
+
+NEO4J
+Add review/like to a book:
+	/api/v1/books/{bookId}/reviews
+/api/v1/books/{bookId}/likes
+
+DELETE
+Delete review/like to a book:
+/api/v1/books/{bookId}/reviews
+/api/v1/books/{bookId}/likes
+PATCH
+Update username
+	/api/v1/users/{id}
+
 

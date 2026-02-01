@@ -7,7 +7,7 @@ set -e
 
 NEO4J_PASSWORD="password"
 NEO4J_IMPORT_DIR="/var/lib/neo4j/import"
-CSV_SOURCE_DIR="DATASET/NEO4J"
+CSV_SOURCE_DIR="PREPROCESSING_DATASET/DATASET/NEO4J"
 
 echo "=================================================="
 echo "Popolamento Neo4j - BookSphere (FAST MODE)"
