@@ -31,3 +31,6 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Dataset ###
+/PREPROCESSING_DATASET/DATASET/
