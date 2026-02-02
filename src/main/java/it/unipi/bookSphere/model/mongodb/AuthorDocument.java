@@ -1,4 +1,4 @@
 package it.unipi.bookSphere.model.mongodb;
 
-public class Author {
+public class AuthorDocument {
 }

@@ -13,9 +13,9 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Document(collation = "books")
+@Document(collection = "books")
 
-public class Book {
+public class BookDocument {
     @Id
     private String id;
 
