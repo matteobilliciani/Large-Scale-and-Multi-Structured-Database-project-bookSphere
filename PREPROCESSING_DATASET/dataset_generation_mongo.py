@@ -452,7 +452,7 @@ for uid, act in user_activity.items():
 
     valid_candidates = list(candidates - act['read_books'])
 
-    if valid_candidates:
+    if valid_candidates and random.random() < 0.2:
         num_to_pick = min(2, len(valid_candidates))
         picked_books = random.sample(valid_candidates, num_to_pick)
 
