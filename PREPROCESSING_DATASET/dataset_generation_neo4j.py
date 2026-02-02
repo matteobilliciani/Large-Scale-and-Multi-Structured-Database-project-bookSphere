@@ -1,16 +1,10 @@
 """
-SCRIPT 2: Neo4j Data Export - FINAL V7 (AUTHORS LOGIC ADDED)
+SCRIPT 2: Neo4j Data Export - FINAL V9 (SMART GENRES & AUTHORS)
 - Input: JSONL files from Script 1 (MongoDB).
 - Output: Clean CSV files for Neo4j Import.
-- Logic:
-    1. NODES: Users, Books, Reviews, Authors, Genres.
-    2. EDGES: WROTE, BELONGS_TO, POSTED, REFER_TO.
-    3. SOCIAL: FOLLOWS (Random generation).
-    4. SYNCED ACTIONS: 
-       - LIKES_REVIEW: Matches 'likes_count' in Mongo.
-       - LIKES_BOOK: High ratings.
-       - LIKES_GENRE: From user profile.
-       - LIKES_AUTHOR: From read books + Random fallback.
+- Logic Changes:
+    - LIKES_GENRE: Calculated from User's Bookshelf (Implicit Preferences).
+    - LIKES_AUTHOR: Calculated from User's Bookshelf.
 """
 
 import pandas as pd
@@ -18,6 +12,7 @@ import json
 import random
 from datetime import datetime, timedelta
 from pathlib import Path
+from collections import Counter # Necessario per contare i generi
 
 # --- CONFIGURAZIONE ---
 random.seed(42)
@@ -61,7 +56,7 @@ def random_date_after_iso(iso_date_str):
         return iso_date_str
 
 # --- MAIN ---
-print("="*60 + "\nNEO4J CSV EXPORTER V7 (FULL + AUTHOR LIKES)\n" + "="*60)
+print("="*60 + "\nNEO4J CSV EXPORTER V9 (SMART GENRES)\n" + "="*60)
 
 print("[1/4] Loading JSONL Data...")
 books = load_jsonl('books.jsonl')
@@ -70,6 +65,11 @@ reviews = load_jsonl('reviews.jsonl')
 authors = load_jsonl('authors.jsonl')
 
 NEO4J_OUTPUT.mkdir(parents=True, exist_ok=True)
+
+# Map per lookup veloce: BookID -> Genres
+book_genres_map = {}
+for b in books:
+    book_genres_map[get_oid(b["_id"])] = b.get("genres", [])
 
 # --- 1. NODES ---
 print("\n[2/4] Exporting Nodes CSV...")
@@ -109,7 +109,8 @@ df_authors.to_csv(NEO4J_OUTPUT / "authors.csv", index=False)
 genres_set = set()
 for b in books: 
     for g in b.get("genres", []): genres_set.add(g)
-df_genres = pd.DataFrame([{"name": g} for g in sorted(genres_set)])
+all_genres_list = sorted(list(genres_set))
+df_genres = pd.DataFrame([{"name": g} for g in all_genres_list])
 df_genres.to_csv(NEO4J_OUTPUT / "genres.csv", index=False)
 
 # --- 2. STRUCTURAL EDGES ---
@@ -117,13 +118,13 @@ print("\n[3/4] Exporting Structural Relationships...")
 
 # WROTE (Author -> Book)
 wrote_data = []
-book_to_author_map = {} # Mappa utile per dopo
+book_to_author_map = {} 
 for b in books:
     if "author" in b and "id" in b["author"]:
         auth_id = get_oid(b["author"]["id"])
         bid = get_oid(b["_id"])
         wrote_data.append({"start_id": auth_id, "end_id": bid})
-        book_to_author_map[bid] = auth_id # Salviamo per la logica "Smart"
+        book_to_author_map[bid] = auth_id
 
 pd.DataFrame(wrote_data).to_csv(NEO4J_OUTPUT / "wrote.csv", index=False)
 
@@ -192,13 +193,43 @@ for r in reviews:
             })
 pd.DataFrame(likes_review_data).to_csv(NEO4J_OUTPUT / "user_likes_review.csv", index=False)
 
-# D. LIKES_GENRE
+# D. LIKES_GENRE (SMART LOGIC FROM BOOKSHELF)
+# ----------------------------------------------------
+print("  - Calculating Smart Genre Preferences from Bookshelf...")
 likes_genre_data = []
+
 for u in users:
     uid = get_oid(u["_id"])
-    for g in u.get("favorite_genres", []):
+    user_genres_counter = Counter()
+    
+    # 1. Analisi Bookshelf (Solo libri Letti)
+    bookshelf = u.get("bookshelf", [])
+    has_read_books = False
+    for item in bookshelf:
+        if item.get("status") == "read":
+            bid = get_oid(item["book_id"])
+            # Recuperiamo i generi reali dal libro
+            if bid in book_genres_map:
+                g_list = book_genres_map[bid]
+                user_genres_counter.update(g_list)
+                has_read_books = True
+
+    # 2. Selezione Top 3 Generi
+    top_genres = []
+    if user_genres_counter:
+        top_genres = [g for g, _ in user_genres_counter.most_common(3)]
+    else:
+        # 3. Fallback (Cold Start): Se non ha letto nulla, assegniamo 1-2 generi a caso
+        # per non lasciare l'utente isolato nel grafo delle raccomandazioni
+        if all_genres_list:
+            top_genres = random.sample(all_genres_list, min(2, len(all_genres_list)))
+
+    # 4. Creazione Relazioni
+    for g in top_genres:
         likes_genre_data.append({"start_id": uid, "end_id": g})
+
 pd.DataFrame(likes_genre_data).to_csv(NEO4J_OUTPUT / "user_likes_genre.csv", index=False)
+# ----------------------------------------------------
 
 # E. LIKES_AUTHOR (SMART LOGIC)
 print("  - Calculating Smart Author Likes...")
@@ -216,9 +247,8 @@ for u in users:
             if bid in book_to_author_map:
                 user_liked_authors.add(book_to_author_map[bid])
     
-    # 2. Fallback Casuale (Se ne ha pochi o nessuno)
+    # 2. Fallback Casuale
     if len(user_liked_authors) < 2 and all_author_ids:
-        # Aggiungi 1-3 autori casuali per popolare il grafo
         num_random = random.randint(1, 3)
         random_picks = random.sample(all_author_ids, min(num_random, len(all_author_ids)))
         user_liked_authors.update(random_picks)
