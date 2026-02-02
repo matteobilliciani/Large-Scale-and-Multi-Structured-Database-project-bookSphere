@@ -5,7 +5,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest
-@ActiveProfiles({"wsl", "test-connection"})
+@ActiveProfiles({"", "test-connection"})
 class BookSphereApplicationTests {
 
 	@Test
