@@ -5,8 +5,12 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import it.unipi.bookSphere.dto.AuthResponseDTO;
 import it.unipi.bookSphere.dto.LoginDTO;
 import it.unipi.bookSphere.dto.RegisterDTO;
+import it.unipi.bookSphere.dto.UserDTO;
+import it.unipi.bookSphere.service.AuthService;
+import it.unipi.bookSphere.utils.JwtUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,8 +20,8 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Authentication (Open)", description = "User authentication endpoints")
 public class AuthController {
 
-    // TODO: Inject AuthService when implemented
-    // private final AuthService authService;
+    private final AuthService authService;
+    private final JwtUtil jwtUtil;
 
     @Operation(
             summary = "Register new user",
@@ -27,22 +31,15 @@ public class AuthController {
     public ResponseEntity<AuthResponseDTO> register(
             @Valid @RequestBody RegisterDTO registerDTO
     ) {
-        // TODO: Implement service call
-        // The service should:
-        // 1. Validate that username/email doesn't exist
-        // 2. Hash the password using BCryptPasswordEncoder
-        // 3. Create user in MongoDB with default role "USER"
-        // 4. Create user node in Neo4j
-        // 5. Generate JWT token using JwtUtil
-        // 6. Return AuthResponseDTO with token and user info
+        // Create new user account
+        UserDTO user = authService.register(registerDTO);
         
-        // Example implementation:
-        // UserDTO user = authService.register(registerDTO);
-        // String token = jwtUtil.generateToken(user.getId(), user.getUsername(), user.getRole());
-        // return ResponseEntity.status(HttpStatus.CREATED)
-        //     .body(new AuthResponseDTO(token, user.getId(), user.getUsername(), user.getRole()));
+        // Generate JWT token
+        String token = jwtUtil.generateToken(user.getId(), user.getUsername(), "USER");
         
-        throw new UnsupportedOperationException("Not yet implemented");
+        // Return response with token and user info
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new AuthResponseDTO(token, user.getId(), user.getUsername(), "USER"));
     }
 
     @Operation(
@@ -53,18 +50,13 @@ public class AuthController {
     public ResponseEntity<AuthResponseDTO> login(
             @Valid @RequestBody LoginDTO loginDTO
     ) {
-        // TODO: Implement service call
-        // The service should:
-        // 1. Find user by username/email
-        // 2. Verify password using BCryptPasswordEncoder
-        // 3. Generate JWT token using JwtUtil
-        // 4. Return AuthResponseDTO with token and user info
+        // Authenticate user
+        UserDTO user = authService.login(loginDTO);
         
-        // Example implementation:
-        // UserDTO user = authService.login(loginDTO);
-        // String token = jwtUtil.generateToken(user.getId(), user.getUsername(), user.getRole());
-        // return ResponseEntity.ok(new AuthResponseDTO(token, user.getId(), user.getUsername(), user.getRole()));
+        // Generate JWT token
+        String token = jwtUtil.generateToken(user.getId(), user.getUsername(), "USER");
         
-        throw new UnsupportedOperationException("Not yet implemented");
+        // Return response with token and user info
+        return ResponseEntity.ok(new AuthResponseDTO(token, user.getId(), user.getUsername(), "USER"));
     }
 }
