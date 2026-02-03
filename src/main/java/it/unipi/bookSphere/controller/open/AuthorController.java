@@ -36,13 +36,13 @@ public class AuthorController {
             summary = "Search author by name",
             description = "Search for authors by name (supports partial matching)"
     )
-    @GetMapping("/search")
+    @GetMapping
     public ResponseEntity<?> searchAuthorByName(
             @Parameter(description = "Author name to search", example = "Tolkien")
-            @RequestParam String name
+            @RequestParam(name = "author_name", required = false) String authorName
     ) {
         // TODO: Implement service call
-        // List<AuthorDTO> authors = authorService.searchByName(name);
+        // List<AuthorDTO> authors = authorService.searchByName(authorName);
         // return ResponseEntity.ok(authors);
         throw new UnsupportedOperationException("Not yet implemented");
     }

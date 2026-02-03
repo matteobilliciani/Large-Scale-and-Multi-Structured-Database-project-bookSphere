@@ -18,8 +18,23 @@ public class UserController {
     // private final UserService userService;
 
     @Operation(
+            summary = "Get user by username",
+            description = "View public user profile and activity by username"
+    )
+    @GetMapping("/{username}")
+    public ResponseEntity<UserDTO> getUserByUsername(
+            @Parameter(description = "Username", example = "User_12345")
+            @PathVariable String username
+    ) {
+        // TODO: Implement service call
+        // UserDTO user = userService.findByUsername(username);
+        // return ResponseEntity.ok(user);
+        throw new UnsupportedOperationException("Not yet implemented");
+    }
+
+    @Operation(
             summary = "Get user by ID",
-            description = "View public user profile and activity"
+            description = "View public user profile and activity by ID"
     )
     @GetMapping("/{id}")
     public ResponseEntity<UserDTO> getUserById(
@@ -28,21 +43,6 @@ public class UserController {
     ) {
         // TODO: Implement service call
         // UserDTO user = userService.findById(id);
-        // return ResponseEntity.ok(user);
-        throw new UnsupportedOperationException("Not yet implemented");
-    }
-
-    @Operation(
-            summary = "Get user by username",
-            description = "View public user profile and activity by username"
-    )
-    @GetMapping("/username/{username}")
-    public ResponseEntity<UserDTO> getUserByUsername(
-            @Parameter(description = "Username", example = "User_12345")
-            @PathVariable String username
-    ) {
-        // TODO: Implement service call
-        // UserDTO user = userService.findByUsername(username);
         // return ResponseEntity.ok(user);
         throw new UnsupportedOperationException("Not yet implemented");
     }

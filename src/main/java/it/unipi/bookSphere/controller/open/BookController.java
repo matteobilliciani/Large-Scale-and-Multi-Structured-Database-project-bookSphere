@@ -36,10 +36,10 @@ public class BookController {
             summary = "Search book by title",
             description = "Search for books by title (supports partial matching)"
     )
-    @GetMapping("/search")
+    @GetMapping
     public ResponseEntity<?> searchBookByTitle(
             @Parameter(description = "Book title to search", example = "The Fellowship")
-            @RequestParam String title
+            @RequestParam(name = "title", required = false) String title
     ) {
         // TODO: Implement service call
         // List<BookDTO> books = bookService.searchByTitle(title);

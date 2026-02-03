@@ -9,7 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/me/likes")
+@RequestMapping("/api/v1/me")
 @RequiredArgsConstructor
 @SecurityRequirement(name = "bearerAuth")
 @Tag(name = "Likes (Registered)", description = "Like/unlike endpoints for books, reviews, authors, and genres")
@@ -24,13 +24,13 @@ public class LikeController {
             summary = "Like a book",
             description = "Add a like to a book. Creates LIKES relationship in Neo4j."
     )
-    @PostMapping("/book/{id}")
+    @PostMapping("/like/book")
     public ResponseEntity<?> likeBook(
-            @Parameter(description = "MongoDB ObjectId of the book", example = "65b3f...")
-            @PathVariable String id
+            @Parameter(description = "Book ID in request body")
+            @RequestBody String bookId
     ) {
         // TODO: Implement service call
-        // likeService.likeBook(currentUserId, id);
+        // likeService.likeBook(currentUserId, bookId);
         // return ResponseEntity.ok(Map.of("message", "Book liked successfully"));
         throw new UnsupportedOperationException("Not yet implemented");
     }
@@ -39,13 +39,13 @@ public class LikeController {
             summary = "Unlike a book",
             description = "Remove a like from a book. Removes LIKES relationship in Neo4j."
     )
-    @DeleteMapping("/book/{id}")
+    @DeleteMapping("/unlike/book/{bookID}")
     public ResponseEntity<?> unlikeBook(
             @Parameter(description = "MongoDB ObjectId of the book", example = "65b3f...")
-            @PathVariable String id
+            @PathVariable String bookID
     ) {
         // TODO: Implement service call
-        // likeService.unlikeBook(currentUserId, id);
+        // likeService.unlikeBook(currentUserId, bookID);
         // return ResponseEntity.ok(Map.of("message", "Book unliked successfully"));
         throw new UnsupportedOperationException("Not yet implemented");
     }
@@ -56,13 +56,13 @@ public class LikeController {
             summary = "Like a review",
             description = "Add a like to a review. Creates LIKES relationship in Neo4j and updates likes_count in MongoDB."
     )
-    @PostMapping("/review/{id}")
+    @PostMapping("/like/review")
     public ResponseEntity<?> likeReview(
-            @Parameter(description = "MongoDB ObjectId of the review", example = "99a1...")
-            @PathVariable String id
+            @Parameter(description = "Review ID in request body")
+            @RequestBody String reviewId
     ) {
         // TODO: Implement service call
-        // likeService.likeReview(currentUserId, id);
+        // likeService.likeReview(currentUserId, reviewId);
         // return ResponseEntity.ok(Map.of("message", "Review liked successfully"));
         throw new UnsupportedOperationException("Not yet implemented");
     }
@@ -71,46 +71,14 @@ public class LikeController {
             summary = "Unlike a review",
             description = "Remove a like from a review. Removes LIKES relationship in Neo4j and updates likes_count in MongoDB."
     )
-    @DeleteMapping("/review/{id}")
+    @DeleteMapping("/unlikes/review/{reviewid}")
     public ResponseEntity<?> unlikeReview(
             @Parameter(description = "MongoDB ObjectId of the review", example = "99a1...")
-            @PathVariable String id
+            @PathVariable String reviewid
     ) {
         // TODO: Implement service call
-        // likeService.unlikeReview(currentUserId, id);
+        // likeService.unlikeReview(currentUserId, reviewid);
         // return ResponseEntity.ok(Map.of("message", "Review unliked successfully"));
-        throw new UnsupportedOperationException("Not yet implemented");
-    }
-
-    // ========== AUTHOR LIKES ==========
-    
-    @Operation(
-            summary = "Like an author",
-            description = "Add a like to an author. Creates LIKES relationship in Neo4j."
-    )
-    @PostMapping("/authors/{name}")
-    public ResponseEntity<?> likeAuthor(
-            @Parameter(description = "Author name", example = "J.R.R. Tolkien")
-            @PathVariable String name
-    ) {
-        // TODO: Implement service call
-        // likeService.likeAuthor(currentUserId, name);
-        // return ResponseEntity.ok(Map.of("message", "Author liked successfully"));
-        throw new UnsupportedOperationException("Not yet implemented");
-    }
-
-    @Operation(
-            summary = "Unlike an author",
-            description = "Remove a like from an author. Removes LIKES relationship in Neo4j."
-    )
-    @DeleteMapping("/authors/{name}")
-    public ResponseEntity<?> unlikeAuthor(
-            @Parameter(description = "Author name", example = "J.R.R. Tolkien")
-            @PathVariable String name
-    ) {
-        // TODO: Implement service call
-        // likeService.unlikeAuthor(currentUserId, name);
-        // return ResponseEntity.ok(Map.of("message", "Author unliked successfully"));
         throw new UnsupportedOperationException("Not yet implemented");
     }
 
@@ -120,13 +88,13 @@ public class LikeController {
             summary = "Like a genre",
             description = "Add a like to a genre. Creates LIKES relationship in Neo4j and updates MongoDB."
     )
-    @PostMapping("/genres/{name}")
+    @PostMapping("/likes/genres")
     public ResponseEntity<?> likeGenre(
-            @Parameter(description = "Genre name", example = "Fantasy")
-            @PathVariable String name
+            @Parameter(description = "Genre name in request body")
+            @RequestBody String genreName
     ) {
         // TODO: Implement service call
-        // likeService.likeGenre(currentUserId, name);
+        // likeService.likeGenre(currentUserId, genreName);
         // return ResponseEntity.ok(Map.of("message", "Genre liked successfully"));
         throw new UnsupportedOperationException("Not yet implemented");
     }
@@ -135,7 +103,7 @@ public class LikeController {
             summary = "Unlike a genre",
             description = "Remove a like from a genre. Removes LIKES relationship in Neo4j and updates MongoDB."
     )
-    @DeleteMapping("/genres/{name}")
+    @DeleteMapping("/unlike/genres/{name}")
     public ResponseEntity<?> unlikeGenre(
             @Parameter(description = "Genre name", example = "Fantasy")
             @PathVariable String name
@@ -143,6 +111,38 @@ public class LikeController {
         // TODO: Implement service call
         // likeService.unlikeGenre(currentUserId, name);
         // return ResponseEntity.ok(Map.of("message", "Genre unliked successfully"));
+        throw new UnsupportedOperationException("Not yet implemented");
+    }
+
+    // ========== AUTHOR LIKES ==========
+    
+    @Operation(
+            summary = "Like an author",
+            description = "Add a like to an author. Creates LIKES relationship in Neo4j."
+    )
+    @PostMapping("/likes/authors")
+    public ResponseEntity<?> likeAuthor(
+            @Parameter(description = "Author ID in request body")
+            @RequestBody String authorId
+    ) {
+        // TODO: Implement service call
+        // likeService.likeAuthor(currentUserId, authorId);
+        // return ResponseEntity.ok(Map.of("message", "Author liked successfully"));
+        throw new UnsupportedOperationException("Not yet implemented");
+    }
+
+    @Operation(
+            summary = "Unlike an author",
+            description = "Remove a like from an author. Removes LIKES relationship in Neo4j."
+    )
+    @DeleteMapping("/unlike/authors/{authorID}")
+    public ResponseEntity<?> unlikeAuthor(
+            @Parameter(description = "Author ID", example = "65b3a...")
+            @PathVariable String authorID
+    ) {
+        // TODO: Implement service call
+        // likeService.unlikeAuthor(currentUserId, authorID);
+        // return ResponseEntity.ok(Map.of("message", "Author unliked successfully"));
         throw new UnsupportedOperationException("Not yet implemented");
     }
 }

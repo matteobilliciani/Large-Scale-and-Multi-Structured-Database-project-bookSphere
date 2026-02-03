@@ -9,7 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/me/follow")
+@RequestMapping("/api/v1/me")
 @RequiredArgsConstructor
 @SecurityRequirement(name = "bearerAuth")
 @Tag(name = "Follow (Registered)", description = "User follow/unfollow endpoints")
@@ -20,16 +20,16 @@ public class FollowController {
 
     @Operation(
             summary = "Follow a user",
-            description = "Start following another user. Creates FOLLOWS relationship in Neo4j."
+            description = "Start following another user. Creates FOLLOWS relationship in Neo4j. Accepts username or user ID in request body."
     )
-    @PostMapping("/{username}")
+    @PostMapping("/follow")
     public ResponseEntity<?> followUser(
-            @Parameter(description = "Username of the user to follow", example = "User_12345")
-            @PathVariable String username
+            @Parameter(description = "Username or user ID to follow")
+            @RequestBody String userIdentifier
     ) {
         // TODO: Implement service call
-        // followService.followUser(currentUserId, username);
-        // return ResponseEntity.ok(Map.of("message", "Successfully followed " + username));
+        // followService.followUser(currentUserId, userIdentifier);
+        // return ResponseEntity.ok(Map.of("message", "Successfully followed " + userIdentifier));
         throw new UnsupportedOperationException("Not yet implemented");
     }
 
@@ -37,14 +37,14 @@ public class FollowController {
             summary = "Unfollow a user",
             description = "Stop following a user. Removes FOLLOWS relationship in Neo4j."
     )
-    @DeleteMapping("/{username}")
+    @DeleteMapping("/unfollow/{userId}")
     public ResponseEntity<?> unfollowUser(
-            @Parameter(description = "Username of the user to unfollow", example = "User_12345")
-            @PathVariable String username
+            @Parameter(description = "User ID to unfollow", example = "65d1...")
+            @PathVariable String userId
     ) {
         // TODO: Implement service call
-        // followService.unfollowUser(currentUserId, username);
-        // return ResponseEntity.ok(Map.of("message", "Successfully unfollowed " + username));
+        // followService.unfollowUser(currentUserId, userId);
+        // return ResponseEntity.ok(Map.of("message", "Successfully unfollowed user"));
         throw new UnsupportedOperationException("Not yet implemented");
     }
 }

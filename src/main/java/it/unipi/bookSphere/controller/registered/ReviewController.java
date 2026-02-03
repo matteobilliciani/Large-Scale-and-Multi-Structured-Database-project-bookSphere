@@ -38,14 +38,14 @@ public class ReviewController {
             summary = "Update a review",
             description = "Modify a previously posted review. Updates both MongoDB and Neo4j."
     )
-    @PatchMapping("/{reviewId}")
+    @PatchMapping("/{reviewID}")
     public ResponseEntity<?> updateReview(
             @Parameter(description = "MongoDB ObjectId of the review", example = "99a1...")
-            @PathVariable String reviewId,
+            @PathVariable String reviewID,
             @Valid @RequestBody ReviewDTO reviewDTO
     ) {
         // TODO: Implement service call
-        // ReviewDTO updated = reviewService.updateReview(reviewId, reviewDTO, currentUserId);
+        // ReviewDTO updated = reviewService.updateReview(reviewID, reviewDTO, currentUserId);
         // return ResponseEntity.ok(updated);
         throw new UnsupportedOperationException("Not yet implemented");
     }
@@ -54,13 +54,13 @@ public class ReviewController {
             summary = "Delete a review",
             description = "Remove a review from the system. Updates both MongoDB and Neo4j."
     )
-    @DeleteMapping("/{reviewId}")
+    @DeleteMapping("/{reviewID}")
     public ResponseEntity<?> deleteReview(
             @Parameter(description = "MongoDB ObjectId of the review", example = "99a1...")
-            @PathVariable String reviewId
+            @PathVariable String reviewID
     ) {
         // TODO: Implement service call
-        // reviewService.deleteReview(reviewId, currentUserId);
+        // reviewService.deleteReview(reviewID, currentUserId);
         // return ResponseEntity.noContent().build();
         throw new UnsupportedOperationException("Not yet implemented");
     }

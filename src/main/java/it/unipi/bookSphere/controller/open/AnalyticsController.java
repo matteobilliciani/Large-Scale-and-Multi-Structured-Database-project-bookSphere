@@ -105,17 +105,15 @@ public class AnalyticsController {
 
     @Operation(
             summary = "Calculate Internationality Index",
-            description = "Measure how far a book or author travels across the globe"
+            description = "Measure how far a book or author travels across the globe. Pass either a book ID or author ID."
     )
-    @GetMapping("/internationality/{entityType}/{entityId}")
+    @GetMapping("/internationality/{entityId}")
     public ResponseEntity<?> calculateInternationality(
-            @Parameter(description = "Entity type: 'book' or 'author'", example = "book")
-            @PathVariable String entityType,
-            @Parameter(description = "MongoDB ObjectId of the entity", example = "65b3f...")
+            @Parameter(description = "MongoDB ObjectId of the book or author", example = "65b3f...")
             @PathVariable String entityId
     ) {
         // TODO: Implement service call - Neo4j Query 2
-        // Map<String, Object> internationality = analyticsService.calculateInternationality(entityType, entityId);
+        // Map<String, Object> internationality = analyticsService.calculateInternationality(entityId);
         // return ResponseEntity.ok(internationality);
         throw new UnsupportedOperationException("Not yet implemented");
     }

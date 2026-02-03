@@ -7,7 +7,7 @@ Colori:
 
 Platform introduction
 Welcome to BookSphere, the ultimate social platform for book lovers designed to help you organize your reading life and connect with a global community. Beyond simply searching for titles and authors, BookSphere allows you to curate your own digital library by marking books as "To-Read," "Reading," or "Read," ensuring you never lose track of your literary journey.
-The experience is deeply social and smart: you can follow friends to instantly see their latest updates and ratings, or discover "Real Influencers"—expert reviewers identified by the quality of their engagement rather than just follower count—to get the best recommendations for your favourite genres. The platform goes beyond standard suggestions by offering unique insights, such as a "Trending Probability" that predicts the next viral hit and an "Internationality Index" that shows you how far a book is traveling around the globe. You can share your own voice by leaving one-to-one-hundred ratings and written reviews, and at the end of every year, you’ll receive a personalized "Yearly Wrapped" recap to celebrate your reading highlights, top authors, and most-read genres.
+The experience is deeply social and smart: you can follow friends to instantly see their latest updates and ratings or discover "Real Influencers" - expert reviewers identified by the quality of their engagement rather than just follower count - to get the best recommendations for your favourite genres. The platform goes beyond standard suggestions by offering unique insights, such as a "Trending Probability" that predicts the next viral hit and an "Internationality Index" that shows you how far a book is traveling around the globe. You can share your own voice by leaving one-to-one-hundred ratings and written reviews, and at the end of every year, you’ll receive a personalized "Yearly Wrapped" recap to celebrate your reading highlights, top authors, and most-read genres.
 
 
 Requirements
@@ -633,57 +633,59 @@ REFER_TO	Review ➔ Book	(Nessuna)	-	Relazione strutturale pura.
 Restful API definition
 API Endpoint Specification - BookSphere Platform
 Queries + CRUD operations + analytics
+Path variables: identifica una risorsa specifica (es. ricerche per ID)
+Query string: filtra, ordina, cerca e pagina risultati di una query, con parametri anche opzionali
 
-Categoria Utente	Metodo	Endpoint	Descrizione	Database Primario
-Generic (Unregistered)	POST	/api/v1/auth/register	Creazione di un nuovo account	MongoDB
-X	POST	/api/v1/auth/login	Autenticazione utente	MongoDB
-X	GET	/api/v1/books/{id}	Visualizza dettagli libro e snapshot recensioni	MongoDB
-X	GET	/api/v1/books/{title}	Ricerca il Libro dal titolo	MongoDB
-X	GET	/api/v1/authors/{id}	Visualizza profilo autore e opere pubblicate	MongoDB
-X	GET	/api/v1/authors/{name}		
-X	GET	/api/v1/users/{username}	Visualizza profilo pubblico utente e attività	Mongo
-X	GET	/api/v1/users/{id}		
-X	GET	/api/v1/analytics/rankings/trendingbooks	Libri di tendenza	MongoDB
-X	GET	/api/v1/analytics/rankings/books/{OPT:year}	Classifiche generali (classici, più letti, ecc.)
+Categoria Utente	Metodo	Endpoint	Input	Descrizione	Database Primario
+Generic (Unregistered)	POST	/api/v1/auth/register	Username, mail, hashed password	Creazione di un nuovo account	MongoDB
+X	POST	/api/v1/auth/login	Username|mail, password	Autenticazione utente	MongoDB
+X	GET	/api/v1/books/{id}	pathVariable	Visualizza dettagli libro, snapshot recensioni e statistiche	MongoDB
+X	GET	/api/v1/books?title = …	Query string	Ricerca il Libro dal titolo	MongoDB
+X	GET	/api/v1/authors/{id}	Author’s Id	Visualizza profilo autore, opere pubblicate e rating	MongoDB
+X	GET	/api/v1/authors?author_name = …	Query string	Ricerca Autore dal nome, opere pubblicate e rating	
+X	GET	/api/v1/users/{username}	Path Variable 	Visualizza profilo utente e attività (bookshelf e reviews dell’anno)	Mongo
+X	GET	/api/v1/users/{id}	Path variable 	Ricerca utente per ID	
+X	GET	/api/v1/analytics/rankings/trendingbooks		Lista di Libri di tendenza	MongoDB
+X	GET	/api/v1/analytics/rankings/books?year = …	Query string 	Classifiche dei libri per un anno specifico o di sempre
 	MongoDB
-X	GET	/api/v1/analytics/rankings/authors/{OPT:year}		
-X	GET	/api/v1/ analytics/rankings/genres/{OPT:year}		
-X	GET	/api/v1/analytics/tpi/{bookId}	Calcola il Trending Probability Index	MongoDB
-X	GET	/api/v1/analytics/versatility/{authId}	Calcola Author Versatility Index	Neo4j
-X	GET	/api/v1/analytics/internationality/{book/authorID}	Calcola Internationality Index (Book/Author)	Neo4j
-X	GET	/api/v1/analytics/influencers	Identifica influencer per genere (Engagement)	Neo4j
-Registered User				
-	POST	/api/v1/me/reviews	Scrittura di una recensione (voto + commento)	Mongo+Neo4j
-	PATCH	/api/v1/me/reviews/{reviewID}	Modifica di una review postata precedentemente	Mongo+Neo4j
-	DELETE	/api/v1/me/reviews/{reviewId}	Eliminazione di una recensione 	Mongo+Neo4j
-	POST	/api/v1/me/follow/{username}	Segui un altro utente	Neo4j
-	DELETE	/api/v1/me/follow/{username}	Unfollow user	Neo4j
-	PATCH	/api/v1/me/username/{new_username}	Cambia nome utente	MongoDB+Neo4j
-X	POST	/api/v1/me/bookshelf /{bookid + status}	Aggiunge libro alla to-read list o cambia status	MongoDB
-X	PATCH	/api/v1/me/bookshelf /{bookid}/{status}	Cambia stato di un libro	Mongo DB
-X	DELETE	/api/v1/me/bookshelf /{bookid}	Elimina libro dalla lista	MongoDB
-X	POST	/api/v1/me/likes/book/{id}	Metti "Like" a un libro	Neo4j
-X	DELETE	/api/v1/me/likes/book/{id}	Togli like al libro	Neo4j
-X	POST	/api/v1/me/likes/review/{id}	Metti "Like" a una recensione	Neo4j+MongoDB
-X	DELETE	/api/v1/me/likes/review/{id}	Togli like a una review	Neo4j + MongoDB
-	GET	/api/v1/me/recommendations	Suggerimenti basati su gusti e rete sociale	Neo4j
-	GET	/api/v1/me/wrapped	Genera lo Yearly Personal Recap (Wrapped)	MongoDB
-	POST	/api/v1/me/likes/genres/{name}		MongoDB + Neo4j
-	DELETE	/api/v1/me/likes/genres/{name}		MongoDB + Neo4j
-	POST	/api/v1/me/likes/authors/{name}		Neo4j
-	DELETE	/api/v1/me/likes/authors/{name}		Neo4j
-	DELETE	/api/v1/me/account	Rimozione account	Mongo + Neo
+X	GET	/api/v1/analytics/rankings/authors?year = …	Query string	Classifiche degli autori per un anno specifico o di sempre	
+X	GET	/api/v1/ analytics/rankings/genres?year = …	Query string	Classifiche dei generi per un anno specifico o di sempre	
+X	GET	/api/v1/analytics/tpi/{bookId}	Path variable	Calcola il Trending Probability Index	MongoDB
+X	GET	/api/v1/analytics/versatility/{authId}	Path variable	Calcola Author Versatility Index	Neo4j
+X	GET	/api/v1/analytics/internationality/{book|authorID}	Path variable	Calcola Internationality Index (Book/Author)	Neo4j
+X	GET	/api/v1/analytics/influencers?genre=…	Query string	Identifica influencer per genere (Engagement)	Neo4j
+Registered User					
+X	POST	/api/v1/me/reviews	Auth + bookid + voto + commento (optional)	Scrittura di una recensione (voto + commento)	Mongo+Neo4j
+X	PATCH	/api/v1/me/reviews/{reviewID}	Auth + path variable + voto or commento (optional)	Modifica di una review postata precedentemente	Mongo+Neo4j
+X	DELETE	/api/v1/me/reviews/{reviewID}	Auth + path variable + reviewID	Eliminazione di una recensione 	Mongo+Neo4j
+X	POST	/api/v1/me/follow	Auth + username or other user’s id	Segui un altro utente	Neo4j
+X	DELETE	/api/v1/me/unfollow/{userId}	Auth + path variable + username or other user’s id	Unfollow user	Neo4j
+X	PATCH	/api/v1/me/username	Auth + new username	Cambia nome utente	MongoDB+Neo4j
+X	POST	/api/v1/me/bookshelf	Auth + book id + status	Aggiunge libro alla to-read list o cambia status	MongoDB
+X	PATCH	/api/v1/me/bookshelf/{bookID}	Auth + path variable + Status	Cambia stato di un libro	Mongo DB
+X	DELETE	/api/v1/me/bookshelf /{bookId}	Auth + path variable	Elimina libro dalla lista	MongoDB
+X	POST	/api/v1/me/like/book	Auth + book id	Metti "Like" a un libro	Neo4j
+X	DELETE	/api/v1/me/unlike/book/{bookID}	Auth + path variable	Togli like al libro	Neo4j
+X	POST	/api/v1/me/like/review	Auth + Review’s Id	Metti "Like" a una recensione	Neo4j+MongoDB
+X	DELETE	/api/v1/me/unlikes/review/{reviewid}	Auth + path variable	Togli like a una review	Neo4j + MongoDB
+X	GET	/api/v1/me/recommendations	Auth	Suggerimenti basati su gusti e rete sociale	Neo4j
+X	GET	/api/v1/me/wrapped	Auth	Genera lo Yearly Personal Recap (Wrapped)	MongoDB
+X	POST	/api/v1/me/likes/genres	Auth + genre’s name		MongoDB + Neo4j
+X	DELETE	/api/v1/me/unlike/genres/{name}	Auth + path variable		MongoDB + Neo4j
+X	POST	/api/v1/me/likes/authors	Auth + Author’s Id		Neo4j
+X	DELETE	/api/v1/me/unlike/authors/{authorID}	Auth + path variable		Neo4j
+X	DELETE	/api/v1/me/account	Auth	Rimozione account	Mongo + Neo
 
 
-Administrator	POST	/api/v1/admin/books	Aggiunta di un nuovo libro al catalogo	MongoDB + Neo4j
-	PUT	/api/v1/admin/books/{id}	Aggiornamento informazioni libro	MongoDB + Neo4J
-	DELETE	/api/v1/admin/books/{id}	Rimozione di un libro dal sistema	MongoDB + Neo4J
-	DELETE	/api/v1/admin/reviews/{id}	Moderazione: elimina recensione offensiva	Mongo + Neo
-	PATCH	/api/v1/admin/users/{id}/ban	Ban di un utente dalla piattaforma	MongoDB
-	POST	/api/v1/admin/authors	Inserisci autore	Mongo + neo
-	PUT	/api/v1/admin/authors/{id}	Aggiorna autore	Mongo + neo
-	DELETE	/api/v1/admin/authors/{id}	Elimina autore	Mongo + neo
-	POST	/api/v1/admin/genres	Inserisci nuovo genere	Neo
+Administrator	POST	/api/v1/admin/books	Auth + corpo Book	Aggiunta di un nuovo libro al catalogo	MongoDB + Neo4j
+X	PUT	/api/v1/admin/books/{id}	Auth + corpo book modificato + path variable	Aggiornamento informazioni libro	MongoDB + Neo4J
+X	DELETE	/api/v1/admin/books/{id}	Auth + path variable	Rimozione di un libro dal sistema	MongoDB + Neo4J
+X	DELETE	/api/v1/admin/reviews/{id}	Auth + path variable	Moderazione: elimina recensione offensiva	Mongo + Neo
+X	PATCH	/api/v1/admin/users/{id}/ban	Auth + path variable + status banned	Ban di un utente dalla piattaforma	MongoDB
+X	POST	/api/v1/admin/authors	Auth + authors’ information fields	Inserisci autore	Mongo + neo
+X	PUT	/api/v1/admin/authors/{id}	Auth + path variable + update author info	Aggiorna autore	Mongo + neo
+X	DELETE	/api/v1/admin/authors/{id}	Auth + path variable	Elimina autore	Mongo + neo
+X	POST	/api/v1/admin/genres	Auth + corpo genre	Inserisci nuovo genere	Neo
 
 
 

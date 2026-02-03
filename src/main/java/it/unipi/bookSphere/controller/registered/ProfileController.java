@@ -22,10 +22,10 @@ public class ProfileController {
             summary = "Update username",
             description = "Change the user's username. Updates both MongoDB and Neo4j."
     )
-    @PatchMapping("/username/{newUsername}")
+    @PatchMapping("/username")
     public ResponseEntity<?> updateUsername(
             @Parameter(description = "New username", example = "NewUsername123")
-            @PathVariable String newUsername
+            @RequestBody String newUsername
     ) {
         // TODO: Implement service call
         // profileService.updateUsername(currentUserId, newUsername);

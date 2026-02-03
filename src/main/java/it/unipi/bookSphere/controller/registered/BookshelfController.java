@@ -38,15 +38,15 @@ public class BookshelfController {
             summary = "Update book status",
             description = "Change the status of a book in the bookshelf"
     )
-    @PatchMapping("/{bookId}/{status}")
+    @PatchMapping("/{bookID}")
     public ResponseEntity<?> updateBookStatus(
             @Parameter(description = "MongoDB ObjectId of the book", example = "65b3f...")
-            @PathVariable String bookId,
+            @PathVariable String bookID,
             @Parameter(description = "New status", example = "read", schema = @io.swagger.v3.oas.annotations.media.Schema(allowableValues = {"to_read", "reading", "read"}))
-            @PathVariable String status
+            @RequestBody String status
     ) {
         // TODO: Implement service call
-        // bookshelfService.updateBookStatus(currentUserId, bookId, status);
+        // bookshelfService.updateBookStatus(currentUserId, bookID, status);
         // return ResponseEntity.ok(Map.of("message", "Book status updated"));
         throw new UnsupportedOperationException("Not yet implemented");
     }
