@@ -635,44 +635,44 @@ API Endpoint Specification - BookSphere Platform
 Queries + CRUD operations + analytics
 
 Categoria Utente	Metodo	Endpoint	Descrizione	Database Primario
-Generic (Unregistered)	POST	/api/auth/register	Creazione di un nuovo account	MongoDB
-	POST	/api/v1/auth/login	Autenticazione utente	MongoDB
-	GET	/api/v1/books/{id}	Visualizza dettagli libro e snapshot recensioni	MongoDB
-	GET	/api/v1/books/{title}	Ricerca il Libro dal titolo	MongoDB
-	GET	/api/v1/authors/{id}	Visualizza profilo autore e opere pubblicate	MongoDB
-	GET	/api/v1/authors/{name}		
-	GET	/api/v1/users/{username}	Visualizza profilo pubblico utente e attività	Mongo
-	GET	/api/v1/users/{id}		
-	GET	/api/v1/rankings/trendingbooks	Libri di tendenza	MongoDB
-	GET	/api/v1/rankings/books/{OPT:year}	Classifiche generali (classici, più letti, ecc.)
+Generic (Unregistered)	POST	/api/v1/auth/register	Creazione di un nuovo account	MongoDB
+X	POST	/api/v1/auth/login	Autenticazione utente	MongoDB
+X	GET	/api/v1/books/{id}	Visualizza dettagli libro e snapshot recensioni	MongoDB
+X	GET	/api/v1/books/{title}	Ricerca il Libro dal titolo	MongoDB
+X	GET	/api/v1/authors/{id}	Visualizza profilo autore e opere pubblicate	MongoDB
+X	GET	/api/v1/authors/{name}		
+X	GET	/api/v1/users/{username}	Visualizza profilo pubblico utente e attività	Mongo
+X	GET	/api/v1/users/{id}		
+X	GET	/api/v1/analytics/rankings/trendingbooks	Libri di tendenza	MongoDB
+X	GET	/api/v1/analytics/rankings/books/{OPT:year}	Classifiche generali (classici, più letti, ecc.)
 	MongoDB
-	GET	/api/v1/rankings/authors/{OPT:year}		
-	GET	/api/v1/rankings/genres/{OPT:year}		
-	GET	/api/v1/analytics/tpi/{bookId}	Calcola il Trending Probability Index	MongoDB
-	GET	/api/v1/analytics/versatility/{authId}	Calcola Author Versatility Index	Neo4j
-	GET	/api/v1/analytics/internationality/{book/authorID}	Calcola Internationality Index (Book/Author)	Neo4j
-	GET	/api/v1/analytics/influencers	Identifica influencer per genere (Engagement)	Neo4j
+X	GET	/api/v1/analytics/rankings/authors/{OPT:year}		
+X	GET	/api/v1/ analytics/rankings/genres/{OPT:year}		
+X	GET	/api/v1/analytics/tpi/{bookId}	Calcola il Trending Probability Index	MongoDB
+X	GET	/api/v1/analytics/versatility/{authId}	Calcola Author Versatility Index	Neo4j
+X	GET	/api/v1/analytics/internationality/{book/authorID}	Calcola Internationality Index (Book/Author)	Neo4j
+X	GET	/api/v1/analytics/influencers	Identifica influencer per genere (Engagement)	Neo4j
 Registered User				
-	POST	/api/v1/reviews	Scrittura di una recensione (voto + commento)	Mongo+Neo4j
-	PATCH	/api/v1/reviews/{reviewID}	Modifica di una review postata precedentemente	Mongo+Neo4j
-	DELETE	/api/v1/reviews/{reviewId}	Eliminazione di una recensione 	Mongo+Neo4j
-	POST	/api/v1/users/follow/{username}	Segui un altro utente	Neo4j
-	DELETE	/api/v1/users/follow/{username}	Unfollow user	Neo4j
-	PATCH	/api/v1/change/{new_username}	Cambia nome utente	MongoDB+Neo4j
-	POST	/api/v1/users/bookshelf /{bookid + status}	Aggiunge libro alla to-read list o cambia status	MongoDB
-	PATCH	/api/v1/users/bookshelf /{bookid}/{status}	Cambia stato di un libro	Mongo DB
-	DELETE	/api/v1/users/bookshelf /{bookid}	Elimina libro dalla lista	MongoDB
-	POST	/api/v1/likes/book/{id}	Metti "Like" a un libro	Neo4j
-	DELETE	/api/v1/likes/book/{id}	Togli like al libro	Neo4j
-	POST	/api/v1/likes/review/{id}	Metti "Like" a una recensione	Neo4j+MongoDB
-	DELETE	/api/v1/likes/review/{id}	Togli like a una review	Neo4j + MongoDB
-	GET	/api/v1/recommendations	Suggerimenti basati su gusti e rete sociale	Neo4j
-	GET	/api/v1/wrapped	Genera lo Yearly Personal Recap (Wrapped)	MongoDB
-	POST	/api/v1/likes/genres/{name}		MongoDB + Neo4j
-	DELETE	/api/v1/likes/genres/{name}		MongoDB + Neo4j
-	POST	/api/v1/likes/authors/{name}		Neo4j
-	DELETE	/api/v1/likes/authors/{name}		Neo4j
-	DELETE	/api/v1/account	Rimozione account	Mongo + Neo
+	POST	/api/v1/me/reviews	Scrittura di una recensione (voto + commento)	Mongo+Neo4j
+	PATCH	/api/v1/me/reviews/{reviewID}	Modifica di una review postata precedentemente	Mongo+Neo4j
+	DELETE	/api/v1/me/reviews/{reviewId}	Eliminazione di una recensione 	Mongo+Neo4j
+	POST	/api/v1/me/follow/{username}	Segui un altro utente	Neo4j
+	DELETE	/api/v1/me/follow/{username}	Unfollow user	Neo4j
+	PATCH	/api/v1/me/username/{new_username}	Cambia nome utente	MongoDB+Neo4j
+X	POST	/api/v1/me/bookshelf /{bookid + status}	Aggiunge libro alla to-read list o cambia status	MongoDB
+X	PATCH	/api/v1/me/bookshelf /{bookid}/{status}	Cambia stato di un libro	Mongo DB
+X	DELETE	/api/v1/me/bookshelf /{bookid}	Elimina libro dalla lista	MongoDB
+X	POST	/api/v1/me/likes/book/{id}	Metti "Like" a un libro	Neo4j
+X	DELETE	/api/v1/me/likes/book/{id}	Togli like al libro	Neo4j
+X	POST	/api/v1/me/likes/review/{id}	Metti "Like" a una recensione	Neo4j+MongoDB
+X	DELETE	/api/v1/me/likes/review/{id}	Togli like a una review	Neo4j + MongoDB
+	GET	/api/v1/me/recommendations	Suggerimenti basati su gusti e rete sociale	Neo4j
+	GET	/api/v1/me/wrapped	Genera lo Yearly Personal Recap (Wrapped)	MongoDB
+	POST	/api/v1/me/likes/genres/{name}		MongoDB + Neo4j
+	DELETE	/api/v1/me/likes/genres/{name}		MongoDB + Neo4j
+	POST	/api/v1/me/likes/authors/{name}		Neo4j
+	DELETE	/api/v1/me/likes/authors/{name}		Neo4j
+	DELETE	/api/v1/me/account	Rimozione account	Mongo + Neo
 
 
 Administrator	POST	/api/v1/admin/books	Aggiunta di un nuovo libro al catalogo	MongoDB + Neo4j
@@ -680,9 +680,19 @@ Administrator	POST	/api/v1/admin/books	Aggiunta di un nuovo libro al catalogo	Mo
 	DELETE	/api/v1/admin/books/{id}	Rimozione di un libro dal sistema	MongoDB + Neo4J
 	DELETE	/api/v1/admin/reviews/{id}	Moderazione: elimina recensione offensiva	Mongo + Neo
 	PATCH	/api/v1/admin/users/{id}/ban	Ban di un utente dalla piattaforma	MongoDB
-	POST	/api/v1/admin/author	Inserisci autore	Mongo + neo
-	PUT	/api/v1/admin/author/{id}	Aggiorna autore	Mongo + neo
-	DELETE	/api/v1/admin/author/{id}	Elimina autore	Mongo + neo
-	POST	/api/v1/admin/genre	Inserisci nuovo genere	Neo
+	POST	/api/v1/admin/authors	Inserisci autore	Mongo + neo
+	PUT	/api/v1/admin/authors/{id}	Aggiorna autore	Mongo + neo
+	DELETE	/api/v1/admin/authors/{id}	Elimina autore	Mongo + neo
+	POST	/api/v1/admin/genres	Inserisci nuovo genere	Neo
 
 
+
+
+Implementation
+Model
+Mongo
+For each collection we have modelled in a single java class an entity.
+
+
+Neo4j
+For each node we have an entity, with their relation modelled inside each class representing the node.
