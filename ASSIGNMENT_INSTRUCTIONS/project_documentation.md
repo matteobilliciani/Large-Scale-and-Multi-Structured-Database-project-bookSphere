@@ -5,7 +5,7 @@ Colori:
 -	Matteo Team Boxer
 -	Matteo Team Donna
 
-Platform introduction
+Platform introduction[MB1.1][MB1.2]
 Welcome to BookSphere, the ultimate social platform for book lovers designed to help you organize your reading life and connect with a global community. Beyond simply searching for titles and authors, BookSphere allows you to curate your own digital library by marking books as "To-Read," "Reading," or "Read," ensuring you never lose track of your literary journey.
 The experience is deeply social and smart: you can follow friends to instantly see their latest updates and ratings or discover "Real Influencers" - expert reviewers identified by the quality of their engagement rather than just follower count - to get the best recommendations for your favourite genres. The platform goes beyond standard suggestions by offering unique insights, such as a "Trending Probability" that predicts the next viral hit and an "Internationality Index" that shows you how far a book is traveling around the globe. You can share your own voice by leaving one-to-one-hundred ratings and written reviews, and at the end of every year, you’ll receive a personalized "Yearly Wrapped" recap to celebrate your reading highlights, top authors, and most-read genres.
 
@@ -52,7 +52,7 @@ Admin
 4.	The System must allow an Admin to view any Registered User.
 5.	The System must enable an Admin to view any review.
 6.	The System must enable an Admin to delete any review.
-7.	The System must enable an Admin to ban any Registered User.
+7.	The System must enable an Admin to ban any Registered User[DP2.1].
 Non-Functional Requirements
 1.	The System must follow RESTful design principles
 2.	The System must avoid permanent data loss
@@ -589,7 +589,7 @@ Book	User	Review	Author
 Il link tra REVIEW e USER/BOOK non è usato in modo relazionale ma per poter accedere facilmente alle review di un libro/utente
 
 NEO4J
-  
+ 
 
 
 
@@ -635,6 +635,8 @@ API Endpoint Specification - BookSphere Platform
 Queries + CRUD operations + analytics
 Path variables: identifica una risorsa specifica (es. ricerche per ID)
 Query string: filtra, ordina, cerca e pagina risultati di una query, con parametri anche opzionali
+Le review sono accessibili sono tramite o profilo utente o libro, eccezion fatta per l’Admin che può cercarle.
+Si noti che nella ricerca di altri utenti lo username è path variable in quanto univoco
 
 Categoria Utente	Metodo	Endpoint	Input	Descrizione	Database Primario
 Generic (Unregistered)	POST	/api/v1/auth/register	Username, mail, hashed password	Creazione di un nuovo account	MongoDB
@@ -643,7 +645,7 @@ X	GET	/api/v1/books/{id}	pathVariable	Visualizza dettagli libro, snapshot recens
 X	GET	/api/v1/books?title = …	Query string	Ricerca il Libro dal titolo	MongoDB
 X	GET	/api/v1/authors/{id}	Author’s Id	Visualizza profilo autore, opere pubblicate e rating	MongoDB
 X	GET	/api/v1/authors?author_name = …	Query string	Ricerca Autore dal nome, opere pubblicate e rating	
-X	GET	/api/v1/users/{username}	Path Variable 	Visualizza profilo utente e attività (bookshelf e reviews dell’anno)	Mongo
+X	GET	/api/v1/users/{username[DP3.1]}	Path Variable 	Visualizza profilo utente e attività (bookshelf e reviews dell’anno)	Mongo
 X	GET	/api/v1/users/{id}	Path variable 	Ricerca utente per ID	
 X	GET	/api/v1/analytics/rankings/trendingbooks		Lista di Libri di tendenza	MongoDB
 X	GET	/api/v1/analytics/rankings/books?year = …	Query string 	Classifiche dei libri per un anno specifico o di sempre
@@ -658,15 +660,15 @@ Registered User
 X	POST	/api/v1/me/reviews	Auth + bookid + voto + commento (optional)	Scrittura di una recensione (voto + commento)	Mongo+Neo4j
 X	PATCH	/api/v1/me/reviews/{reviewID}	Auth + path variable + voto or commento (optional)	Modifica di una review postata precedentemente	Mongo+Neo4j
 X	DELETE	/api/v1/me/reviews/{reviewID}	Auth + path variable + reviewID	Eliminazione di una recensione 	Mongo+Neo4j
-X	POST	/api/v1/me/follow	Auth + username or other user’s id	Segui un altro utente	Neo4j
+X	POST	/api/v1/me/follow	Auth +  user’s id	Segui un altro utente	Neo4j
 X	DELETE	/api/v1/me/unfollow/{userId}	Auth + path variable + username or other user’s id	Unfollow user	Neo4j
 X	PATCH	/api/v1/me/username	Auth + new username	Cambia nome utente	MongoDB+Neo4j
 X	POST	/api/v1/me/bookshelf	Auth + book id + status	Aggiunge libro alla to-read list o cambia status	MongoDB
-X	PATCH	/api/v1/me/bookshelf/{bookID}	Auth + path variable + Status	Cambia stato di un libro	Mongo DB
+X	PATCH	/api/v1/me/bookshelf/{bookID}	Auth + path variable + Status	Cambia stato di un libro	Mongo DB[MI4.1]
 X	DELETE	/api/v1/me/bookshelf /{bookId}	Auth + path variable	Elimina libro dalla lista	MongoDB
-X	POST	/api/v1/me/like/book	Auth + book id	Metti "Like" a un libro	Neo4j
+X	POST	/api/v1/me/like/book	Auth + book id	Metti "Like" a un libro	Neo4j[MI5.1]
 X	DELETE	/api/v1/me/unlike/book/{bookID}	Auth + path variable	Togli like al libro	Neo4j
-X	POST	/api/v1/me/like/review	Auth + Review’s Id	Metti "Like" a una recensione	Neo4j+MongoDB
+X	POST	/api/v1/me/like/review	Auth + Review’s Id	Metti "Like" a una recensione	Neo4j+MongoDB[MI6.1]
 X	DELETE	/api/v1/me/unlikes/review/{reviewid}	Auth + path variable	Togli like a una review	Neo4j + MongoDB
 X	GET	/api/v1/me/recommendations	Auth	Suggerimenti basati su gusti e rete sociale	Neo4j
 X	GET	/api/v1/me/wrapped	Auth	Genera lo Yearly Personal Recap (Wrapped)	MongoDB
@@ -676,7 +678,7 @@ X	POST	/api/v1/me/likes/authors	Auth + Author’s Id		Neo4j
 X	DELETE	/api/v1/me/unlike/authors/{authorID}	Auth + path variable		Neo4j
 X	DELETE	/api/v1/me/account	Auth	Rimozione account	Mongo + Neo
 
-
+[MI7.1]
 Administrator	POST	/api/v1/admin/books	Auth + corpo Book	Aggiunta di un nuovo libro al catalogo	MongoDB + Neo4j
 X	PUT	/api/v1/admin/books/{id}	Auth + corpo book modificato + path variable	Aggiornamento informazioni libro	MongoDB + Neo4J
 X	DELETE	/api/v1/admin/books/{id}	Auth + path variable	Rimozione di un libro dal sistema	MongoDB + Neo4J
@@ -698,3 +700,47 @@ For each collection we have modelled in a single java class an entity.
 
 Neo4j
 For each node we have an entity, with their relation modelled inside each class representing the node.
+
+
+JWT
+Utils
+-	JWTUtils per validare ed estrarre claims JWT.
+-	UserPrincipal che rappresenta admin o user auntenticati.
+-	SecurityUtils ritorna l’utente corrente , UserPrincipal che rappresenta admin o user auntenticati.
+Config
+-	securityConfig: configurazione ruolo per ogni endpoint 
+-	jwtAuthFilter: filtro per la validazione dei token;
+-	jwtAuthEntryPoint: gestione errori di auth (401);
+DTO
+-	AuthResponseDTO oggetto traferito in fase di register o login;
+Application.properies
+-	Chiave jwt e relativa scadenza (24h) specificata
+Nel codice l’inserimento di uno user in neo4j è effettuato dentro una try ma per l’inserimento in mongo no.
+1. Ruolo dei Database nel Sistema
+•	MongoDB è il database primario per la persistenza degli utenti (profilo completo, password hashata, stato, ecc.). È essenziale per il funzionamento dell'autenticazione.
+•	Neo4j è il database secondario per le relazioni grafiche (nodi utente per connessioni future, come amicizie o raccomandazioni). Non è critico per l'autenticazione di base, ma serve per mantenere la consistenza tra i due sistemi.
+Se MongoDB fallisce, l'intera registrazione deve fallire (non ha senso creare un utente incompleto). Se Neo4j fallisce, possiamo "riparare" la situazione facendo rollback su MongoDB per evitare dati inconsistenti.
+2. Perché Non c'è try-catch per MongoDB?
+•	Propagazione dell'Eccezione: Se userRepository.save(user) fallisce (es. connessione persa, vincolo univoco violato, ecc.), l'eccezione viene lasciata propagare senza essere catturata. Questo è corretto perché:
+o	Il metodo è annotato con @Transactional, quindi il transaction manager di Spring (per MongoDB) gestisce automaticamente il rollback se un'eccezione non catturata viene lanciata.
+o	Non c'è bisogno di un try-catch manuale: l'eccezione interrompe il flusso e viene gestita a livello superiore (es. dal GlobalExceptionHandler nel controller, che restituisce un errore HTTP 500 o personalizzato).
+•	Semplicità e Chiarezza: Aggiungere un try-catch attorno a MongoDB renderebbe il codice più verboso senza benefici reali. Se fallisce MongoDB, non possiamo procedere comunque, quindi è meglio lasciare che l'eccezione salga.
+3. Perché c'è try-catch per Neo4j?
+•	Gestione della Consistenza: Neo4j è opzionale ma critico per la coerenza. Se il salvataggio su Neo4j fallisce, il codice cattura l'eccezione e fa un rollback manuale cancellando l'utente appena creato in MongoDB (userRepository.delete(savedUser)). Questo garantisce che non rimangano "utenti fantasma" in MongoDB senza corrispondente in Neo4j.
+•	Transazioni Separate: MongoDB e Neo4j usano transaction manager diversi (Spring Data MongoDB vs. Spring Data Neo4j). Il @Transactional copre solo MongoDB; per Neo4j, il controllo manuale è necessario per il rollback cross-database.
+•	Logging e Recupero: Il catch permette di loggare l'errore specifico e rilanciare un'eccezione più chiara (RuntimeException), facilitando il debugging.
+
+AUTHENTICATION: REGISTER e LOGIN
+Nella Register l’operazione su mongodb non è in un try-catch mentre quella per neo4j sì perché
+MAPPER
+Implementato via map struct.
+Spring Retry
+Abilitato in tutta l’applicazione, metodo dichiarato che ritenta più volte l’esecuzione di certe operazioni sul db  in caso di fallimento.
+
+📋 ARCHITETTURA MANCANTE
+Pattern Architetturali:
+1.	Outbox Pattern - gestione eventual consistency
+2.	Worker Pattern - task schedulati
+3.	Processor Pattern - elaborazione asincrona
+4.	Notification System - sistema di notifiche
+
