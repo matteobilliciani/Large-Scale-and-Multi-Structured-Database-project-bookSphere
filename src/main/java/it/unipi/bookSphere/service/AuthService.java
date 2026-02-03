@@ -10,6 +10,8 @@ import it.unipi.bookSphere.repository.neo4j.UserNodeRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,6 +41,11 @@ public class AuthService {
      * @throws UserAlreadyExistsException if username or email already exists
      */
     @Transactional
+    @Retryable(
+        retryFor = {RuntimeException.class},
+        maxAttempts = 3,
+        backoff = @Backoff(delay = 1000, multiplier = 2)
+    )
     public UserDTO register(RegisterDTO registerDTO) {
         logger.info("Attempting to register user: {}", registerDTO.getUsername());
         
