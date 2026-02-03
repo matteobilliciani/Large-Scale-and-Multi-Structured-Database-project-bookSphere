@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import it.unipi.bookSphere.utils.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -28,6 +29,8 @@ public class ProfileController {
             @RequestBody String newUsername
     ) {
         // TODO: Implement service call
+        // Get current user ID from JWT token
+        // String currentUserId = SecurityUtils.getCurrentUserId();
         // profileService.updateUsername(currentUserId, newUsername);
         // return ResponseEntity.ok(Map.of("message", "Username updated successfully", "newUsername", newUsername));
         throw new UnsupportedOperationException("Not yet implemented");
@@ -40,6 +43,8 @@ public class ProfileController {
     @DeleteMapping("/account")
     public ResponseEntity<?> deleteAccount() {
         // TODO: Implement service call
+        // Get current user ID from JWT token
+        // String currentUserId = SecurityUtils.getCurrentUserId();
         // profileService.deleteAccount(currentUserId);
         // return ResponseEntity.noContent().build();
         throw new UnsupportedOperationException("Not yet implemented");
