@@ -1,0 +1,34 @@
+package it.unipi.bookSphere.model.neo4j;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.springframework.data.neo4j.core.schema.Id;
+import org.springframework.data.neo4j.core.schema.Node;
+import org.springframework.data.neo4j.core.schema.Property;
+import org.springframework.data.neo4j.core.schema.Relationship;
+
+import java.util.HashSet;
+import java.util.Set;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Node("Author")
+public class AuthorNode {
+    
+    @Id
+    @Property("mongoId")
+    private String mongoId;
+
+    @Property("name")
+    private String name;
+
+    // Relationships
+
+    @Relationship(type = "WROTE", direction = Relationship.Direction.OUTGOING)
+    private Set<BookNode> books = new HashSet<>();
+
+    @Relationship(type = "LIKES", direction = Relationship.Direction.INCOMING)
+    private Set<UserNode> likedByUsers = new HashSet<>();
+}
