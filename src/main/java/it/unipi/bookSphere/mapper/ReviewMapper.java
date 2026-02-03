@@ -2,75 +2,51 @@ package it.unipi.bookSphere.mapper;
 
 import it.unipi.bookSphere.dto.ReviewDTO;
 import it.unipi.bookSphere.model.mongodb.Review;
-import org.springframework.stereotype.Component;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.Named;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 
-@Component
-public class ReviewMapper {
+/**
+ * MapStruct mapper for Review <-> ReviewDTO conversion
+ */
+@Mapper(componentModel = "spring")
+public interface ReviewMapper {
 
     /**
      * Convert Review to ReviewDTO
      */
-    public ReviewDTO toDTO(Review document) {
-        if (document == null) {
-            return null;
-        }
-
-        ReviewDTO dto = new ReviewDTO();
-        dto.setId(document.getId());
-        dto.setRating(document.getRating());
-        dto.setText(document.getText());
-        dto.setSummary(document.getSummary());
-        dto.setLikesCount(document.getLikesCount());
-        dto.setSource(document.getSource());
-        dto.setIsBanned(document.getIsBanned());
-
-        // Convert Instant to LocalDateTime
-        if (document.getCreatedAt() != null) {
-            dto.setCreatedAt(LocalDateTime.ofInstant(document.getCreatedAt(), ZoneId.systemDefault()));
-        }
-
-        // Map book snapshot
-        if (document.getBookSnapshot() != null) {
-            dto.setBookId(document.getBookSnapshot().getBookId());
-            dto.setBookTitle(document.getBookSnapshot().getTitle());
-        }
-
-        return dto;
-    }
+    @Mapping(target = "createdAt", source = "createdAt", qualifiedByName = "instantToLocalDateTime")
+    @Mapping(target = "bookId", source = "bookSnapshot.bookId")
+    @Mapping(target = "bookTitle", source = "bookSnapshot.title")
+    @Mapping(target = "authorName", ignore = true)
+    ReviewDTO toDTO(Review document);
 
     /**
      * Convert ReviewDTO to Review (for create/update operations)
      */
-    public Review toDocument(ReviewDTO dto) {
-        if (dto == null) {
-            return null;
-        }
+    @Mapping(target = "createdAt", source = "createdAt", qualifiedByName = "localDateTimeToInstant")
+    @Mapping(target = "bookSnapshot.bookId", source = "bookId")
+    @Mapping(target = "bookSnapshot.title", source = "bookTitle")
+    @Mapping(target = "userId", ignore = true)
+    Review toDocument(ReviewDTO dto);
 
-        Review document = new Review();
-        document.setId(dto.getId());
-        document.setRating(dto.getRating());
-        document.setText(dto.getText());
-        document.setSummary(dto.getSummary());
-        document.setLikesCount(dto.getLikesCount());
-        document.setSource(dto.getSource());
-        document.setIsBanned(dto.getIsBanned());
+    /**
+     * Convert Instant to LocalDateTime
+     */
+    @Named("instantToLocalDateTime")
+    default LocalDateTime instantToLocalDateTime(Instant instant) {
+        return instant != null ? LocalDateTime.ofInstant(instant, ZoneId.systemDefault()) : null;
+    }
 
-        // Convert LocalDateTime to Instant
-        if (dto.getCreatedAt() != null) {
-            document.setCreatedAt(dto.getCreatedAt().atZone(ZoneId.systemDefault()).toInstant());
-        }
-
-        // Map book snapshot
-        if (dto.getBookId() != null && dto.getBookTitle() != null) {
-            Review.BookSnapshot bookSnapshot = new Review.BookSnapshot();
-            bookSnapshot.setBookId(dto.getBookId());
-            bookSnapshot.setTitle(dto.getBookTitle());
-            document.setBookSnapshot(bookSnapshot);
-        }
-
-        return document;
+    /**
+     * Convert LocalDateTime to Instant
+     */
+    @Named("localDateTimeToInstant")
+    default Instant localDateTimeToInstant(LocalDateTime localDateTime) {
+        return localDateTime != null ? localDateTime.atZone(ZoneId.systemDefault()).toInstant() : null;
     }
 }
