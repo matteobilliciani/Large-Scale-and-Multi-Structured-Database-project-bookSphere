@@ -1,10 +1,10 @@
 """
-SCRIPT 1: MongoDB Data Generation - FINAL V11-MOD (NO FAV GENRES)
-- Schema Review:
-    - book_snapshot: { book_id, title, genres }  <-- GENRES INSIDE
-    - author_snapshot: { id, name }              <-- AUTHOR OUTSIDE
-- User Schema: Removed 'favorite_genres'.
-- Optimization: Bookshelf fully embedded (Title, Author, Genres).
+SCRIPT 1: MongoDB Data Generation - FINAL V12 (CORRECTED STRUCTURES)
+- Features:
+    - Review: Includes 'username' (denormalized).
+    - Book: Includes 'review_ids' (linked list) + Snapshots with 'user_id'.
+    - User: Includes 'review_ids' (linked list).
+    - Bookshelf: Fully embedded.
 """
 
 import pandas as pd
@@ -13,12 +13,11 @@ import random
 import re
 import pickle
 import sys
+import hashlib
 from datetime import datetime, timedelta
 from pathlib import Path
-from bson import ObjectId
 from collections import Counter
-import hashlib
-import os
+from bson import ObjectId
 
 # --- CONFIGURAZIONE ---
 random.seed(42)
@@ -122,7 +121,7 @@ def load_checkpoint(step):
     return None
 
 # --- MAIN ETL ---
-print("="*60 + "\nMONGO GENERATOR V11 (FINAL CUSTOM SCHEMA - NO FAV GENRES)\n" + "="*60)
+print("="*60 + "\nMONGO GENERATOR V12 (CORRECTED STRUCTURES)\n" + "="*60)
 
 # STEP 1: RANKING & BOOKS
 step = 1
@@ -199,7 +198,13 @@ else:
             "author": {"id": to_mongo_oid(auth_id), "name": display_name}, 
             "genres": genres,
             "external_ids": {"isbns": []}, 
-            "recent_reviews_snapshot": [], "popular_reviews_snapshot": [], "stats_per_year": [],
+            
+            # --- UPDATED STRUCTURES ---
+            "recent_reviews_snapshot": [], 
+            "popular_reviews_snapshot": [], 
+            "stats_per_year": [],
+            "review_ids": [], # LINKED ID: Added
+            
             "trend_score": {"rating": 0, "updated_at": to_mongo_date(datetime.now())},
             "source": "amazon_master",
         }
@@ -272,8 +277,11 @@ else:
             "password_hashed": hashlib.sha256(f"password_{uid}".encode()).hexdigest(),
             "email": f"user_{uid}@bx.com", "country": random_country(),
             "joined_at": to_mongo_date(random_date(2023, 2024)), "status": "active",
-            # REMOVED: "favorite_genres"
-            "bookshelf": [], "reviews_year": []
+            
+            # --- UPDATED STRUCTURES ---
+            "bookshelf": [], 
+            "reviews_year": [],
+            "review_ids": [] # LINKED ID: Added
         }
         user_activity[uid] = {'mongo_id': mid, 'read_books': set(), 'review_ids': [], 'genres': Counter()}
         
@@ -288,6 +296,11 @@ reviews_map = {}
 book_reviews = {} 
 
 bid_to_book_obj = {b['_id']['$oid']: b for b in books_data}
+
+# Helper to get username safely
+def get_username(uid):
+    if uid in users_data: return users_data[uid]['username']
+    return "Unknown User"
 
 # 1. BOOKCROSSING
 bc_df = pd.read_csv(BOOKCROSSING_RATINGS, sep=';', encoding='latin-1', dtype=str, on_bad_lines='skip')
@@ -313,26 +326,30 @@ for _, row in bc_valid.iterrows():
     # --- FETCH DETAILS ---
     target_book = bid_to_book_obj.get(mongo_bid)
     book_title = target_book['title'] if target_book else "Unknown Title"
-    book_author = target_book['author'] if target_book else {"id": "", "name": "Unknown"}
+    raw_author = target_book['author'] if target_book else {"id": "", "name": "Unknown"}
+    book_author_snap = {"id": raw_author.get("id"), "name": raw_author.get("name")}
     book_genres = target_book['genres'] if target_book else []
     # ---------------------
 
     rev = {
         "_id": to_mongo_oid(rid), 
         "user_id": to_mongo_oid(mongo_uid),
+        
+        # --- DENORMALIZATION: USERNAME ADDED ---
+        "username": get_username(row['user_id']),
+        
         "rating": rating, 
         "source": "bookcrossing", 
         "text": "",
         "summary": "",
         "created_at": to_mongo_date(rdate), 
         "likes_count": 0, "is_banned": False,
-        # --- CUSTOM SCHEMA ---
         "book_snapshot": {
             "title": book_title, 
             "book_id": to_mongo_oid(mongo_bid),
             "genres": book_genres 
         },
-        "author_snapshot": book_author 
+        "author_snapshot": book_author_snap
     }
     reviews_data.append(rev); reviews_map[rid] = rev
     book_reviews.setdefault(mongo_bid, []).append(rid)
@@ -372,13 +389,18 @@ for _, row in amz_valid.iterrows():
     # --- FETCH DETAILS ---
     target_book = bid_to_book_obj.get(mongo_bid)
     book_title = target_book['title'] if target_book else "Unknown Title"
-    book_author = target_book['author'] if target_book else {"id": "", "name": "Unknown"}
+    raw_author = target_book['author'] if target_book else {"id": "", "name": "Unknown"}
+    book_author_snap = {"id": raw_author.get("id"), "name": raw_author.get("name")}
     book_genres = target_book['genres'] if target_book else []
     # ---------------------
     
     rev = {
         "_id": to_mongo_oid(rid), 
         "user_id": to_mongo_oid(mongo_uid),
+        
+        # --- DENORMALIZATION: USERNAME ADDED ---
+        "username": get_username(row['User_id']),
+        
         "rating": rating, 
         "source": "amazon", 
         "text": str(row.get('review/text', ''))[:500],
@@ -386,13 +408,12 @@ for _, row in amz_valid.iterrows():
         "created_at": to_mongo_date(rdate), 
         "likes_count": int(random.expovariate(0.2)), 
         "is_banned": False,
-        # --- CUSTOM SCHEMA ---
         "book_snapshot": {
             "title": book_title, 
             "book_id": to_mongo_oid(mongo_bid),
             "genres": book_genres 
         },
-        "author_snapshot": book_author 
+        "author_snapshot": book_author_snap 
     }
     reviews_data.append(rev); reviews_map[rid] = rev
     book_reviews.setdefault(mongo_bid, []).append(rid)
@@ -416,23 +437,26 @@ for isbn, bid in isbn_to_book_id.items():
             count_isbns += 1
 print(f"    Mapped {count_isbns} ISBNs into book documents.")
 
-# 1. USERS ENRICHMENT (SMART GENRES & EMBEDDED BOOKSHELF)
+# 1. USERS ENRICHMENT
 for uid, act in user_activity.items():
     u = users_data[uid]
     
-    # --- CALCOLO GENERE SOLO INTERNO (NON SALVATO SU JSON) ---
+    # --- POPULATE REVIEW_IDS (User side) ---
+    u["review_ids"] = [to_mongo_oid(rid) for rid in act['review_ids']]
+    
+    # ... (Bookshelf logic similar to before) ...
+    
+    # --- CALCOLO GENERE SOLO INTERNO ---
     user_genres_counter = Counter()
     for bid in act['read_books']:
         g_list = book_id_to_genres.get(bid, [])
         user_genres_counter.update(g_list)
     
-    # Variabile temporanea per logica bookshelf
     temp_fav_genres = []
     if user_genres_counter:
         temp_fav_genres = [g for g, _ in user_genres_counter.most_common(3)]
     else:
         temp_fav_genres = random.sample(list(genres_set), random.randint(1, 3))
-    # ---------------------------------------------------------
 
     # --- BOOKSHELF (READ) ---
     u["bookshelf"] = []
@@ -444,11 +468,11 @@ for uid, act in user_activity.items():
                 "title": tb['title'],
                 "status": "read",
                 "added_at": to_mongo_date(random_date(2023, 2025)),
-                "author": tb['author'], 
-                "genres": tb['genres'] 
+                "author": tb['author'],
+                "genres": tb['genres']
             })
 
-    # --- BOOKSHELF (WANT TO READ) - Use temp_fav_genres ---
+    # --- BOOKSHELF (WANT TO READ) ---
     candidates = set()
     for g in temp_fav_genres:
         if g in genre_to_books_map:
@@ -459,7 +483,6 @@ for uid, act in user_activity.items():
     if valid_candidates and random.random() < 0.2:
         num_to_pick = min(2, len(valid_candidates))
         picked_books = random.sample(valid_candidates, num_to_pick)
-        
         for bid_str in picked_books:
             tb = bid_to_book_obj.get(bid_str)
             if tb:
@@ -483,12 +506,18 @@ for uid, act in user_activity.items():
                 })
     u["reviews_year"] = u["reviews_year"][:20] 
 
-# 2. BOOKS STATS
+# 2. BOOKS STATS & LINKING
 for b in books_data:
     bid = b['_id']['$oid']
+    
+    # --- POPULATE REVIEW_IDS (Book side) ---
     if bid in book_reviews:
+        # Convert all string RIDs to Mongo OIDs
+        b["review_ids"] = [to_mongo_oid(rid) for rid in book_reviews[bid]]
+        
         revs = [reviews_map[rid] for rid in book_reviews[bid]]
         
+        # Stats Logic ...
         ratings = [x['rating'] for x in revs]
         avg = sum(ratings)/len(ratings) if ratings else 0
         b['trend_score']['rating'] = round(avg, 2)
@@ -510,11 +539,14 @@ for b in books_data:
             })
         b['stats_per_year'].sort(key=lambda k: k['year'])
 
+        # --- SNAPSHOTS (With UserID & Username) ---
         top_likes = sorted(revs, key=lambda x: x.get('likes_count', 0), reverse=True)[:3]
         for tr in top_likes:
-            real_username = user_oid_to_name.get(tr['user_id']['$oid'], "Unknown User")
+            # Note: reviews_map already has username denormalized, but let's be safe
+            real_username = tr.get("username", "Unknown")
             b['popular_reviews_snapshot'].append({
                 '_id': tr['_id'],
+                'user_id': tr['user_id'], # ADDED: User ID in snapshot
                 'username': real_username, 
                 'rating': tr['rating'], 'num_of_like': tr.get('likes_count', 0),
                 'snippet': tr['text'][:50], 'date': tr['created_at']
@@ -522,9 +554,10 @@ for b in books_data:
             
         recents = sorted(revs, key=lambda x: x['created_at']['$date'], reverse=True)[:3]
         for tr in recents:
-             real_username = user_oid_to_name.get(tr['user_id']['$oid'], "Unknown User")
+             real_username = tr.get("username", "Unknown")
              b['recent_reviews_snapshot'].append({ 
                 '_id': tr['_id'],
+                'user_id': tr['user_id'], # ADDED: User ID in snapshot
                 'username': real_username, 
                 'rating': tr['rating'], 'snippet': tr['text'][:50], 'date': tr['created_at']
             })
