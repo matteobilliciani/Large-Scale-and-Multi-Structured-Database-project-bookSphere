@@ -47,4 +47,16 @@ public class FollowController {
         // return ResponseEntity.ok(Map.of("message", "Successfully unfollowed user"));
         throw new UnsupportedOperationException("Not yet implemented");
     }
+
+    @Operation(
+            summary = "Get followed users",
+            description = "Retrieve all users followed by the current user (friends). Queries Neo4j for FOLLOWS relationships."
+    )
+    @GetMapping("/friends")
+    public ResponseEntity<?> getFollowedUsers() {
+        // TODO: Implement service call
+        // List<UserDTO> followedUsers = followService.getFollowedUsers(currentUserId);
+        // return ResponseEntity.ok(followedUsers);
+        throw new UnsupportedOperationException("Not yet implemented");
+    }
 }

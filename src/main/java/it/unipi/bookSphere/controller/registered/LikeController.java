@@ -145,4 +145,54 @@ public class LikeController {
         // return ResponseEntity.ok(Map.of("message", "Author unliked successfully"));
         throw new UnsupportedOperationException("Not yet implemented");
     }
+
+    // ========== GET LIKED ITEMS ==========
+    
+    @Operation(
+            summary = "Get liked books",
+            description = "Retrieve all books liked by the current user. Queries Neo4j for LIKES relationships."
+    )
+    @GetMapping("/liked/book")
+    public ResponseEntity<?> getLikedBooks() {
+        // TODO: Implement service call
+        // List<BookDTO> likedBooks = likeService.getLikedBooks(currentUserId);
+        // return ResponseEntity.ok(likedBooks);
+        throw new UnsupportedOperationException("Not yet implemented");
+    }
+
+    @Operation(
+            summary = "Get liked authors",
+            description = "Retrieve all authors liked by the current user. Queries Neo4j for LIKES relationships."
+    )
+    @GetMapping("/liked/author")
+    public ResponseEntity<?> getLikedAuthors() {
+        // TODO: Implement service call
+        // List<AuthorDTO> likedAuthors = likeService.getLikedAuthors(currentUserId);
+        // return ResponseEntity.ok(likedAuthors);
+        throw new UnsupportedOperationException("Not yet implemented");
+    }
+
+    @Operation(
+            summary = "Get liked reviews",
+            description = "Retrieve all reviews liked by the current user. Queries Neo4j for LIKES relationships."
+    )
+    @GetMapping("/liked/review")
+    public ResponseEntity<?> getLikedReviews() {
+        // TODO: Implement service call
+        // List<ReviewDTO> likedReviews = likeService.getLikedReviews(currentUserId);
+        // return ResponseEntity.ok(likedReviews);
+        throw new UnsupportedOperationException("Not yet implemented");
+    }
+
+    @Operation(
+            summary = "Get liked genres",
+            description = "Retrieve all genres liked by the current user. Queries Neo4j for LIKES relationships."
+    )
+    @GetMapping("/liked/genre")
+    public ResponseEntity<?> getLikedGenres() {
+        // TODO: Implement service call
+        // List<GenreDTO> likedGenres = likeService.getLikedGenres(currentUserId);
+        // return ResponseEntity.ok(likedGenres);
+        throw new UnsupportedOperationException("Not yet implemented");
+    }
 }
