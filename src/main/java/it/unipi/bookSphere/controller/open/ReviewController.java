@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import it.unipi.bookSphere.dto.ReviewDTO;
+import it.unipi.bookSphere.service.ReviewService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,8 +17,7 @@ import java.util.List;
 @Tag(name = "Reviews (Open)", description = "Public review endpoints accessible to all users")
 public class ReviewController {
 
-    // TODO: Inject ReviewService when implemented
-    // private final ReviewService reviewService;
+    private final ReviewService reviewService;
 
     @Operation(
             summary = "Get reviews by IDs",
@@ -28,9 +28,7 @@ public class ReviewController {
             @Parameter(description = "List of review IDs", example = "review=99a1...&review=99a2...&review=99a3...")
             @RequestParam(name = "review", required = true) List<String> reviewIds
     ) {
-        // TODO: Implement service call
-        // List<ReviewDTO> reviews = reviewService.getReviewsByIds(reviewIds);
-        // return ResponseEntity.ok(reviews);
-        throw new UnsupportedOperationException("Not yet implemented");
+        List<ReviewDTO> reviews = reviewService.getReviewsByIds(reviewIds);
+        return ResponseEntity.ok(reviews);
     }
 }

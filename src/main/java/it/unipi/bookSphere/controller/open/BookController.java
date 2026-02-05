@@ -4,9 +4,12 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import it.unipi.bookSphere.dto.BookDTO;
+import it.unipi.bookSphere.service.BookService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/books")
@@ -14,8 +17,7 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Books (Open)", description = "Public book endpoints accessible to all users")
 public class BookController {
 
-    // TODO: Inject BookService when implemented
-    // private final BookService bookService;
+    private final BookService bookService;
 
     @Operation(
             summary = "Get book by ID",
@@ -26,10 +28,8 @@ public class BookController {
             @Parameter(description = "MongoDB ObjectId of the book", example = "65b3f...")
             @PathVariable String id
     ) {
-        // TODO: Implement service call
-        // BookDTO book = bookService.findById(id);
-        // return ResponseEntity.ok(book);
-        throw new UnsupportedOperationException("Not yet implemented");
+        BookDTO book = bookService.findById(id);
+        return ResponseEntity.ok(book);
     }
 
     @Operation(
@@ -37,13 +37,11 @@ public class BookController {
             description = "Search for books by title (supports partial matching)"
     )
     @GetMapping
-    public ResponseEntity<?> searchBookByTitle(
+    public ResponseEntity<List<BookDTO>> searchBookByTitle(
             @Parameter(description = "Book title to search", example = "The Fellowship")
             @RequestParam(name = "title", required = false) String title
     ) {
-        // TODO: Implement service call
-        // List<BookDTO> books = bookService.searchByTitle(title);
-        // return ResponseEntity.ok(books);
-        throw new UnsupportedOperationException("Not yet implemented");
+        List<BookDTO> books = bookService.searchByTitle(title);
+        return ResponseEntity.ok(books);
     }
 }

@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import it.unipi.bookSphere.dto.UserDTO;
+import it.unipi.bookSphere.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,36 +15,31 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Users (Open)", description = "Public user profile endpoints")
 public class UserController {
 
-    // TODO: Inject UserService when implemented
-    // private final UserService userService;
+    private final UserService userService;
 
     @Operation(
             summary = "Get user by username",
             description = "View public user profile and activity by username"
     )
-    @GetMapping("/{username}")
+    @GetMapping("/username/{username}")
     public ResponseEntity<UserDTO> getUserByUsername(
             @Parameter(description = "Username", example = "User_12345")
             @PathVariable String username
     ) {
-        // TODO: Implement service call
-        // UserDTO user = userService.findByUsername(username);
-        // return ResponseEntity.ok(user);
-        throw new UnsupportedOperationException("Not yet implemented");
+        UserDTO user = userService.findByUsername(username);
+        return ResponseEntity.ok(user);
     }
 
     @Operation(
             summary = "Get user by ID",
-            description = "View public user profile and activity by ID"
+            description = "View public user profile and activity by MongoDB ObjectId"
     )
-    @GetMapping("/{id}")
+    @GetMapping("/id/{id}")
     public ResponseEntity<UserDTO> getUserById(
             @Parameter(description = "MongoDB ObjectId of the user", example = "65d1...")
             @PathVariable String id
     ) {
-        // TODO: Implement service call
-        // UserDTO user = userService.findById(id);
-        // return ResponseEntity.ok(user);
-        throw new UnsupportedOperationException("Not yet implemented");
+        UserDTO user = userService.findById(id);
+        return ResponseEntity.ok(user);
     }
 }

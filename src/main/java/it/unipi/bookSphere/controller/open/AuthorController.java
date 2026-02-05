@@ -4,9 +4,12 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import it.unipi.bookSphere.dto.AuthorDTO;
+import it.unipi.bookSphere.service.AuthorService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/authors")
@@ -14,8 +17,7 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Authors (Open)", description = "Public author endpoints accessible to all users")
 public class AuthorController {
 
-    // TODO: Inject AuthorService when implemented
-    // private final AuthorService authorService;
+    private final AuthorService authorService;
 
     @Operation(
             summary = "Get author by ID",
@@ -26,10 +28,8 @@ public class AuthorController {
             @Parameter(description = "MongoDB ObjectId of the author", example = "65b3a...")
             @PathVariable String id
     ) {
-        // TODO: Implement service call
-        // AuthorDTO author = authorService.findById(id);
-        // return ResponseEntity.ok(author);
-        throw new UnsupportedOperationException("Not yet implemented");
+        AuthorDTO author = authorService.findById(id);
+        return ResponseEntity.ok(author);
     }
 
     @Operation(
@@ -37,13 +37,11 @@ public class AuthorController {
             description = "Search for authors by name (supports partial matching)"
     )
     @GetMapping
-    public ResponseEntity<?> searchAuthorByName(
+    public ResponseEntity<List<AuthorDTO>> searchAuthorByName(
             @Parameter(description = "Author name to search", example = "Tolkien")
             @RequestParam(name = "author_name", required = false) String authorName
     ) {
-        // TODO: Implement service call
-        // List<AuthorDTO> authors = authorService.searchByName(authorName);
-        // return ResponseEntity.ok(authors);
-        throw new UnsupportedOperationException("Not yet implemented");
+        List<AuthorDTO> authors = authorService.searchByName(authorName);
+        return ResponseEntity.ok(authors);
     }
 }

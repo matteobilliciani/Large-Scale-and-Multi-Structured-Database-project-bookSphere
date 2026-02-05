@@ -690,7 +690,7 @@ X	GET	/api/v1/books/{id}	pathVariable	Visualizza dettagli libro, snapshot recens
 X	GET	/api/v1/books?title = …	Query string	Ricerca il Libro dal titolo	MongoDB
 X	GET	/api/v1/authors/{id}	Author’s Id	Visualizza profilo autore, opere pubblicate e rating	MongoDB
 X	GET	/api/v1/authors?author_name = …	Query string	Ricerca Autore dal nome, opere pubblicate e rating	
-X	GET	/api/v1/users/{username}	Path Variable 	Visualizza profilo utente e attività (bookshelf e reviews dell’anno e lista delle reviewID)	Mongo
+X	GET	/api/v1/users/username/{username}	Path Variable 	Visualizza profilo utente e attività (bookshelf e reviews dell’anno e lista delle reviewID)	Mongo
 X	GET	/api/v1/users/{id}	Path variable 	Ricerca utente per ID	
 X	GET	/api/v1/analytics/rankings/trendingbooks		Lista di Libri di tendenza	MongoDB
 X	GET	/api/v1/analytics/rankings/books?year = …	Query string 	Classifiche dei libri per un anno specifico o di sempre
@@ -720,7 +720,8 @@ X	DELETE	/api/v1/me/unlikes/review/{reviewid}	Auth + path variable	Togli like a 
 	GET
 	/api/v1/me/liked/review	Auth	Vedi le revies piaciute
 	Neo4j
-	GET	/api/v1/me/friends	Auth	Vedi utenti seguiti	
+	GET	/api/v1/me/liked/genres	Auth	Vedi I generi piaciuti	Neo
+	GET	/api/v1/me/friends	Auth	Vedi utenti seguiti	Neo
 X	GET	/api/v1/me/recommendations	Auth	Suggerimenti basati su gusti e rete sociale	Neo4j
 X	GET	/api/v1/me/wrapped	Auth	Genera lo Yearly Personal Recap (Wrapped)	MongoDB
 X	POST	/api/v1/me/likes/genres	Auth + genre’s name	Metti like a un genere	Neo4j
