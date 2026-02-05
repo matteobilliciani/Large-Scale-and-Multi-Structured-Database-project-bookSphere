@@ -4,9 +4,14 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import it.unipi.bookSphere.dto.*;
+import it.unipi.bookSphere.service.LikeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/me")
@@ -15,8 +20,7 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Likes (Registered)", description = "Like/unlike endpoints for books, reviews, authors, and genres")
 public class LikeController {
 
-    // TODO: Inject LikeService when implemented
-    // private final LikeService likeService;
+    private final LikeService likeService;
 
     // ========== BOOK LIKES ==========
     
@@ -25,14 +29,13 @@ public class LikeController {
             description = "Add a like to a book. Creates LIKES relationship in Neo4j."
     )
     @PostMapping("/like/book")
-    public ResponseEntity<?> likeBook(
+    public ResponseEntity<Map<String, String>> likeBook(
             @Parameter(description = "Book ID in request body")
-            @RequestBody String bookId
+            @RequestBody Map<String, String> requestBody
     ) {
-        // TODO: Implement service call
-        // likeService.likeBook(currentUserId, bookId);
-        // return ResponseEntity.ok(Map.of("message", "Book liked successfully"));
-        throw new UnsupportedOperationException("Not yet implemented");
+        String bookId = requestBody.get("bookId");
+        likeService.likeBook(bookId);
+        return ResponseEntity.ok(Map.of("message", "Book liked successfully"));
     }
 
     @Operation(
@@ -40,14 +43,12 @@ public class LikeController {
             description = "Remove a like from a book. Removes LIKES relationship in Neo4j."
     )
     @DeleteMapping("/unlike/book/{bookID}")
-    public ResponseEntity<?> unlikeBook(
+    public ResponseEntity<Map<String, String>> unlikeBook(
             @Parameter(description = "MongoDB ObjectId of the book", example = "65b3f...")
             @PathVariable String bookID
     ) {
-        // TODO: Implement service call
-        // likeService.unlikeBook(currentUserId, bookID);
-        // return ResponseEntity.ok(Map.of("message", "Book unliked successfully"));
-        throw new UnsupportedOperationException("Not yet implemented");
+        likeService.unlikeBook(bookID);
+        return ResponseEntity.ok(Map.of("message", "Book unliked successfully"));
     }
 
     // ========== REVIEW LIKES ==========
@@ -57,14 +58,13 @@ public class LikeController {
             description = "Add a like to a review. Creates LIKES relationship in Neo4j and updates likes_count in MongoDB."
     )
     @PostMapping("/like/review")
-    public ResponseEntity<?> likeReview(
+    public ResponseEntity<Map<String, String>> likeReview(
             @Parameter(description = "Review ID in request body")
-            @RequestBody String reviewId
+            @RequestBody Map<String, String> requestBody
     ) {
-        // TODO: Implement service call
-        // likeService.likeReview(currentUserId, reviewId);
-        // return ResponseEntity.ok(Map.of("message", "Review liked successfully"));
-        throw new UnsupportedOperationException("Not yet implemented");
+        String reviewId = requestBody.get("reviewId");
+        likeService.likeReview(reviewId);
+        return ResponseEntity.ok(Map.of("message", "Review liked successfully"));
     }
 
     @Operation(
@@ -72,46 +72,41 @@ public class LikeController {
             description = "Remove a like from a review. Removes LIKES relationship in Neo4j and updates likes_count in MongoDB."
     )
     @DeleteMapping("/unlikes/review/{reviewid}")
-    public ResponseEntity<?> unlikeReview(
+    public ResponseEntity<Map<String, String>> unlikeReview(
             @Parameter(description = "MongoDB ObjectId of the review", example = "99a1...")
             @PathVariable String reviewid
     ) {
-        // TODO: Implement service call
-        // likeService.unlikeReview(currentUserId, reviewid);
-        // return ResponseEntity.ok(Map.of("message", "Review unliked successfully"));
-        throw new UnsupportedOperationException("Not yet implemented");
+        likeService.unlikeReview(reviewid);
+        return ResponseEntity.ok(Map.of("message", "Review unliked successfully"));
     }
 
     // ========== GENRE LIKES ==========
     
     @Operation(
             summary = "Like a genre",
-            description = "Add a like to a genre. Creates LIKES relationship in Neo4j and updates MongoDB."
+            description = "Add a like to a genre. Creates LIKES relationship in Neo4j."
     )
     @PostMapping("/likes/genres")
-    public ResponseEntity<?> likeGenre(
+    public ResponseEntity<Map<String, String>> likeGenre(
             @Parameter(description = "Genre name in request body")
-            @RequestBody String genreName
+            @RequestBody Map<String, String> requestBody
     ) {
-        // TODO: Implement service call
-        // likeService.likeGenre(currentUserId, genreName);
-        // return ResponseEntity.ok(Map.of("message", "Genre liked successfully"));
-        throw new UnsupportedOperationException("Not yet implemented");
+        String genreName = requestBody.get("genreName");
+        likeService.likeGenre(genreName);
+        return ResponseEntity.ok(Map.of("message", "Genre liked successfully"));
     }
 
     @Operation(
             summary = "Unlike a genre",
-            description = "Remove a like from a genre. Removes LIKES relationship in Neo4j and updates MongoDB."
+            description = "Remove a like from a genre. Removes LIKES relationship in Neo4j."
     )
     @DeleteMapping("/unlike/genres/{name}")
-    public ResponseEntity<?> unlikeGenre(
+    public ResponseEntity<Map<String, String>> unlikeGenre(
             @Parameter(description = "Genre name", example = "Fantasy")
             @PathVariable String name
     ) {
-        // TODO: Implement service call
-        // likeService.unlikeGenre(currentUserId, name);
-        // return ResponseEntity.ok(Map.of("message", "Genre unliked successfully"));
-        throw new UnsupportedOperationException("Not yet implemented");
+        likeService.unlikeGenre(name);
+        return ResponseEntity.ok(Map.of("message", "Genre unliked successfully"));
     }
 
     // ========== AUTHOR LIKES ==========
@@ -121,14 +116,13 @@ public class LikeController {
             description = "Add a like to an author. Creates LIKES relationship in Neo4j."
     )
     @PostMapping("/likes/authors")
-    public ResponseEntity<?> likeAuthor(
+    public ResponseEntity<Map<String, String>> likeAuthor(
             @Parameter(description = "Author ID in request body")
-            @RequestBody String authorId
+            @RequestBody Map<String, String> requestBody
     ) {
-        // TODO: Implement service call
-        // likeService.likeAuthor(currentUserId, authorId);
-        // return ResponseEntity.ok(Map.of("message", "Author liked successfully"));
-        throw new UnsupportedOperationException("Not yet implemented");
+        String authorId = requestBody.get("authorId");
+        likeService.likeAuthor(authorId);
+        return ResponseEntity.ok(Map.of("message", "Author liked successfully"));
     }
 
     @Operation(
@@ -136,14 +130,12 @@ public class LikeController {
             description = "Remove a like from an author. Removes LIKES relationship in Neo4j."
     )
     @DeleteMapping("/unlike/authors/{authorID}")
-    public ResponseEntity<?> unlikeAuthor(
+    public ResponseEntity<Map<String, String>> unlikeAuthor(
             @Parameter(description = "Author ID", example = "65b3a...")
             @PathVariable String authorID
     ) {
-        // TODO: Implement service call
-        // likeService.unlikeAuthor(currentUserId, authorID);
-        // return ResponseEntity.ok(Map.of("message", "Author unliked successfully"));
-        throw new UnsupportedOperationException("Not yet implemented");
+        likeService.unlikeAuthor(authorID);
+        return ResponseEntity.ok(Map.of("message", "Author unliked successfully"));
     }
 
     // ========== GET LIKED ITEMS ==========
@@ -153,11 +145,9 @@ public class LikeController {
             description = "Retrieve all books liked by the current user. Queries Neo4j for LIKES relationships."
     )
     @GetMapping("/liked/book")
-    public ResponseEntity<?> getLikedBooks() {
-        // TODO: Implement service call
-        // List<BookDTO> likedBooks = likeService.getLikedBooks(currentUserId);
-        // return ResponseEntity.ok(likedBooks);
-        throw new UnsupportedOperationException("Not yet implemented");
+    public ResponseEntity<List<BookDTO>> getLikedBooks() {
+        List<BookDTO> likedBooks = likeService.getLikedBooks();
+        return ResponseEntity.ok(likedBooks);
     }
 
     @Operation(
@@ -165,11 +155,9 @@ public class LikeController {
             description = "Retrieve all authors liked by the current user. Queries Neo4j for LIKES relationships."
     )
     @GetMapping("/liked/author")
-    public ResponseEntity<?> getLikedAuthors() {
-        // TODO: Implement service call
-        // List<AuthorDTO> likedAuthors = likeService.getLikedAuthors(currentUserId);
-        // return ResponseEntity.ok(likedAuthors);
-        throw new UnsupportedOperationException("Not yet implemented");
+    public ResponseEntity<List<AuthorDTO>> getLikedAuthors() {
+        List<AuthorDTO> likedAuthors = likeService.getLikedAuthors();
+        return ResponseEntity.ok(likedAuthors);
     }
 
     @Operation(
@@ -177,11 +165,9 @@ public class LikeController {
             description = "Retrieve all reviews liked by the current user. Queries Neo4j for LIKES relationships."
     )
     @GetMapping("/liked/review")
-    public ResponseEntity<?> getLikedReviews() {
-        // TODO: Implement service call
-        // List<ReviewDTO> likedReviews = likeService.getLikedReviews(currentUserId);
-        // return ResponseEntity.ok(likedReviews);
-        throw new UnsupportedOperationException("Not yet implemented");
+    public ResponseEntity<List<ReviewDTO>> getLikedReviews() {
+        List<ReviewDTO> likedReviews = likeService.getLikedReviews();
+        return ResponseEntity.ok(likedReviews);
     }
 
     @Operation(
@@ -189,10 +175,8 @@ public class LikeController {
             description = "Retrieve all genres liked by the current user. Queries Neo4j for LIKES relationships."
     )
     @GetMapping("/liked/genre")
-    public ResponseEntity<?> getLikedGenres() {
-        // TODO: Implement service call
-        // List<GenreDTO> likedGenres = likeService.getLikedGenres(currentUserId);
-        // return ResponseEntity.ok(likedGenres);
-        throw new UnsupportedOperationException("Not yet implemented");
+    public ResponseEntity<List<GenreDTO>> getLikedGenres() {
+        List<GenreDTO> likedGenres = likeService.getLikedGenres();
+        return ResponseEntity.ok(likedGenres);
     }
 }

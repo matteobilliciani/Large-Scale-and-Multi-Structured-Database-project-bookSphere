@@ -6,6 +6,9 @@ import org.springframework.data.neo4j.repository.query.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -41,4 +44,69 @@ public interface UserNodeRepository extends Neo4jRepository<UserNode, String> {
      */
     @Query("MATCH (u:User {mongoId: $mongoId}) DETACH DELETE u")
     void deleteByMongoId(@Param("mongoId") String mongoId);
+    
+    // ========== FOLLOW RELATIONSHIP METHODS ==========
+    
+    /**
+     * Check if user A follows user B
+     */
+    @Query("MATCH (a:User {mongoId: $userAId})-[r:FOLLOWS]->(b:User {mongoId: $userBId}) RETURN COUNT(r) > 0")
+    boolean isFollowing(@Param("userAId") String userAId, @Param("userBId") String userBId);
+    
+    /**
+     * Create FOLLOWS relationship between two users
+     */
+    @Query("""
+        MATCH (a:User {mongoId: $followerId})
+        MATCH (b:User {mongoId: $followedId})
+        CREATE (a)-[r:FOLLOWS {since: $since}]->(b)
+        RETURN r
+        """)
+    void createFollowsRelationship(
+        @Param("followerId") String followerId, 
+        @Param("followedId") String followedId,
+        @Param("since") LocalDateTime since
+    );
+    
+    /**
+     * Delete FOLLOWS relationship between two users
+     * @return number of relationships deleted (0 or 1)
+     */
+    @Query("""
+        MATCH (a:User {mongoId: $followerId})-[r:FOLLOWS]->(b:User {mongoId: $followedId})
+        DELETE r
+        RETURN COUNT(r)
+        """)
+    Long deleteFollowsRelationship(
+        @Param("followerId") String followerId,
+        @Param("followedId") String followedId
+    );
+    
+    /**
+     * Get all users followed by a user
+     */
+    @Query("""
+        MATCH (u:User {mongoId: $userId})-[r:FOLLOWS]->(followed:User)
+        RETURN followed.mongoId AS userId, followed.username AS username, 
+               followed.country AS country, r.since AS since
+        ORDER BY r.since DESC
+        """)
+    List<Map<String, Object>> getFollowedUsers(@Param("userId") String userId);
+    
+    // ========== GET OR CREATE METHODS ==========
+    
+    /**
+     * Get or create UserNode - if not found, creates a new one with the given parameters
+     * This is a default method to centralize the get-or-create pattern used across services
+     */
+    default UserNode getOrCreate(String mongoId, String username, String country) {
+        return findByMongoId(mongoId)
+                .orElseGet(() -> {
+                    UserNode newNode = new UserNode();
+                    newNode.setMongoId(mongoId);
+                    newNode.setUsername(username);
+                    newNode.setCountry(country);
+                    return save(newNode);
+                });
+    }
 }

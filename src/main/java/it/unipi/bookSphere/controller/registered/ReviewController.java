@@ -5,10 +5,14 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import it.unipi.bookSphere.dto.ReviewDTO;
+import it.unipi.bookSphere.service.ReviewService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/me/reviews")
@@ -17,21 +21,18 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Reviews (Registered)", description = "Review management endpoints for registered users")
 public class ReviewController {
 
-    // TODO: Inject ReviewService when implemented
-    // private final ReviewService reviewService;
+    private final ReviewService reviewService;
 
     @Operation(
             summary = "Create a review",
             description = "Write a review for a book with rating and optional comment. Updates both MongoDB and Neo4j."
     )
     @PostMapping
-    public ResponseEntity<?> createReview(
+    public ResponseEntity<ReviewDTO> createReview(
             @Valid @RequestBody ReviewDTO reviewDTO
     ) {
-        // TODO: Implement service call
-        // ReviewDTO created = reviewService.createReview(reviewDTO, currentUserId);
-        // return ResponseEntity.status(HttpStatus.CREATED).body(created);
-        throw new UnsupportedOperationException("Not yet implemented");
+        ReviewDTO created = reviewService.createReview(reviewDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @Operation(
@@ -39,15 +40,13 @@ public class ReviewController {
             description = "Modify a previously posted review. Updates both MongoDB and Neo4j."
     )
     @PatchMapping("/{reviewID}")
-    public ResponseEntity<?> updateReview(
+    public ResponseEntity<ReviewDTO> updateReview(
             @Parameter(description = "MongoDB ObjectId of the review", example = "99a1...")
             @PathVariable String reviewID,
             @Valid @RequestBody ReviewDTO reviewDTO
     ) {
-        // TODO: Implement service call
-        // ReviewDTO updated = reviewService.updateReview(reviewID, reviewDTO, currentUserId);
-        // return ResponseEntity.ok(updated);
-        throw new UnsupportedOperationException("Not yet implemented");
+        ReviewDTO updated = reviewService.updateReview(reviewID, reviewDTO);
+        return ResponseEntity.ok(updated);
     }
 
     @Operation(
@@ -55,13 +54,11 @@ public class ReviewController {
             description = "Remove a review from the system. Updates both MongoDB and Neo4j."
     )
     @DeleteMapping("/{reviewID}")
-    public ResponseEntity<?> deleteReview(
+    public ResponseEntity<Void> deleteReview(
             @Parameter(description = "MongoDB ObjectId of the review", example = "99a1...")
             @PathVariable String reviewID
     ) {
-        // TODO: Implement service call
-        // reviewService.deleteReview(reviewID, currentUserId);
-        // return ResponseEntity.noContent().build();
-        throw new UnsupportedOperationException("Not yet implemented");
+        reviewService.deleteReview(reviewID);
+        return ResponseEntity.noContent().build();
     }
 }

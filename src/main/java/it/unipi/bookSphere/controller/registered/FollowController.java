@@ -4,9 +4,14 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import it.unipi.bookSphere.dto.UserDTO;
+import it.unipi.bookSphere.service.FollowService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/me")
@@ -15,22 +20,20 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Follow (Registered)", description = "User follow/unfollow endpoints")
 public class FollowController {
 
-    // TODO: Inject FollowService when implemented
-    // private final FollowService followService;
+    private final FollowService followService;
 
     @Operation(
             summary = "Follow a user",
-            description = "Start following another user. Creates FOLLOWS relationship in Neo4j. Accepts username or user ID in request body."
+            description = "Start following another user by their user ID. Creates FOLLOWS relationship in Neo4j."
     )
     @PostMapping("/follow")
-    public ResponseEntity<?> followUser(
-            @Parameter(description = "Username or user ID to follow")
-            @RequestBody String userIdentifier
+    public ResponseEntity<Map<String, String>> followUser(
+            @Parameter(description = "User ID to follow (MongoDB ObjectId)")
+            @RequestBody Map<String, String> requestBody
     ) {
-        // TODO: Implement service call
-        // followService.followUser(currentUserId, userIdentifier);
-        // return ResponseEntity.ok(Map.of("message", "Successfully followed " + userIdentifier));
-        throw new UnsupportedOperationException("Not yet implemented");
+        String userId = requestBody.get("userId");
+        followService.followUser(userId);
+        return ResponseEntity.ok(Map.of("message", "Successfully followed user"));
     }
 
     @Operation(
@@ -38,14 +41,12 @@ public class FollowController {
             description = "Stop following a user. Removes FOLLOWS relationship in Neo4j."
     )
     @DeleteMapping("/unfollow/{userId}")
-    public ResponseEntity<?> unfollowUser(
+    public ResponseEntity<Map<String, String>> unfollowUser(
             @Parameter(description = "User ID to unfollow", example = "65d1...")
             @PathVariable String userId
     ) {
-        // TODO: Implement service call
-        // followService.unfollowUser(currentUserId, userId);
-        // return ResponseEntity.ok(Map.of("message", "Successfully unfollowed user"));
-        throw new UnsupportedOperationException("Not yet implemented");
+        followService.unfollowUser(userId);
+        return ResponseEntity.ok(Map.of("message", "Successfully unfollowed user"));
     }
 
     @Operation(
@@ -53,10 +54,8 @@ public class FollowController {
             description = "Retrieve all users followed by the current user (friends). Queries Neo4j for FOLLOWS relationships."
     )
     @GetMapping("/friends")
-    public ResponseEntity<?> getFollowedUsers() {
-        // TODO: Implement service call
-        // List<UserDTO> followedUsers = followService.getFollowedUsers(currentUserId);
-        // return ResponseEntity.ok(followedUsers);
-        throw new UnsupportedOperationException("Not yet implemented");
+    public ResponseEntity<List<UserDTO>> getFollowedUsers() {
+        List<UserDTO> followedUsers = followService.getFollowedUsers();
+        return ResponseEntity.ok(followedUsers);
     }
 }

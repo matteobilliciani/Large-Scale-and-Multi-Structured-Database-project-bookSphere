@@ -1,30 +1,60 @@
 package it.unipi.bookSphere.service;
 
 import it.unipi.bookSphere.dto.ReviewDTO;
+import it.unipi.bookSphere.exceptions.*;
 import it.unipi.bookSphere.mapper.ReviewMapper;
+import it.unipi.bookSphere.model.mongodb.BookDocument;
+import it.unipi.bookSphere.model.mongodb.RegisteredUser;
 import it.unipi.bookSphere.model.mongodb.Review;
+import it.unipi.bookSphere.model.neo4j.BookNode;
+import it.unipi.bookSphere.model.neo4j.ReviewNode;
+import it.unipi.bookSphere.model.neo4j.UserNode;
+import it.unipi.bookSphere.repository.mongo.BookRepository;
+import it.unipi.bookSphere.repository.mongo.RegisteredUserRepository;
 import it.unipi.bookSphere.repository.mongo.ReviewRepository;
+import it.unipi.bookSphere.repository.neo4j.BookNodeRepository;
+import it.unipi.bookSphere.repository.neo4j.ReviewNodeRepository;
+import it.unipi.bookSphere.repository.neo4j.UserNodeRepository;
+import it.unipi.bookSphere.utils.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Service for handling review operations
+ * Service for handling review operations with eventual consistency between MongoDB and Neo4j
  */
 @Service
 @RequiredArgsConstructor
 public class ReviewService {
 
     private static final Logger logger = LoggerFactory.getLogger(ReviewService.class);
+    private static final int MAX_RECENT_REVIEWS = 3;
+    private static final int MAX_POPULAR_REVIEWS = 3;
     
     private final ReviewRepository reviewRepository;
     private final ReviewMapper reviewMapper;
+    private final BookRepository bookRepository;
+    private final RegisteredUserRepository userRepository;
+    private final MongoTemplate mongoTemplate;
+    
+    // Neo4j repositories
+    private final ReviewNodeRepository reviewNodeRepository;
+    private final UserNodeRepository userNodeRepository;
+    private final BookNodeRepository bookNodeRepository;
 
     /**
      * Get reviews by list of IDs
@@ -51,5 +81,427 @@ public class ReviewService {
         return reviews.stream()
                 .map(reviewMapper::toDTO)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Create a new review with eventual consistency
+     * - Saves in MongoDB
+     * - Creates ReviewNode in Neo4j with relationships
+     * - Updates book stats_per_year and snapshots
+     * - Updates user reviews_year and reviews array
+     */
+    @Transactional
+    @Retryable(
+        retryFor = {RuntimeException.class},
+        maxAttempts = 3,
+        backoff = @Backoff(delay = 1000, multiplier = 2)
+    )
+    public ReviewDTO createReview(ReviewDTO reviewDTO) {
+        String currentUserId = SecurityUtils.getCurrentUserId();
+        String currentUsername = SecurityUtils.getCurrentUsername();
+        
+        if (currentUserId == null) {
+            throw new UnauthorizedOperationException("User not authenticated");
+        }
+        
+        // 1. Validate book exists
+        BookDocument book = bookRepository.findById(reviewDTO.getBookId())
+                .orElseThrow(() -> new BookNotFoundException("Book not found with ID: " + reviewDTO.getBookId()));
+        
+        // 2. Validate user exists
+        RegisteredUser user = userRepository.findById(currentUserId)
+                .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + currentUserId));
+        
+        // 3. Create Review in MongoDB
+        // Note: We create the Review manually instead of using reviewMapper.toDocument() 
+        // because we need to set several fields that are not in the DTO (userId, createdAt, 
+        // likesCount, isBanned, source). The mapper is used for DTO conversion at the end.
+        Review review = new Review();
+        review.setUserId(currentUserId);
+        review.setUsername(currentUsername);
+        review.setRating(reviewDTO.getRating());
+        review.setText(reviewDTO.getText());
+        review.setSummary(reviewDTO.getSummary());
+        review.setCreatedAt(Instant.now());
+        review.setLikesCount(0);
+        review.setIsBanned(false);
+        review.setSource("app");
+        
+        // Set book snapshot
+        Review.BookSnapshot bookSnapshot = new Review.BookSnapshot();
+        bookSnapshot.setBookId(book.getId());
+        bookSnapshot.setTitle(book.getTitle());
+        review.setBookSnapshot(bookSnapshot);
+        
+        Review savedReview = reviewRepository.save(review);
+        logger.info("Created review in MongoDB: {}", savedReview.getId());
+        
+        try {
+            // 4. Create ReviewNode in Neo4j with relationships
+            createReviewNodeWithRelationships(savedReview, currentUserId, book.getId());
+            
+            // 5. Update book stats and snapshots (eventual consistency)
+            updateBookStatistics(book, savedReview);
+            
+            // 6. Update user reviews_year and reviews array (eventual consistency)
+            updateUserReviews(currentUserId, savedReview, book.getTitle());
+            
+        } catch (Exception e) {
+            // Rollback MongoDB if Neo4j or updates fail
+            logger.error("Failed to create review in Neo4j or update statistics, rolling back", e);
+            reviewRepository.delete(savedReview);
+            throw new RuntimeException("Failed to create review: " + e.getMessage(), e);
+        }
+        
+        ReviewDTO result = reviewMapper.toDTO(savedReview);
+        result.setBookTitle(book.getTitle());
+        return result;
+    }
+
+    /**
+     * Update an existing review
+     */
+    @Transactional
+    @Retryable(
+        retryFor = {RuntimeException.class},
+        maxAttempts = 3,
+        backoff = @Backoff(delay = 1000, multiplier = 2)
+    )
+    public ReviewDTO updateReview(String reviewId, ReviewDTO reviewDTO) {
+        String currentUserId = SecurityUtils.getCurrentUserId();
+        
+        if (currentUserId == null) {
+            throw new UnauthorizedOperationException("User not authenticated");
+        }
+        
+        // 1. Find existing review
+        Review existingReview = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new ReviewNotFoundException("Review not found with ID: " + reviewId));
+        
+        // 2. Check ownership
+        if (!existingReview.getUserId().equals(currentUserId)) {
+            throw new UnauthorizedOperationException("You can only update your own reviews");
+        }
+        
+        // Store old values for stats update
+        Integer oldRating = existingReview.getRating();
+        String bookId = existingReview.getBookSnapshot().getBookId();
+        
+        // 3. Update fields
+        if (reviewDTO.getRating() != null) {
+            existingReview.setRating(reviewDTO.getRating());
+        }
+        if (reviewDTO.getText() != null) {
+            existingReview.setText(reviewDTO.getText());
+        }
+        if (reviewDTO.getSummary() != null) {
+            existingReview.setSummary(reviewDTO.getSummary());
+        }
+        
+        Review updatedReview = reviewRepository.save(existingReview);
+        logger.info("Updated review in MongoDB: {}", reviewId);
+        
+        try {
+            // 4. Update ReviewNode in Neo4j
+            updateReviewNode(reviewId, updatedReview.getRating());
+            
+            // 5. Update book stats if rating changed (eventual consistency)
+            if (reviewDTO.getRating() != null && !oldRating.equals(reviewDTO.getRating())) {
+                BookDocument book = bookRepository.findById(bookId)
+                        .orElseThrow(() -> new BookNotFoundException("Book not found"));
+                updateBookStatisticsAfterRatingChange(book, oldRating, updatedReview.getRating());
+            }
+            
+            // 6. Update user reviews_year if rating changed
+            if (reviewDTO.getRating() != null && !oldRating.equals(reviewDTO.getRating())) {
+                updateUserReviewRating(currentUserId, reviewId, updatedReview.getRating());
+            }
+            
+        } catch (Exception e) {
+            logger.error("Failed to update review in Neo4j or statistics", e);
+            // Don't rollback MongoDB, log error and continue (eventual consistency will fix)
+        }
+        
+        return reviewMapper.toDTO(updatedReview);
+    }
+
+    /**
+     * Delete a review
+     */
+    @Transactional
+    @Retryable(
+        retryFor = {RuntimeException.class},
+        maxAttempts = 3,
+        backoff = @Backoff(delay = 1000, multiplier = 2)
+    )
+    public void deleteReview(String reviewId) {
+        String currentUserId = SecurityUtils.getCurrentUserId();
+        
+        if (currentUserId == null) {
+            throw new UnauthorizedOperationException("User not authenticated");
+        }
+        
+        // 1. Find existing review
+        Review existingReview = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new ReviewNotFoundException("Review not found with ID: " + reviewId));
+        
+        // 2. Check ownership (or admin)
+        boolean isAdmin = SecurityUtils.isAdmin();
+        if (!existingReview.getUserId().equals(currentUserId) && !isAdmin) {
+            throw new UnauthorizedOperationException("You can only delete your own reviews");
+        }
+        
+        String bookId = existingReview.getBookSnapshot().getBookId();
+        Integer rating = existingReview.getRating();
+        String userId = existingReview.getUserId();
+        
+        // 3. Delete from MongoDB
+        reviewRepository.deleteById(reviewId);
+        logger.info("Deleted review from MongoDB: {}", reviewId);
+        
+        try {
+            // 4. Delete ReviewNode from Neo4j
+            reviewNodeRepository.deleteByMongoId(reviewId);
+            logger.info("Deleted review from Neo4j: {}", reviewId);
+            
+            // 5. Remove from book stats and snapshots (eventual consistency)
+            BookDocument book = bookRepository.findById(bookId).orElse(null);
+            if (book != null) {
+                removeReviewFromBookStatistics(book, rating, reviewId);
+            }
+            
+            // 6. Remove from user reviews and reviews_year
+            removeReviewFromUser(userId, reviewId);
+            
+        } catch (Exception e) {
+            logger.error("Failed to delete review from Neo4j or update statistics", e);
+            // Review already deleted from MongoDB, log the error
+        }
+    }
+
+    // ========== PRIVATE HELPER METHODS ==========
+
+    /**
+     * Create ReviewNode in Neo4j with relationships to User and Book
+     */
+    private void createReviewNodeWithRelationships(Review review, String userId, String bookId) {
+        ReviewNode reviewNode = new ReviewNode();
+        reviewNode.setMongoId(review.getId());
+        reviewNode.setRating(review.getRating());
+        reviewNode.setCreatedAt(review.getCreatedAt().atZone(ZoneOffset.UTC).toLocalDateTime());
+        
+        // Get or create UserNode using repository method
+        UserNode userNode = userNodeRepository.getOrCreate(
+            userId,
+            SecurityUtils.getCurrentUsername(),
+            null
+        );
+        
+        // Find BookNode
+        BookNode bookNode = bookNodeRepository.findByMongoId(bookId)
+                .orElseThrow(() -> new BookNotFoundException("BookNode not found in Neo4j"));
+        
+        reviewNode.setAuthor(userNode);
+        reviewNode.setBook(bookNode);
+        
+        reviewNodeRepository.save(reviewNode);
+        logger.info("Created ReviewNode in Neo4j: {}", review.getId());
+    }
+
+    /**
+     * Update ReviewNode rating in Neo4j
+     */
+    private void updateReviewNode(String reviewId, Integer newRating) {
+        ReviewNode reviewNode = reviewNodeRepository.findByMongoId(reviewId)
+                .orElseThrow(() -> new ReviewNotFoundException("ReviewNode not found in Neo4j"));
+        
+        reviewNode.setRating(newRating);
+        reviewNodeRepository.save(reviewNode);
+        logger.info("Updated ReviewNode rating in Neo4j: {}", reviewId);
+    }
+
+    /**
+     * Update book statistics after new review (eventual consistency)
+     * - Updates stats_per_year
+     * - Updates recent_reviews_snapshot
+     * - Adds review ID to reviews array
+     */
+    private void updateBookStatistics(BookDocument book, Review review) {
+        int currentYear = LocalDateTime.now().getYear();
+        
+        Query query = new Query(Criteria.where("_id").is(book.getId()));
+        Update update = new Update();
+        
+        // 1. Update or create stats_per_year for current year
+        boolean yearExists = book.getStatsPerYear() != null && 
+            book.getStatsPerYear().stream().anyMatch(s -> s.getYear().equals(currentYear));
+        
+        if (yearExists) {
+            // Increment existing yearupdate.inc("stats_per_year.$[elem].ratings_count", 1);
+            update.inc("stats_per_year.$[elem].sum_rating", review.getRating());
+            
+            // Calculate new average
+            BookDocument.YearStat stat = book.getStatsPerYear().stream()
+                .filter(s -> s.getYear().equals(currentYear))
+                .findFirst()
+                .get();
+            int newCount = stat.getRatingsCount() + 1;
+            int newSum = stat.getSumRating() + review.getRating();
+            double newAvg = (double) newSum / newCount;
+            
+            update.set("stats_per_year.$[elem].average_rating", newAvg);
+            update.filterArray(Criteria.where("elem.year").is(currentYear));
+        } else {
+            // Add new year stat
+            BookDocument.YearStat newStat = new BookDocument.YearStat();
+            newStat.setYear(currentYear);
+            newStat.setRatingsCount(1);
+            newStat.setSumRating(review.getRating());
+            newStat.setAverageRating((double) review.getRating());
+            
+            update.push("stats_per_year", newStat);
+        }
+        
+        // 2. Add to recent_reviews_snapshot (keep last 3)
+        BookDocument.ReviewSnapshot snapshot = new BookDocument.ReviewSnapshot();
+        snapshot.setId(review.getId());
+        snapshot.setUserId(review.getUserId());
+        snapshot.setUsername(review.getUsername());
+        snapshot.setRating(review.getRating());
+        snapshot.setSnippet(review.getText() != null && review.getText().length() > 100 
+            ? review.getText().substring(0, 100) + "..." 
+            : review.getText());
+        snapshot.setNumOfLike(0);
+        snapshot.setDate(review.getCreatedAt());
+        
+        update.push("recent_reviews_snapshot")
+            .slice(-MAX_RECENT_REVIEWS)
+            .each(snapshot);
+        
+        // 3. Add review ID to reviews array
+        update.addToSet("reviews", review.getId());
+        
+        mongoTemplate.updateFirst(query, update, BookDocument.class);
+        logger.info("Updated book statistics for book: {}", book.getId());
+    }
+
+    /**
+     * Update book statistics after rating change
+     */
+    private void updateBookStatisticsAfterRatingChange(BookDocument book, Integer oldRating, Integer newRating) {
+        int currentYear = LocalDateTime.now().getYear();
+        
+        Query query = new Query(Criteria.where("_id").is(book.getId()));
+        Update update = new Update();
+        
+        // Update stats_per_year
+        BookDocument.YearStat stat = book.getStatsPerYear().stream()
+            .filter(s -> s.getYear().equals(currentYear))
+            .findFirst()
+            .orElse(null);
+        
+        if (stat != null) {
+            int newSum = stat.getSumRating() - oldRating + newRating;
+            double newAvg = (double) newSum / stat.getRatingsCount();
+            
+            update.set("stats_per_year.$[elem].sum_rating", newSum);
+            update.set("stats_per_year.$[elem].average_rating", newAvg);
+            update.filterArray(Criteria.where("elem.year").is(currentYear));
+            
+            mongoTemplate.updateFirst(query, update, BookDocument.class);
+            logger.info("Updated book statistics after rating change for book: {}", book.getId());
+        }
+    }
+
+    /**
+     * Remove review from book statistics after deletion
+     */
+    private void removeReviewFromBookStatistics(BookDocument book, Integer rating, String reviewId) {
+        int currentYear = LocalDateTime.now().getYear();
+        
+        Query query = new Query(Criteria.where("_id").is(book.getId()));
+        Update update = new Update();
+        
+        // 1. Update stats_per_year
+        BookDocument.YearStat stat = book.getStatsPerYear() != null 
+            ? book.getStatsPerYear().stream()
+                .filter(s -> s.getYear().equals(currentYear))
+                .findFirst()
+                .orElse(null)
+            : null;
+        
+        if (stat != null && stat.getRatingsCount() > 1) {
+            int newCount = stat.getRatingsCount() - 1;
+            int newSum = stat.getSumRating() - rating;
+            double newAvg = (double) newSum / newCount;
+            
+            update.inc("stats_per_year.$[elem].ratings_count", -1);
+            update.set("stats_per_year.$[elem].sum_rating", newSum);
+            update.set("stats_per_year.$[elem].average_rating", newAvg);
+            update.filterArray(Criteria.where("elem.year").is(currentYear));
+        } else if (stat != null && stat.getRatingsCount() == 1) {
+            // Remove the year stat entirely
+            update.pull("stats_per_year", Query.query(Criteria.where("year").is(currentYear)));
+        }
+        
+        // 2. Remove from snapshots  
+        update.pull("recent_reviews_snapshot", Query.query(Criteria.where("_id").is(reviewId)));
+        update.pull("popular_reviews_snapshot", Query.query(Criteria.where("_id").is(reviewId)));
+        
+        // 3. Remove from reviews array
+        update.pull("reviews", reviewId);
+        
+        mongoTemplate.updateFirst(query, update, BookDocument.class);
+        logger.info("Removed review from book statistics: {}", reviewId);
+    }
+
+    /**
+     * Update user reviews_year and reviews array after new review
+     */
+    private void updateUserReviews(String userId, Review review, String bookTitle) {
+        Query query = new Query(Criteria.where("_id").is(userId));
+        Update update = new Update();
+        
+        // 1. Add to reviews_year
+        RegisteredUser.ReviewYear reviewYear = new RegisteredUser.ReviewYear();
+        reviewYear.setId(review.getId());
+        reviewYear.setRating(review.getRating());
+        reviewYear.setBook(bookTitle);
+        
+        update.addToSet("reviews_year", reviewYear);
+        
+        // 2. Add to reviews array
+        update.addToSet("reviews", review.getId());
+        
+        mongoTemplate.updateFirst(query, update, RegisteredUser.class);
+        logger.info("Updated user reviews for user: {}", userId);
+    }
+
+    /**
+     * Update user review rating in reviews_year
+     */
+    private void updateUserReviewRating(String userId, String reviewId, Integer newRating) {
+        Query query = new Query(Criteria.where("_id").is(userId));
+        Update update = new Update();
+        
+        update.set("reviews_year.$[elem].rating", newRating);
+        update.filterArray(Criteria.where("elem.id").is(reviewId));
+        
+        mongoTemplate.updateFirst(query, update, RegisteredUser.class);
+        logger.info("Updated user review rating for user: {}", userId);
+    }
+
+    /**
+     * Remove review from user reviews and reviews_year
+     */
+    private void removeReviewFromUser(String userId, String reviewId) {
+        Query query = new Query(Criteria.where("_id").is(userId));
+        Update update = new Update();
+        
+        update.pull("reviews_year", Query.query(Criteria.where("id").is(reviewId)));
+        update.pull("reviews", reviewId);
+        
+        mongoTemplate.updateFirst(query, update, RegisteredUser.class);
+        logger.info("Removed review from user: {}", userId);
     }
 }

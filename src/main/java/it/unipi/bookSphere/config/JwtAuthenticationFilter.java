@@ -49,10 +49,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 String userId = jwtUtil.extractUserId(jwt);
                 String username = jwtUtil.extractUsername(jwt);
                 String role = jwtUtil.extractRole(jwt);
+                String status = jwtUtil.extractStatus(jwt);
+
+                // SECURITY: Only allow ACTIVE users with USER role to access registered APIs
+                // ADMIN and BANNED users should not be accepted in registered user APIs
+                if (!"USER".equals(role)) {
+                    logger.warn("Access denied: user {} has role {} (only USER role is allowed)", username, role);
+                    filterChain.doFilter(request, response);
+                    return;
+                }
+                
+                if (!"active".equals(status)) {
+                    logger.warn("Access denied: user {} has status {} (only active status is allowed)", username, status);
+                    filterChain.doFilter(request, response);
+                    return;
+                }
 
                 // Create authentication token with user details
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                        new UserPrincipal(userId, username, role),
+                        new UserPrincipal(userId, username, role, status),
                         null,
                         Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role))
                 );
@@ -62,7 +77,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 // Set authentication in security context
                 SecurityContextHolder.getContext().setAuthentication(authentication);
                 
-                logger.debug("Set authentication for user: {} with role: {}", username, role);
+                logger.debug("Set authentication for user: {} with role: {} and status: {}", username, role, status);
             }
         } catch (Exception ex) {
             logger.error("Cannot set user authentication: {}", ex.getMessage());

@@ -5,6 +5,7 @@ import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Repository for Review MongoDB operations
@@ -20,4 +21,24 @@ public interface ReviewRepository extends MongoRepository<Review, String> {
      * @return List of reviews
      */
     List<Review> findByIdIn(List<String> ids);
+    
+    /**
+     * Find reviews by user ID
+     */
+    List<Review> findByUserId(String userId);
+    
+    /**
+     * Find reviews by book ID (from book_snapshot)
+     */
+    List<Review> findByBookSnapshot_BookId(String bookId);
+    
+    /**
+     * Count reviews by user ID
+     */
+    long countByUserId(String userId);
+    
+    /**
+     * Delete all reviews by user ID
+     */
+    void deleteByUserId(String userId);
 }

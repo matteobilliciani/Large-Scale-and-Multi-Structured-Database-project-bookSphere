@@ -80,14 +80,13 @@ public class AuthService {
         RegisteredUser savedUser = userRepository.save(user);
         logger.info("User saved in MongoDB with id: {}", savedUser.getId());
 
-        // 4. Create user node in Neo4j
+        // 4. Create user node in Neo4j using repository getOrCreate method
         try {
-            UserNode userNode = new UserNode();
-            userNode.setMongoId(savedUser.getId());
-            userNode.setUsername(savedUser.getUsername());
-            userNode.setCountry(savedUser.getCountry());
-            
-            userNodeRepository.save(userNode);
+            userNodeRepository.getOrCreate(
+                savedUser.getId(),
+                savedUser.getUsername(),
+                savedUser.getCountry()
+            );
             logger.info("User node created in Neo4j for user: {}", savedUser.getUsername());
         } catch (Exception e) {
             logger.error("Failed to create user node in Neo4j", e);

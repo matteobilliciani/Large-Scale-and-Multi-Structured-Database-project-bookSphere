@@ -29,6 +29,11 @@ public class UserPrincipal {
     private String role;
     
     /**
+     * User status (e.g., "active", "banned")
+     */
+    private String status;
+    
+    /**
      * Check if user has admin role
      */
     public boolean isAdmin() {
@@ -40,5 +45,12 @@ public class UserPrincipal {
      */
     public boolean isUser() {
         return "USER".equals(role);
+    }
+    
+    /**
+     * Check if user is active
+     */
+    public boolean isActive() {
+        return "active".equals(status);
     }
 }
