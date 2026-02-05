@@ -33,4 +33,7 @@ public class UserDTO {
 
     @Schema(description = "User's reviews from the current year")
     private List<ReviewYearDTO> reviewsYear;
+
+    @Schema(description = "List of MongoDB ObjectIds of all reviews by this user")
+    private List<String> reviews;
 }

@@ -43,6 +43,9 @@ public class RegisteredUser {
     @Field("reviews_year")
     private List<ReviewYear> reviewsYear;
 
+    // Array of ObjectIds linking to all reviews of this user
+    private List<String> reviews;
+
     // Nested classes
 
     @Data

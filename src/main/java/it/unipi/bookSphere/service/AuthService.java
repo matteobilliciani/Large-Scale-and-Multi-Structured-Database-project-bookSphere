@@ -3,6 +3,7 @@ package it.unipi.bookSphere.service;
 import it.unipi.bookSphere.dto.*;
 import it.unipi.bookSphere.exceptions.InvalidCredentialsException;
 import it.unipi.bookSphere.exceptions.UserAlreadyExistsException;
+import it.unipi.bookSphere.mapper.UserMapper;
 import it.unipi.bookSphere.model.mongodb.RegisteredUser;
 import it.unipi.bookSphere.model.neo4j.UserNode;
 import it.unipi.bookSphere.repository.mongo.RegisteredUserRepository;
@@ -32,6 +33,7 @@ public class AuthService {
     private final RegisteredUserRepository userRepository;
     private final UserNodeRepository userNodeRepository;
     private final PasswordEncoder passwordEncoder;
+    private final UserMapper userMapper;
 
     /**
      * Register a new user
@@ -73,6 +75,7 @@ public class AuthService {
         user.setStatus("active");
         user.setBookshelf(new ArrayList<>());
         user.setReviewsYear(new ArrayList<>());
+        user.setReviews(new ArrayList<>());
         
         RegisteredUser savedUser = userRepository.save(user);
         logger.info("User saved in MongoDB with id: {}", savedUser.getId());
@@ -93,16 +96,8 @@ public class AuthService {
             throw new RuntimeException("Failed to create user in graph database", e);
         }
 
-        // 5. Convert to DTO
-        UserDTO userDTO = new UserDTO();
-        userDTO.setId(savedUser.getId());
-        userDTO.setUsername(savedUser.getUsername());
-        userDTO.setEmail(savedUser.getEmail());
-        userDTO.setCountry(savedUser.getCountry());
-        userDTO.setStatus(savedUser.getStatus());
-        userDTO.setJoinedAt(LocalDateTime.ofInstant(savedUser.getJoinedAt(), java.time.ZoneOffset.UTC));
-        userDTO.setBookshelf(new ArrayList<>());
-        userDTO.setReviewsYear(new ArrayList<>());
+        // 5. Convert to DTO using mapper
+        UserDTO userDTO = userMapper.toDTO(savedUser);
 
         logger.info("User registration completed successfully: {}", savedUser.getUsername());
         return userDTO;
@@ -138,16 +133,8 @@ public class AuthService {
             throw new InvalidCredentialsException("Account is not active");
         }
 
-        // 3. Convert to DTO
-        UserDTO userDTO = new UserDTO();
-        userDTO.setId(user.getId());
-        userDTO.setUsername(user.getUsername());
-        userDTO.setEmail(user.getEmail());
-        userDTO.setCountry(user.getCountry());
-        userDTO.setStatus(user.getStatus());
-        userDTO.setJoinedAt(LocalDateTime.ofInstant(user.getJoinedAt(), java.time.ZoneOffset.UTC));
-        userDTO.setBookshelf(new ArrayList<>());
-        userDTO.setReviewsYear(new ArrayList<>());
+        // 3. Convert to DTO using mapper
+        UserDTO userDTO = userMapper.toDTO(user);
 
         logger.info("Login successful for user: {}", user.getUsername());
         return userDTO;

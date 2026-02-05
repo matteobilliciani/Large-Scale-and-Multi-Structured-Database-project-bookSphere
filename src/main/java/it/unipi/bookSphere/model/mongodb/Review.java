@@ -21,6 +21,8 @@ public class Review {
     @Field("user_id")
     private String userId;
 
+    private String username;
+
     private Integer rating; // Unified scale 0-100
 
     private String source; // "amazon", "bookcrossing"

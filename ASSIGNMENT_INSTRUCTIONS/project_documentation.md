@@ -5,7 +5,7 @@ Colori:
 -	Matteo Team Boxer
 -	Matteo Team Donna
 
-Platform introduction[MB1.1][MB1.2]
+Platform introduction
 Welcome to BookSphere, the ultimate social platform for book lovers designed to help you organize your reading life and connect with a global community. Beyond simply searching for titles and authors, BookSphere allows you to curate your own digital library by marking books as "To-Read," "Reading," or "Read," ensuring you never lose track of your literary journey.
 The experience is deeply social and smart: you can follow friends to instantly see their latest updates and ratings or discover "Real Influencers" - expert reviewers identified by the quality of their engagement rather than just follower count - to get the best recommendations for your favourite genres. The platform goes beyond standard suggestions by offering unique insights, such as a "Trending Probability" that predicts the next viral hit and an "Internationality Index" that shows you how far a book is traveling around the globe. You can share your own voice by leaving one-to-one-hundred ratings and written reviews, and at the end of every year, you’ll receive a personalized "Yearly Wrapped" recap to celebrate your reading highlights, top authors, and most-read genres.
 
@@ -44,6 +44,8 @@ Registered User
 9.	The System must enable a Registered User to view every publication of a specified author.
 10.	The System must permit to a Registered User to Log In and Out the system
 11.	The System must generate a Yearly Personal Recap for Registered User
+12.	The System must allow the Registered User to see his friends
+13.	The System must allow the Registered User to see on demand all the review of a book
 
 Admin
 1.	The System must enable an Admin to add a new book, author or genre.
@@ -52,7 +54,7 @@ Admin
 4.	The System must allow an Admin to view any Registered User.
 5.	The System must enable an Admin to view any review.
 6.	The System must enable an Admin to delete any review.
-7.	The System must enable an Admin to ban any Registered User[DP2.1].
+7.	The System must enable an Admin to ban any Registered User.
 Non-Functional Requirements
 1.	The System must follow RESTful design principles
 2.	The System must avoid permanent data loss
@@ -67,13 +69,10 @@ Search book
 Search user				
 Search author				
 				
-				
-				
-				
-				
-				
-				
-				
+How manage the Reviews for different purpose 
+In order to ensure to Registered User to see the most recent e popular reviews for a given book and to load on demand every review of a certain book:
+-	 They are partially embedded for popular and recent (we assume that when a user sees a book this are the first reviews seen)
+-	They are all linked by their id (we assume that after given a book the user will demand to upload all the review remember limit count)
 
 DocumentDB Analytics (3)
 Certamente. Ecco il documento unico, pronto per essere copiato nella tua documentazione o presentazione.
@@ -274,6 +273,26 @@ db.books.aggregate([
 ]);
 
 Document Indexes (da definire quando le query sono implementate)
+Per ora GEMINI CONSIGLIA I SEGUENTI INDICI, e controllando hanno senso
+// --- BOOKS COLLECTION ---
+// Supporta Query 1, 3 e API Author
+db.books.createIndex({ "author.name": 1 });
+// Supporta Query 1d, 4 e API Genre Filtering (Multikey Index)
+db.books.createIndex({ "genres": 1 });
+// Supporta API Search e ordinamento alfabetico
+db.books.createIndex({ "title": 1 }); 
+// Opzionale: Se le query di Ranking usano spesso il trend_score pre-calcolato, secondo me eliminabile come indice
+db.books.createIndex({ "trend_score.rating": -1 });
+// --- USERS COLLECTION ---
+// Supporta Query 2 e Login (Unique Constraints)
+db.users.createIndex({ "username": 1 }, { unique: true });
+db.users.createIndex({ "email": 1 }, { unique: true });
+// --- REVIEWS COLLECTION ---
+// Fondamentale per caricare le recensioni di un libro (ESR Pattern)
+// Filtra per libro -> Ordina per data
+db.reviews.createIndex({ "book_snapshot.book_id": 1, "created_at": -1 });
+// Supporta la visualizzazione del profilo utente (tutte le recensioni di un utente)
+db.reviews.createIndex({ "user_id": 1 });
  
 NEO4J QUERIES
 
@@ -374,9 +393,28 @@ ORDER BY AvgLikesPerReview DESC
 LIMIT 5
 
 Find authors that have written books of different genres (versatility).
-		
+	TO DO	TO DO
 
 GRAPH indexes
+GEMINI GIUSTAMENTE CONSIGLIA:
+// --- 2. INDICI FUNZIONALI (Per le tue 5 Query) ---
+// Servono per trovare istantaneamente il nodo da cui parte la query.
+
+// Query 1: Parte da (u:User {username: "Alice"})
+CREATE INDEX user_username_idx FOR (u:User) ON (u.username);
+
+// Query 2 & 3: Partono da (b:Book {title: "..."})
+// Nota: I titoli possono non essere unici, quindi usiamo INDEX, non CONSTRAINT
+CREATE INDEX book_title_idx FOR (b:Book) ON (b.title);
+
+// Query 2 & 5: Partono da (a:Author {name: "..."})
+CREATE INDEX author_name_idx FOR (a:Author) ON (a.name);
+
+// Query 4: Parte da (g:Genre {name: "Fantasy"})
+// (Questo è ridondante se hai già il CONSTRAINT su g.name, ma lo metto per chiarezza. 
+// Se hai il constraint sopra, questo darà un warning che esiste già, puoi ignorarlo).
+//DIPENDE SE SU GENRE NAME SI METTE IL CONSTRAIN SUL NOME ESSENDO UNIVOCO
+
 •	Vincoli di unicità
 •	Genres (per real influencers)
 
@@ -419,9 +457,9 @@ Book-Crossing: User review ratings
 Amazon Books Reviews
 
 
+
+
 Source	Description	Volume
-goodbooks10k
-Contains six million user ratings for the 10,000 books. It also includes books metadatas (title, author, etc.).	~ 90MB
 Randomuser API
 Dynamic creation of fake users and reviews. This API allows to generate fully fictional user data on demand.	Dynamic creation of fake users and reviews
 Amazon Reviews dataset
@@ -461,6 +499,7 @@ Book	User	Review	Author
   "recent_reviews_snapshot": [
     {
       "_id": ObjectId("65c1..."),
+     “user_id”: ObjectId(“46…”),
       "username": "BookLover",
       "rating": 5,
       "snippet": "Assolutamente incredibile...",
@@ -472,6 +511,7 @@ Book	User	Review	Author
   "popular_reviews_snapshot": [
     {
       "_id": ObjectId("65c2..."),
+“user_id”: ObjectId(“46…”),
       "username": "MarioRossi",
       "rating": 4,
       "num_of_like": 45, // Campo denormalizzato per ordinamento
@@ -479,6 +519,8 @@ Book	User	Review	Author
       "date": ISODate("2025-05-20T09:00:00Z")
     }
   ],
+
+“reviews”:[ObjectId(), …]
 
   // PATTERN: Computed / Bucketing (Statistiche aggregate per anno)
   "stats_per_year": [
@@ -530,6 +572,8 @@ Book	User	Review	Author
      "genres": ["Fantasy”]
     }
   ],
+“reviews”:[ObjectId(), …]
+
 
   // PATTERN: Subset / Report (Solo le recensioni dell'anno corrente 2025)
   "reviews_year": [
@@ -543,7 +587,7 @@ Book	User	Review	Author
 	{
   "_id": ObjectId("99a1..."),
   "user_id": ObjectId("65d1..."),
-  
+  “username”: “Mario”
   // Nota: book_id è rimosso dalla radice e spostato nello snapshot (scelta V5)
   
   "rating": 90, // Scala unificata 0-100
@@ -641,11 +685,12 @@ Si noti che nella ricerca di altri utenti lo username è path variable in quanto
 Categoria Utente	Metodo	Endpoint	Input	Descrizione	Database Primario
 Generic (Unregistered)	POST	/api/v1/auth/register	Username, mail, hashed password	Creazione di un nuovo account	MongoDB
 X	POST	/api/v1/auth/login	Username|mail, password	Autenticazione utente	MongoDB
-X	GET	/api/v1/books/{id}	pathVariable	Visualizza dettagli libro, snapshot recensioni e statistiche	MongoDB
+X	GET	/api/v1/books/{id}	pathVariable	Visualizza dettagli libro, snapshot recensioni e statistiche e lista di tutte le reviewID	MongoDB
+	GET 	/api/v1/reviews?review=ID&review=ID…	Auth + query string con la lista di reviewID	Ottenere tutte le reviews di un libro o di un utente	Neo4j
 X	GET	/api/v1/books?title = …	Query string	Ricerca il Libro dal titolo	MongoDB
 X	GET	/api/v1/authors/{id}	Author’s Id	Visualizza profilo autore, opere pubblicate e rating	MongoDB
 X	GET	/api/v1/authors?author_name = …	Query string	Ricerca Autore dal nome, opere pubblicate e rating	
-X	GET	/api/v1/users/{username[DP3.1]}	Path Variable 	Visualizza profilo utente e attività (bookshelf e reviews dell’anno)	Mongo
+X	GET	/api/v1/users/{username}	Path Variable 	Visualizza profilo utente e attività (bookshelf e reviews dell’anno e lista delle reviewID)	Mongo
 X	GET	/api/v1/users/{id}	Path variable 	Ricerca utente per ID	
 X	GET	/api/v1/analytics/rankings/trendingbooks		Lista di Libri di tendenza	MongoDB
 X	GET	/api/v1/analytics/rankings/books?year = …	Query string 	Classifiche dei libri per un anno specifico o di sempre
@@ -664,21 +709,32 @@ X	POST	/api/v1/me/follow	Auth +  user’s id	Segui un altro utente	Neo4j
 X	DELETE	/api/v1/me/unfollow/{userId}	Auth + path variable + username or other user’s id	Unfollow user	Neo4j
 X	PATCH	/api/v1/me/username	Auth + new username	Cambia nome utente	MongoDB+Neo4j
 X	POST	/api/v1/me/bookshelf	Auth + book id + status	Aggiunge libro alla to-read list o cambia status	MongoDB
-X	PATCH	/api/v1/me/bookshelf/{bookID}	Auth + path variable + Status	Cambia stato di un libro	Mongo DB[MI4.1]
+X	PATCH	/api/v1/me/bookshelf/{bookID}	Auth + path variable + Status	Cambia stato di un libro	Mongo DB
 X	DELETE	/api/v1/me/bookshelf /{bookId}	Auth + path variable	Elimina libro dalla lista	MongoDB
-X	POST	/api/v1/me/like/book	Auth + book id	Metti "Like" a un libro	Neo4j[MI5.1]
+X	POST	/api/v1/me/like/book	Auth + book id	Metti "Like" a un libro	Neo4j
 X	DELETE	/api/v1/me/unlike/book/{bookID}	Auth + path variable	Togli like al libro	Neo4j
-X	POST	/api/v1/me/like/review	Auth + Review’s Id	Metti "Like" a una recensione	Neo4j+MongoDB[MI6.1]
+X	POST	/api/v1/me/like/review	Auth + Review’s Id	Metti "Like" a una recensione	Neo4j+MongoDB
 X	DELETE	/api/v1/me/unlikes/review/{reviewid}	Auth + path variable	Togli like a una review	Neo4j + MongoDB
+	GET	/api/v1/me/liked/book	Auth 	Vedi I libri piaciuti	Neo4j
+	GET	/api/v1/me/liked/author	Auth 	Vedi gli Autori piaciuti	Neo4j
+	GET
+	/api/v1/me/liked/review	Auth	Vedi le revies piaciute
+	Neo4j
+	GET	/api/v1/me/friends	Auth	Vedi utenti seguiti	
 X	GET	/api/v1/me/recommendations	Auth	Suggerimenti basati su gusti e rete sociale	Neo4j
 X	GET	/api/v1/me/wrapped	Auth	Genera lo Yearly Personal Recap (Wrapped)	MongoDB
-X	POST	/api/v1/me/likes/genres	Auth + genre’s name		MongoDB + Neo4j
-X	DELETE	/api/v1/me/unlike/genres/{name}	Auth + path variable		MongoDB + Neo4j
-X	POST	/api/v1/me/likes/authors	Auth + Author’s Id		Neo4j
-X	DELETE	/api/v1/me/unlike/authors/{authorID}	Auth + path variable		Neo4j
+X	POST	/api/v1/me/likes/genres	Auth + genre’s name	Metti like a un genere	Neo4j
+X	DELETE	/api/v1/me/unlike/genres/{name}	Auth + path variable	Togli like a un genre	Neo4j
+X<	POST	/api/v1/me/likes/authors	Auth + Author’s Id	Metti like all’autore	Neo4j
+X	DELETE	/api/v1/me/unlike/authors/{authorID}	Auth + path variable	Togli like authore	Neo4j
 X	DELETE	/api/v1/me/account	Auth	Rimozione account	Mongo + Neo
 
-[MI7.1]
+TO ADD: dato un utente restiturie:
+lista di utenti seguiti
+lista di libri/generi/review piaciute
+Volendo anche solo ID.
+Andrà fatta l’interazione per recuperare le info con Neo4j in questo caso.
+Da un libro ottenere tutte le recensioni.
 Administrator	POST	/api/v1/admin/books	Auth + corpo Book	Aggiunta di un nuovo libro al catalogo	MongoDB + Neo4j
 X	PUT	/api/v1/admin/books/{id}	Auth + corpo book modificato + path variable	Aggiornamento informazioni libro	MongoDB + Neo4J
 X	DELETE	/api/v1/admin/books/{id}	Auth + path variable	Rimozione di un libro dal sistema	MongoDB + Neo4J
@@ -706,7 +762,7 @@ JWT
 Utils
 -	JWTUtils per validare ed estrarre claims JWT.
 -	UserPrincipal che rappresenta admin o user auntenticati.
--	SecurityUtils ritorna l’utente corrente , UserPrincipal che rappresenta admin o user auntenticati.
+-	SecurityUtils ritorna l’utente corrente , UserPrincipal che rappresenta admin o user auntenticati (Il JWT andrebbe passato tra le funzioni, lo userPrincipal è salvato nel contesto).
 Config
 -	securityConfig: configurazione ruolo per ogni endpoint 
 -	jwtAuthFilter: filtro per la validazione dei token;
@@ -733,9 +789,11 @@ o	Non c'è bisogno di un try-catch manuale: l'eccezione interrompe il flusso e v
 AUTHENTICATION: REGISTER e LOGIN
 Nella Register l’operazione su mongodb non è in un try-catch mentre quella per neo4j sì perché
 MAPPER
-Implementato via map struct.
+Implementato via MapStruct.
 Spring Retry
 Abilitato in tutta l’applicazione, metodo dichiarato che ritenta più volte l’esecuzione di certe operazioni sul db  in caso di fallimento.
+SPRING-BOOT-STARTER-DATA-NEO4J instead of neo4j-java-driver
+Lo starter include il driver e integra spring con neo4j gestendo automaticamente le connessioni con l’application-properties.
 
 📋 ARCHITETTURA MANCANTE
 Pattern Architetturali:
@@ -743,4 +801,12 @@ Pattern Architetturali:
 2.	Worker Pattern - task schedulati
 3.	Processor Pattern - elaborazione asincrona
 4.	Notification System - sistema di notifiche
+
+CAP theorem
+We to prioritize the availability (we need to discuss it).
+On the primary we do the write, the read on the secondary.
+Mongo DB automatically managed the eventual consistency (w=majority), when set the replicas will be acknowledged of the writes before committed. 
+
+Eventual Consistency between Mongo and Neo4j
+In order to guarantee the consistency between the DBs...
 

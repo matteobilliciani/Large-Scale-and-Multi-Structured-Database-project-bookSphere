@@ -40,6 +40,9 @@ public class BookDTO {
     @Schema(description = "Most popular reviews (top 3 by likes)")
     private List<ReviewSnapshotDTO> popularReviewsSnapshot;
 
+    @Schema(description = "List of MongoDB ObjectIds of all reviews for this book")
+    private List<String> reviews;
+
     @Schema(description = "Statistics aggregated by year")
     private List<StatsPerYearDTO> statsPerYear;
 

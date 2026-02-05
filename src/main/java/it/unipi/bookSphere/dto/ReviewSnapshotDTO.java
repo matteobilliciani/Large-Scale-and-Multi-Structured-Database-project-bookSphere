@@ -8,6 +8,9 @@ public class ReviewSnapshotDTO {
     @Schema(description = "MongoDB ObjectId of the review")
     private String id;
 
+    @Schema(description = "MongoDB ObjectId of the user who wrote the review")
+    private String userId;
+
     @Schema(description = "Username of the reviewer", example = "BookLover")
     private String username;
 

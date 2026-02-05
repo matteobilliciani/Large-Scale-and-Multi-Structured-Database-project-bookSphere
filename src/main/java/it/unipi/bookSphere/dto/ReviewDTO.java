@@ -13,6 +13,9 @@ public class ReviewDTO {
     @Schema(description = "MongoDB ObjectId of the review")
     private String id;
 
+    @Schema(description = "Username of the user who wrote the review", example = "User_12345")
+    private String username;
+
     @Schema(description = "Rating (0-100)", example = "85")
     @NotNull(message = "Rating is mandatory")
     @Min(value = 0, message = "Rating must be at least 0")

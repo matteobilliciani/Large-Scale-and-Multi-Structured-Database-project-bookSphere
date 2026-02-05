@@ -41,6 +41,9 @@ public class BookDocument {
     @Field("popular_reviews_snapshot")
     private List<ReviewSnapshot> popularReviewsSnapshot;
 
+    // Array of ObjectIds linking to all reviews of this book
+    private List<String> reviews;
+
     @Field("stats_per_year")
     private List<YearStat> statsPerYear;
 
@@ -76,6 +79,9 @@ public class BookDocument {
         // This maps the nested "_id" inside the review array
         @Field("_id")
         private String id;
+
+        @Field("user_id")
+        private String userId;
 
         private String username;
         private Integer rating;
