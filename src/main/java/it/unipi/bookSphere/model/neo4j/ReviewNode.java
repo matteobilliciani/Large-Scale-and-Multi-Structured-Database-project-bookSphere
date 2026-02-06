@@ -10,8 +10,6 @@ import org.springframework.data.neo4j.core.schema.Property;
 import org.springframework.data.neo4j.core.schema.Relationship;
 
 import java.time.LocalDateTime;
-import java.util.HashSet;
-import java.util.Set;
 
 @Data
 @NoArgsConstructor
@@ -38,7 +36,4 @@ public class ReviewNode {
 
     @Relationship(type = "REFER_TO", direction = Relationship.Direction.OUTGOING)
     private BookNode book;
-
-    @Relationship(type = "LIKES", direction = Relationship.Direction.INCOMING)
-    private Set<UserNode> likedByUsers = new HashSet<>();
 }

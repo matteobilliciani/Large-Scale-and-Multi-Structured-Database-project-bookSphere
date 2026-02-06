@@ -311,7 +311,7 @@ public class AdminApiTest {
 
     @Test
     @Order(5)
-    @Disabled("Disabilitato temporaneamente per problemi di memoria heap con database grande")
+    //@Disabled("Disabilitato temporaneamente per problemi di memoria heap con database grande")
     @DisplayName("Admin API: Add new book")
     public void test05_AddBook() {
         System.out.println("\n========== TEST 5: ADD BOOK ==========");
@@ -358,7 +358,7 @@ public class AdminApiTest {
 
     @Test
     @Order(6)
-    @Disabled("Disabilitato perché dipende da test05")
+    //@Disabled("Disabilitato perché dipende da test05")
     @DisplayName("Admin API: Add book with same title (should succeed, not an error)")
     public void test06_AddDuplicateBook() {
         System.out.println("\n========== TEST 6: ADD DUPLICATE BOOK ==========");
@@ -388,7 +388,7 @@ public class AdminApiTest {
 
     @Test
     @Order(7)
-    @Disabled("Disabilitato perché dipende da test05 (testBookId1)")
+    //@Disabled("Disabilitato perché dipende da test05 (testBookId1)")
     @DisplayName("Admin API: Update book")
     public void test07_UpdateBook() {
         System.out.println("\n========== TEST 7: UPDATE BOOK ==========");
@@ -445,7 +445,7 @@ public class AdminApiTest {
 
     @Test
     @Order(9)
-    @Disabled("Disabilitato perché dipende da test06 (testBookId2)")
+    //@Disabled("Disabilitato perché dipende da test06 (testBookId2)")
     @DisplayName("Admin API: Delete book (soft delete)")
     public void test09_DeleteBook() {
         System.out.println("\n========== TEST 9: DELETE BOOK ==========");
@@ -539,7 +539,7 @@ public class AdminApiTest {
 
     @Test
     @Order(13)
-    @Disabled("Disabilitato perché dipende da test05 (testBookId1)")
+    //@Disabled("Disabilitato perché dipende da test05 (testBookId1)")
     @DisplayName("Admin API: Create review for moderation tests")
     public void test13_CreateReviewForModeration() {
         System.out.println("\n========== TEST 13: CREATE REVIEW FOR MODERATION ==========");
@@ -564,7 +564,7 @@ public class AdminApiTest {
 
     @Test
     @Order(14)
-    @Disabled("Disabilitato perché dipende da test13 (testReviewId1)")
+    //@Disabled("Disabilitato perché dipende da test13 (testReviewId1)")
     @DisplayName("Admin API: Delete review (moderation)")
     public void test14_DeleteReview() {
         System.out.println("\n========== TEST 14: DELETE REVIEW ==========");
