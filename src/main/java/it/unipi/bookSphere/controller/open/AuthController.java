@@ -34,8 +34,8 @@ public class AuthController {
         // Create new user account
         UserDTO user = authService.register(registerDTO);
         
-        // Generate JWT token
-        String token = jwtUtil.generateToken(user.getId(), user.getUsername(), "USER");
+        // Generate JWT token with status (new users are always "active")
+        String token = jwtUtil.generateToken(user.getId(), user.getUsername(), "USER", "active");
         
         // Return response with token and user info
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -50,11 +50,11 @@ public class AuthController {
     public ResponseEntity<AuthResponseDTO> login(
             @Valid @RequestBody LoginDTO loginDTO
     ) {
-        // Authenticate user
+        // Authenticate user (AuthService verifies status is "active")
         UserDTO user = authService.login(loginDTO);
         
-        // Generate JWT token
-        String token = jwtUtil.generateToken(user.getId(), user.getUsername(), "USER");
+        // Generate JWT token with status
+        String token = jwtUtil.generateToken(user.getId(), user.getUsername(), "USER", user.getStatus());
         
         // Return response with token and user info
         return ResponseEntity.ok(new AuthResponseDTO(token, user.getId(), user.getUsername(), "USER"));

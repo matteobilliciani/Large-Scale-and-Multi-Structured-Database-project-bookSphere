@@ -48,12 +48,14 @@ public class JwtUtil {
      * @param userId MongoDB user ID
      * @param username Username
      * @param role User role (e.g., "USER", "ADMIN")
+     * @param status User status (e.g., "active", "banned")
      * @return JWT token string
      */
-    public String generateToken(String userId, String username, String role) {
+    public String generateToken(String userId, String username, String role, String status) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId);
         claims.put("role", role);
+        claims.put("status", status);
         
         return Jwts.builder()
                 .claims(claims)
@@ -68,10 +70,11 @@ public class JwtUtil {
     /**
      * Generate JWT token with custom expiration
      */
-    public String generateTokenWithExpiration(String userId, String username, String role, long expirationMs) {
+    public String generateTokenWithExpiration(String userId, String username, String role, String status, long expirationMs) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId);
         claims.put("role", role);
+        claims.put("status", status);
         
         return Jwts.builder()
                 .claims(claims)
@@ -102,6 +105,13 @@ public class JwtUtil {
      */
     public String extractRole(String token) {
         return extractClaim(token, claims -> claims.get("role", String.class));
+    }
+    
+    /**
+     * Extract user status from token
+     */
+    public String extractStatus(String token) {
+        return extractClaim(token, claims -> claims.get("status", String.class));
     }
 
     /**

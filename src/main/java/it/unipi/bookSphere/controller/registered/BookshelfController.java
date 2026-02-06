@@ -5,10 +5,13 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import it.unipi.bookSphere.dto.BookshelfRequestDTO;
+import it.unipi.bookSphere.service.BookshelfService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/me/bookshelf")
@@ -17,21 +20,18 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Bookshelf (Registered)", description = "User bookshelf management endpoints")
 public class BookshelfController {
 
-    // TODO: Inject BookshelfService when implemented
-    // private final BookshelfService bookshelfService;
+    private final BookshelfService bookshelfService;
 
     @Operation(
             summary = "Add book to bookshelf",
             description = "Add a book to the user's bookshelf with a specific status (to_read, reading, read)"
     )
     @PostMapping
-    public ResponseEntity<?> addBookToBookshelf(
+    public ResponseEntity<Map<String, String>> addBookToBookshelf(
             @Valid @RequestBody BookshelfRequestDTO request
     ) {
-        // TODO: Implement service call
-        // bookshelfService.addBook(currentUserId, request.getBookId(), request.getStatus());
-        // return ResponseEntity.ok(Map.of("message", "Book added to bookshelf"));
-        throw new UnsupportedOperationException("Not yet implemented");
+        bookshelfService.addBookToBookshelf(request.getBookId(), request.getStatus());
+        return ResponseEntity.ok(Map.of("message", "Book added to bookshelf"));
     }
 
     @Operation(
@@ -39,16 +39,15 @@ public class BookshelfController {
             description = "Change the status of a book in the bookshelf"
     )
     @PatchMapping("/{bookID}")
-    public ResponseEntity<?> updateBookStatus(
+    public ResponseEntity<Map<String, String>> updateBookStatus(
             @Parameter(description = "MongoDB ObjectId of the book", example = "65b3f...")
             @PathVariable String bookID,
-            @Parameter(description = "New status", example = "read", schema = @io.swagger.v3.oas.annotations.media.Schema(allowableValues = {"to_read", "reading", "read"}))
-            @RequestBody String status
+            @Parameter(description = "New status", example = "read")
+            @RequestBody Map<String, String> requestBody
     ) {
-        // TODO: Implement service call
-        // bookshelfService.updateBookStatus(currentUserId, bookID, status);
-        // return ResponseEntity.ok(Map.of("message", "Book status updated"));
-        throw new UnsupportedOperationException("Not yet implemented");
+        String status = requestBody.get("status");
+        bookshelfService.updateBookStatus(bookID, status);
+        return ResponseEntity.ok(Map.of("message", "Book status updated"));
     }
 
     @Operation(
@@ -56,13 +55,11 @@ public class BookshelfController {
             description = "Delete a book from the user's bookshelf"
     )
     @DeleteMapping("/{bookId}")
-    public ResponseEntity<?> removeBookFromBookshelf(
+    public ResponseEntity<Void> removeBookFromBookshelf(
             @Parameter(description = "MongoDB ObjectId of the book", example = "65b3f...")
             @PathVariable String bookId
     ) {
-        // TODO: Implement service call
-        // bookshelfService.removeBook(currentUserId, bookId);
-        // return ResponseEntity.noContent().build();
-        throw new UnsupportedOperationException("Not yet implemented");
+        bookshelfService.removeBookFromBookshelf(bookId);
+        return ResponseEntity.noContent().build();
     }
 }
