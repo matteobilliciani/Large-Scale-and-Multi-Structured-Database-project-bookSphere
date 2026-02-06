@@ -6,8 +6,10 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import it.unipi.bookSphere.dto.AuthorDTO;
 import it.unipi.bookSphere.dto.GenreDTO;
+import it.unipi.bookSphere.service.AdminCatalogService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,8 +20,7 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Admin - Catalog", description = "Admin endpoints for author and genre management")
 public class AdminCatalogController {
 
-    // TODO: Inject AdminCatalogService when implemented
-    // private final AdminCatalogService adminCatalogService;
+    private final AdminCatalogService adminCatalogService;
 
     // ========== AUTHOR MANAGEMENT ==========
     
@@ -31,10 +32,8 @@ public class AdminCatalogController {
     public ResponseEntity<?> addAuthor(
             @Valid @RequestBody AuthorDTO authorDTO
     ) {
-        // TODO: Implement service call
-        // AuthorDTO created = adminCatalogService.addAuthor(authorDTO);
-        // return ResponseEntity.status(HttpStatus.CREATED).body(created);
-        throw new UnsupportedOperationException("Not yet implemented");
+        AuthorDTO created = adminCatalogService.addAuthor(authorDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @Operation(
@@ -47,10 +46,8 @@ public class AdminCatalogController {
             @PathVariable String id,
             @Valid @RequestBody AuthorDTO authorDTO
     ) {
-        // TODO: Implement service call
-        // AuthorDTO updated = adminCatalogService.updateAuthor(id, authorDTO);
-        // return ResponseEntity.ok(updated);
-        throw new UnsupportedOperationException("Not yet implemented");
+        AuthorDTO updated = adminCatalogService.updateAuthor(id, authorDTO);
+        return ResponseEntity.ok(updated);
     }
 
     @Operation(
@@ -62,10 +59,8 @@ public class AdminCatalogController {
             @Parameter(description = "MongoDB ObjectId of the author", example = "65b3a...")
             @PathVariable String id
     ) {
-        // TODO: Implement service call
-        // adminCatalogService.deleteAuthor(id);
-        // return ResponseEntity.noContent().build();
-        throw new UnsupportedOperationException("Not yet implemented");
+        adminCatalogService.deleteAuthor(id);
+        return ResponseEntity.noContent().build();
     }
 
     // ========== GENRE MANAGEMENT ==========
@@ -78,9 +73,7 @@ public class AdminCatalogController {
     public ResponseEntity<?> addGenre(
             @Valid @RequestBody GenreDTO genreDTO
     ) {
-        // TODO: Implement service call
-        // GenreDTO created = adminCatalogService.addGenre(genreDTO);
-        // return ResponseEntity.status(HttpStatus.CREATED).body(created);
-        throw new UnsupportedOperationException("Not yet implemented");
+        GenreDTO created = adminCatalogService.addGenre(genreDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 }

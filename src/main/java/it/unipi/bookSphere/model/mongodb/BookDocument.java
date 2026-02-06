@@ -51,6 +51,9 @@ public class BookDocument {
     private MonthScore monthScore;
 
     private String source;
+    
+    // Status for soft delete: "ACTIVE" or "ARCHIVED"
+    private String status;
 
     // Privates Classes related to Book
 

@@ -5,8 +5,10 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import it.unipi.bookSphere.dto.BookDTO;
+import it.unipi.bookSphere.service.AdminBookService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,8 +19,7 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Admin - Books", description = "Admin endpoints for book catalog management")
 public class AdminBookController {
 
-    // TODO: Inject AdminBookService when implemented
-    // private final AdminBookService adminBookService;
+    private final AdminBookService adminBookService;
 
     @Operation(
             summary = "Add new book",
@@ -28,10 +29,8 @@ public class AdminBookController {
     public ResponseEntity<?> addBook(
             @Valid @RequestBody BookDTO bookDTO
     ) {
-        // TODO: Implement service call
-        // BookDTO created = adminBookService.addBook(bookDTO);
-        // return ResponseEntity.status(HttpStatus.CREATED).body(created);
-        throw new UnsupportedOperationException("Not yet implemented");
+        BookDTO created = adminBookService.addBook(bookDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
     @Operation(
@@ -44,10 +43,8 @@ public class AdminBookController {
             @PathVariable String id,
             @Valid @RequestBody BookDTO bookDTO
     ) {
-        // TODO: Implement service call
-        // BookDTO updated = adminBookService.updateBook(id, bookDTO);
-        // return ResponseEntity.ok(updated);
-        throw new UnsupportedOperationException("Not yet implemented");
+        BookDTO updated = adminBookService.updateBook(id, bookDTO);
+        return ResponseEntity.ok(updated);
     }
 
     @Operation(
@@ -59,9 +56,8 @@ public class AdminBookController {
             @Parameter(description = "MongoDB ObjectId of the book", example = "65b3f...")
             @PathVariable String id
     ) {
-        // TODO: Implement service call
-        // adminBookService.deleteBook(id);
-        // return ResponseEntity.noContent().build();
-        throw new UnsupportedOperationException("Not yet implemented");
+        adminBookService.deleteBook(id);
+        return ResponseEntity.noContent().build();
     }
 }
+

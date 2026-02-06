@@ -4,9 +4,12 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import it.unipi.bookSphere.service.AdminModerationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/admin")
@@ -15,8 +18,7 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Admin - Moderation", description = "Admin endpoints for content moderation and user management")
 public class AdminModerationController {
 
-    // TODO: Inject AdminModerationService when implemented
-    // private final AdminModerationService adminModerationService;
+    private final AdminModerationService adminModerationService;
 
     @Operation(
             summary = "Delete review (moderation)",
@@ -27,10 +29,8 @@ public class AdminModerationController {
             @Parameter(description = "MongoDB ObjectId of the review", example = "99a1...")
             @PathVariable String id
     ) {
-        // TODO: Implement service call
-        // adminModerationService.deleteReview(id);
-        // return ResponseEntity.noContent().build();
-        throw new UnsupportedOperationException("Not yet implemented");
+        adminModerationService.deleteReview(id);
+        return ResponseEntity.noContent().build();
     }
 
     @Operation(
@@ -42,10 +42,8 @@ public class AdminModerationController {
             @Parameter(description = "MongoDB ObjectId of the user", example = "65d1...")
             @PathVariable String id
     ) {
-        // TODO: Implement service call
-        // adminModerationService.banUser(id);
-        // return ResponseEntity.ok(Map.of("message", "User banned successfully", "userId", id));
-        throw new UnsupportedOperationException("Not yet implemented");
+        adminModerationService.banUser(id);
+        return ResponseEntity.ok(Map.of("message", "User banned successfully", "userId", id));
     }
 
     @Operation(
@@ -59,10 +57,7 @@ public class AdminModerationController {
             @Parameter(description = "Page size", example = "20")
             @RequestParam(defaultValue = "20") int size
     ) {
-        // TODO: Implement service call
-        // Page<UserDTO> users = adminModerationService.getAllUsers(page, size);
-        // return ResponseEntity.ok(users);
-        throw new UnsupportedOperationException("Not yet implemented");
+        return ResponseEntity.ok(adminModerationService.getAllUsers(page, size));
     }
 
     @Operation(
@@ -76,9 +71,6 @@ public class AdminModerationController {
             @Parameter(description = "Page size", example = "20")
             @RequestParam(defaultValue = "20") int size
     ) {
-        // TODO: Implement service call
-        // Page<ReviewDTO> reviews = adminModerationService.getAllReviews(page, size);
-        // return ResponseEntity.ok(reviews);
-        throw new UnsupportedOperationException("Not yet implemented");
+        return ResponseEntity.ok(adminModerationService.getAllReviews(page, size));
     }
 }

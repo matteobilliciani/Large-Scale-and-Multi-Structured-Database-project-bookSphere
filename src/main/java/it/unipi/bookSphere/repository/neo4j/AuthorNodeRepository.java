@@ -79,6 +79,22 @@ public interface AuthorNodeRepository extends Neo4jRepository<AuthorNode, String
         """)
     List<Map<String, Object>> getLikedAuthorsByUser(@Param("userId") String userId);
     
+    // ========== WROTE RELATIONSHIP METHODS ==========
+    
+    /**
+     * Create WROTE relationship between author and book
+     */
+    @Query("""
+        MATCH (a:Author {mongoId: $authorMongoId})
+        MATCH (b:Book {mongoId: $bookMongoId})
+        CREATE (a)-[r:WROTE]->(b)
+        RETURN r
+        """)
+    void createWroteRelationship(
+        @Param("authorMongoId") String authorMongoId,
+        @Param("bookMongoId") String bookMongoId
+    );
+    
     // ========== GET OR CREATE METHODS ==========
     
     /**

@@ -31,12 +31,16 @@ public class AuthorDocument {
     private Double averageRating;
 
     @Field("ratings_count")
-    private Integer ratingsCount; // Total votes received (Counter)
+    private Integer ratingsCount; // Total votes received (Counter
+    
+    
+    
+    // Status for soft delete: "ACTIVE" or "ARCHIVED"
+    @Field("status")
+    private String status;
 
     @Field("sum_ratings")
-    private Integer sumRatings; // Sum of votes (Accumulator)
-
-    // Nested class
+    private Integer sumRatings; // Sum of votes (Accumulator)    // Nested class
 
     @Data
     @NoArgsConstructor

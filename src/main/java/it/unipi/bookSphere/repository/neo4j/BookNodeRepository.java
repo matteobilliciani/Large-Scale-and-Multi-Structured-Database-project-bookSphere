@@ -79,6 +79,22 @@ public interface BookNodeRepository extends Neo4jRepository<BookNode, String> {
         """)
     List<Map<String, Object>> getLikedBooksByUser(@Param("userId") String userId);
     
+    // ========== BELONGS_TO RELATIONSHIP METHODS ==========
+    
+    /**
+     * Create BELONGS_TO relationship between book and genre
+     */
+    @Query("""
+        MATCH (b:Book {mongoId: $bookMongoId})
+        MATCH (g:Genre {name: $genreName})
+        MERGE (b)-[r:BELONGS_TO]->(g)
+        RETURN r
+        """)
+    void createBelongsToRelationship(
+        @Param("bookMongoId") String bookMongoId,
+        @Param("genreName") String genreName
+    );
+    
     // ========== GET OR CREATE METHODS ==========
     
     /**
