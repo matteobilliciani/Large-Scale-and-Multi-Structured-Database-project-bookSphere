@@ -1,10 +1,11 @@
 """
-SCRIPT 1: MongoDB Data Generation - FINAL V12 (CORRECTED STRUCTURES)
+SCRIPT 1: MongoDB Data Generation - FINAL V13 (MONTH SCORE & SUMMARY)
 - Features:
-    - Review: Includes 'username' (denormalized).
-    - Book: Includes 'review_ids' (linked list) + Snapshots with 'user_id'.
-    - User: Includes 'review_ids' (linked list).
-    - Bookshelf: Fully embedded.
+    - Month Score: Replaces Trend Score (Stats for the current/latest month).
+    - Snapshots: Use 'summary' instead of 'snippet'.
+    - Review: Includes 'username'.
+    - Book: Includes 'review_ids' + Snapshots with 'user_id'.
+    - Bookshelf: Fully embedded (Status only).
 """
 
 import pandas as pd
@@ -121,7 +122,7 @@ def load_checkpoint(step):
     return None
 
 # --- MAIN ETL ---
-print("="*60 + "\nMONGO GENERATOR V12 (CORRECTED STRUCTURES)\n" + "="*60)
+print("="*60 + "\nMONGO GENERATOR V13 (MONTH SCORE & SUMMARY)\n" + "="*60)
 
 # STEP 1: RANKING & BOOKS
 step = 1
@@ -203,9 +204,16 @@ else:
             "recent_reviews_snapshot": [], 
             "popular_reviews_snapshot": [], 
             "stats_per_year": [],
-            "review_ids": [], # LINKED ID: Added
+            "review_ids": [], 
             
-            "trend_score": {"rating": 0, "updated_at": to_mongo_date(datetime.now())},
+            # REPLACED trend_score WITH month_score
+            "month_score": {
+                "rating": 0,
+                "rating_count": 0,
+                "sum_rating": 0,
+                "Current_Month": "2025-12" # Default init
+            },
+            
             "source": "amazon_master",
         }
         
@@ -281,7 +289,7 @@ else:
             # --- UPDATED STRUCTURES ---
             "bookshelf": [], 
             "reviews_year": [],
-            "review_ids": [] # LINKED ID: Added
+            "review_ids": [] 
         }
         user_activity[uid] = {'mongo_id': mid, 'read_books': set(), 'review_ids': [], 'genres': Counter()}
         
@@ -444,21 +452,7 @@ for uid, act in user_activity.items():
     # --- POPULATE REVIEW_IDS (User side) ---
     u["review_ids"] = [to_mongo_oid(rid) for rid in act['review_ids']]
     
-    # ... (Bookshelf logic similar to before) ...
-    
-    # --- CALCOLO GENERE SOLO INTERNO ---
-    user_genres_counter = Counter()
-    for bid in act['read_books']:
-        g_list = book_id_to_genres.get(bid, [])
-        user_genres_counter.update(g_list)
-    
-    temp_fav_genres = []
-    if user_genres_counter:
-        temp_fav_genres = [g for g, _ in user_genres_counter.most_common(3)]
-    else:
-        temp_fav_genres = random.sample(list(genres_set), random.randint(1, 3))
-
-    # --- BOOKSHELF (READ) ---
+    # --- BOOKSHELF LOGIC (PURE STATUS - NO RATING) ---
     u["bookshelf"] = []
     for bid in list(act['read_books'])[:20]:
         tb = bid_to_book_obj.get(bid)
@@ -472,7 +466,18 @@ for uid, act in user_activity.items():
                 "genres": tb['genres']
             })
 
-    # --- BOOKSHELF (WANT TO READ) ---
+    # --- WANT TO READ GENERATION ---
+    user_genres_counter = Counter()
+    for bid in act['read_books']:
+        g_list = book_id_to_genres.get(bid, [])
+        user_genres_counter.update(g_list)
+    
+    temp_fav_genres = []
+    if user_genres_counter:
+        temp_fav_genres = [g for g, _ in user_genres_counter.most_common(3)]
+    else:
+        temp_fav_genres = random.sample(list(genres_set), random.randint(1, 3))
+
     candidates = set()
     for g in temp_fav_genres:
         if g in genre_to_books_map:
@@ -495,6 +500,7 @@ for uid, act in user_activity.items():
                     "genres": tb['genres'] 
                 })
     
+    # --- REVIEWS YEAR (SNAPSHOT FOR WRAPPED) ---
     for rid in act['review_ids']:
         if rid in reviews_map:
             r = reviews_map[rid]
@@ -510,18 +516,19 @@ for uid, act in user_activity.items():
 for b in books_data:
     bid = b['_id']['$oid']
     
-    # --- POPULATE REVIEW_IDS (Book side) ---
     if bid in book_reviews:
         # Convert all string RIDs to Mongo OIDs
         b["review_ids"] = [to_mongo_oid(rid) for rid in book_reviews[bid]]
         
         revs = [reviews_map[rid] for rid in book_reviews[bid]]
         
-        # Stats Logic ...
+        # --- A. GLOBAL STATS (Historical) ---
         ratings = [x['rating'] for x in revs]
-        avg = sum(ratings)/len(ratings) if ratings else 0
-        b['trend_score']['rating'] = round(avg, 2)
+        total_sum = sum(ratings)
+        count = len(ratings)
+        avg = total_sum / count if count > 0 else 0
         
+        # --- B. STATS PER YEAR ---
         by_year = {}
         for r in revs:
             y = int(r['created_at']['$date'][:4])
@@ -530,36 +537,68 @@ for b in books_data:
             
         for y, yr in by_year.items():
             rs = [x['rating'] for x in yr]
-            total_sum = sum(rs)
+            y_sum = sum(rs)
             b['stats_per_year'].append({
                 "year": y,
-                "average_rating": round(total_sum/len(rs), 2),
+                "average_rating": round(y_sum/len(rs), 2),
                 "ratings_count": len(rs),
-                "sum_rating": total_sum 
+                "sum_rating": y_sum 
             })
         b['stats_per_year'].sort(key=lambda k: k['year'])
 
-        # --- SNAPSHOTS (With UserID & Username) ---
+        # --- C. MONTH SCORE (Replaces Trend) ---
+        # Logic: Find the latest month of activity for this book and calculate stats
+        if revs:
+            # Sort by date descending
+            latest_rev = sorted(revs, key=lambda x: x['created_at']['$date'], reverse=True)[0]
+            latest_date_str = latest_rev['created_at']['$date'] # "2025-12-15T..."
+            current_month_str = latest_date_str[:7] # "2025-12"
+            
+            # Filter reviews for this month
+            month_revs = [r for r in revs if r['created_at']['$date'].startswith(current_month_str)]
+            
+            m_count = len(month_revs)
+            m_sum = sum(r['rating'] for r in month_revs)
+            m_avg = round(m_sum / m_count, 2) if m_count > 0 else 0
+            
+            b['month_score'] = {
+                "rating": m_avg,
+                "rating_count": m_count,
+                "sum_rating": m_sum,
+                "Current_Month": current_month_str
+            }
+
+        # --- D. SNAPSHOTS (Use 'summary') ---
+        # 1. POPULAR
         top_likes = sorted(revs, key=lambda x: x.get('likes_count', 0), reverse=True)[:3]
         for tr in top_likes:
-            # Note: reviews_map already has username denormalized, but let's be safe
             real_username = tr.get("username", "Unknown")
+            # FIX: Use 'summary' if present, else fallback
+            display_text = tr.get('summary') if tr.get('summary') else tr['text'][:50]
+            
             b['popular_reviews_snapshot'].append({
                 '_id': tr['_id'],
-                'user_id': tr['user_id'], # ADDED: User ID in snapshot
+                'user_id': tr['user_id'], 
                 'username': real_username, 
-                'rating': tr['rating'], 'num_of_like': tr.get('likes_count', 0),
-                'snippet': tr['text'][:50], 'date': tr['created_at']
+                'rating': tr['rating'], 
+                'num_of_like': tr.get('likes_count', 0),
+                'summary': display_text, # SUMMARY
+                'date': tr['created_at']
             })
             
-        recents = sorted(revs, key=lambda x: x['created_at']['$date'], reverse=True)[:3]
+        # 2. RECENT
+        recents = sorted(revs, key=lambda x: x['created_at']['$date'], reverse=True)[:5]
         for tr in recents:
              real_username = tr.get("username", "Unknown")
+             display_text = tr.get('summary') if tr.get('summary') else tr['text'][:50]
+             
              b['recent_reviews_snapshot'].append({ 
                 '_id': tr['_id'],
-                'user_id': tr['user_id'], # ADDED: User ID in snapshot
+                'user_id': tr['user_id'], 
                 'username': real_username, 
-                'rating': tr['rating'], 'snippet': tr['text'][:50], 'date': tr['created_at']
+                'rating': tr['rating'], 
+                'summary': display_text, # SUMMARY
+                'date': tr['created_at']
             })
 
 # 3. AUTHORS STATS
