@@ -22,6 +22,7 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -147,6 +148,9 @@ public class LikeService {
         Update update = new Update().inc("likes_count", 1);
         mongoTemplate.updateFirst(query, update, Review.class);
         
+        // Update popular_reviews_snapshot in book (eventual consistency)
+        updateBookPopularReviews(review.getBookSnapshot().getBookId());
+        
         logger.info("User {} liked review {}", currentUserId, reviewId);
     }
 
@@ -169,6 +173,13 @@ public class LikeService {
             Query query = new Query(Criteria.where("_id").is(reviewId));
             Update update = new Update().inc("likes_count", -1);
             mongoTemplate.updateFirst(query, update, Review.class);
+            
+            // Update popular_reviews_snapshot in book (eventual consistency)
+            Review review = reviewRepository.findById(reviewId).orElse(null);
+            if (review != null) {
+                updateBookPopularReviews(review.getBookSnapshot().getBookId());
+            }
+            
             logger.info("User {} unliked review {}", currentUserId, reviewId);
         } else {
             logger.warn("User {} had not liked review {}", currentUserId, reviewId);
@@ -395,5 +406,44 @@ public class LikeService {
         }
         
         return likedGenres;
+    }
+
+    // ========== PRIVATE HELPER METHODS ==========
+
+    /**
+     * Update popular_reviews_snapshot in book (eventual consistency - ASYNC)
+     * Keeps the top 3 reviews with most likes
+     */
+    @Async
+    private void updateBookPopularReviews(String bookId) {
+        // Find all reviews for this book sorted by likes_count descending
+        Query reviewQuery = new Query(Criteria.where("book_snapshot.book_id").is(bookId))
+                .with(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "likes_count"))
+                .limit(3);
+        
+        List<Review> topReviews = mongoTemplate.find(reviewQuery, Review.class);
+        
+        // Build the popular_reviews_snapshot array
+        List<BookDocument.ReviewSnapshot> snapshots = new ArrayList<>();
+        for (Review review : topReviews) {
+            BookDocument.ReviewSnapshot snapshot = new BookDocument.ReviewSnapshot();
+            snapshot.setId(review.getId());
+            snapshot.setUserId(review.getUserId());
+            snapshot.setUsername(review.getUsername());
+            snapshot.setRating(review.getRating());
+            snapshot.setSnippet(review.getText() != null && review.getText().length() > 100 
+                ? review.getText().substring(0, 100) + "..." 
+                : review.getText());
+            snapshot.setNumOfLike(review.getLikesCount());
+            snapshot.setDate(review.getCreatedAt());
+            snapshots.add(snapshot);
+        }
+        
+        // Update the book's popular_reviews_snapshot
+        Query bookQuery = new Query(Criteria.where("_id").is(bookId));
+        Update update = new Update().set("popular_reviews_snapshot", snapshots);
+        mongoTemplate.updateFirst(bookQuery, update, BookDocument.class);
+        
+        logger.info("Updated popular_reviews_snapshot for book: {}", bookId);
     }
 }

@@ -45,6 +45,12 @@ public class UserService {
                     return new UserNotFoundException("User not found with username: " + username);
                 });
         
+        // Verify that the user has active status
+        if (!"active".equals(user.getStatus())) {
+            logger.warn("User {} is not active (status: {})", username, user.getStatus());
+            throw new UserNotFoundException("User not found with username: " + username);
+        }
+        
         UserDTO userDTO = userMapper.toDTO(user);
         logger.info("User found: {}", user.getUsername());
         return userDTO;
@@ -70,6 +76,12 @@ public class UserService {
                     logger.warn("User not found with id: {}", id);
                     return new UserNotFoundException("User not found with id: " + id);
                 });
+        
+        // Verify that the user has active status
+        if (!"active".equals(user.getStatus())) {
+            logger.warn("User with id {} is not active (status: {})", id, user.getStatus());
+            throw new UserNotFoundException("User not found with id: " + id);
+        }
         
         UserDTO userDTO = userMapper.toDTO(user);
         logger.info("User found: {}", user.getUsername());

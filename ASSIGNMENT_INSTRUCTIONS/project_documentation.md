@@ -1,4 +1,4 @@
-LARGE-SCALE
+dLARGE-SCALE
 
 Colori:
 -	Danilo Team Leader
@@ -495,7 +495,7 @@ Book	User	Review	Author
     "isbns": ["978-0547928210", "0345339703"] // Multipli ISBN (Amazon + BC)
   },
 
-  // PATTERN: Subset (Le 3 recensioni più recenti per la card del libro)
+  // PATTERN: Subset (le 3 più recenti per la card del libro)
   "recent_reviews_snapshot": [
     {
       "_id": ObjectId("65c1..."),
@@ -538,10 +538,12 @@ Book	User	Review	Author
     }
   ],
 
-  // PATTERN: Computed (Score attuale per query "Trending Now")
-  "trend_score": {
+  // PATTERN: Current Monthly score
+  "month_score": {
     "rating": 4.35,
-    "updated_at": ISODate("2026-02-01T10:00:00Z")
+    “rating_count”: ,
+    “sum_rating”: ,
+    "Current_Month”: 
   }
 }
 	{
@@ -810,4 +812,78 @@ Mongo DB automatically managed the eventual consistency (w=majority), when set t
 
 Eventual Consistency between Mongo and Neo4j
 In order to guarantee the consistency between the DBs...
+•	Retryable
+•	getOrCreate: es. Dopo aver controllato che un utente esiste su MongoDB, su neo4j viene fatta get or create
+•	application.preperties defines URLs for primary and secondary and W/R preferences, Mongo Library will correctly handle connections based on the operation done
+•	Asynchronous consistency is implemented for the following operations
+Operazione	Strict Consistency 	Eventual Consistency (asynchronous)
+Create review	MONGO:
+-	Add in review collection
+-	Update book collection (LINKING + RECENT EMB.)
+-	Update User collection (LINKING + YEAR EMB.)
+NEO: add
+-	Add node
+-	Add relation post	MONGO:
+-	 Update book collection (STATS MONTH(trending score)/YEAR/ALL)
+-	Update Author collection (STATS)
+Update Review	MONGO:
+-	Review collection
+-	Book collection (EMB.)
+-	User collection (EMB.)
+NEO:
+-	Update rating	MONGO:
+-	Update book statistics
+-	Update author statistics
+Delete Review	MONGO:
+-	Review collection
+-	Book collection (EMB & LINK)
+-	User collection (EMB & LINK)
+NEO:
+-	Delete Node (and relations)	MONGO
+-	Update Book stats
+-	Update Author stats
+Update username	MONGO:
+-	User collection
+NEO:
+-	User node	MONGO
+-	Review collection
+-	Book collection (EMB.)
+Add like to review	MONGO:
+-	Review collection
+-	Book collection (EMB. POPULAR) 
+NEO:
+-	Add like relation	
+Delete like from review	MONGO:
+-	Review collection
+NEO:
+-	Remove like relation 	MONGO
+-	Update Book popular reviews (EMB.)  
+Delete account
+(così come per Banned, non sarà più accessibile il probilo, ma le interazioni che ha avuto rimangono accessibili nel sistema)	MONGO:
+-	Delete User info (status deleted)
+-	Update status to “deleted account”
+NEO:
+	Mongo: 
+-	Eliminare il campo username da users e ovunque esso appaia 
 
+Neo:
+-	Eliminare username
+
+
+
+
+
+
+
+
+
+Aggiunta di un nuovo libro al catalogo	MongoDB + Neo4j	
+Aggiornamento informazioni libro	MongoDB + Neo4J	
+Rimozione di un libro dal sistema	MongoDB + Neo4J	
+Moderazione: elimina recensione offensiva	Mongo +  Neo4J	
+Ban di un utente dalla piattaforma	MongoDB	
+Inserisci autore	Mongo +  Neo4J	
+Aggiorna autore	Mongo +  Neo4J	
+Elimina autore	Mongo +  Neo4J	
+Inserisci nuovo genere	Neo	
+Nota: Una volta eliminato l’account rimuovere ovunque il campo col nome utente eliminato.

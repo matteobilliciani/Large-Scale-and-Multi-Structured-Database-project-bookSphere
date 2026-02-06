@@ -47,8 +47,8 @@ public class BookDocument {
     @Field("stats_per_year")
     private List<YearStat> statsPerYear;
 
-    @Field("trend_score")
-    private TrendScore trendScore;
+    @Field("month_score")
+    private MonthScore monthScore;
 
     private String source;
 
@@ -114,11 +114,17 @@ public class BookDocument {
     @Data
     @NoArgsConstructor
     @AllArgsConstructor
-    public static class TrendScore {
+    public static class MonthScore {
         private Double rating;
 
-        @Field("updated_at")
-        private Instant updatedAt;
+        @Field("rating_count")
+        private Integer ratingCount;
+
+        @Field("sum_rating")
+        private Integer sumRating;
+
+        @Field("current_month")
+        private Integer currentMonth; // Month number (1-12)
     }
 
 }

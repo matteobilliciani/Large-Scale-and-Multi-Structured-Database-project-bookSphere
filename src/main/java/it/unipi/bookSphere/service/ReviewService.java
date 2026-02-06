@@ -6,6 +6,7 @@ import it.unipi.bookSphere.mapper.ReviewMapper;
 import it.unipi.bookSphere.model.mongodb.BookDocument;
 import it.unipi.bookSphere.model.mongodb.RegisteredUser;
 import it.unipi.bookSphere.model.mongodb.Review;
+import it.unipi.bookSphere.model.mongodb.AuthorDocument;
 import it.unipi.bookSphere.model.neo4j.BookNode;
 import it.unipi.bookSphere.model.neo4j.ReviewNode;
 import it.unipi.bookSphere.model.neo4j.UserNode;
@@ -25,6 +26,7 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -112,7 +114,19 @@ public class ReviewService {
         RegisteredUser user = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + currentUserId));
         
-        // 3. Create Review in MongoDB
+        // 3. Check if user already has a review for this book (prevent duplicates)
+        if (user.getReviews() != null && !user.getReviews().isEmpty()) {
+            // Check if any of the user's reviews is for this book
+            List<Review> existingReviews = reviewRepository.findByIdIn(user.getReviews());
+            boolean alreadyReviewed = existingReviews.stream()
+                    .anyMatch(r -> r.getBookSnapshot() != null && 
+                                   reviewDTO.getBookId().equals(r.getBookSnapshot().getBookId()));
+            if (alreadyReviewed) {
+                throw new AlreadyExistsException("You have already reviewed this book");
+            }
+        }
+        
+        // 4. Create Review in MongoDB
         // Note: We create the Review manually instead of using reviewMapper.toDocument() 
         // because we need to set several fields that are not in the DTO (userId, createdAt, 
         // likesCount, isBanned, source). The mapper is used for DTO conversion at the end.
@@ -137,14 +151,20 @@ public class ReviewService {
         logger.info("Created review in MongoDB: {}", savedReview.getId());
         
         try {
-            // 4. Create ReviewNode in Neo4j with relationships
+            // 5. Create ReviewNode in Neo4j with relationships
             createReviewNodeWithRelationships(savedReview, currentUserId, book.getId());
             
-            // 5. Update book stats and snapshots (eventual consistency)
+            // 6. Update book stats and snapshots (eventual consistency)
             updateBookStatistics(book, savedReview);
             
-            // 6. Update user reviews_year and reviews array (eventual consistency)
+            // 7. Update user reviews_year and reviews array (eventual consistency)
             updateUserReviews(currentUserId, savedReview, book.getTitle());
+            
+            // 7. Update author statistics (eventual consistency)
+            updateAuthorStatistics(book.getAuthor().getId(), savedReview.getRating());
+            
+            // 8. Update month score for trending (eventual consistency - ASYNC)
+            updateMonthScore(book.getId(), savedReview.getRating(), 1);
             
         } catch (Exception e) {
             // Rollback MongoDB if Neo4j or updates fail
@@ -217,6 +237,18 @@ public class ReviewService {
                 updateUserReviewRating(currentUserId, reviewId, updatedReview.getRating());
             }
             
+            // 7. Update author statistics if rating changed (eventual consistency)
+            if (reviewDTO.getRating() != null && !oldRating.equals(reviewDTO.getRating())) {
+                BookDocument book = bookRepository.findById(bookId)
+                        .orElseThrow(() -> new BookNotFoundException("Book not found"));
+                updateAuthorStatisticsAfterRatingChange(book.getAuthor().getId(), oldRating, updatedReview.getRating());
+            }
+            
+            // 8. Update month score if rating changed (eventual consistency - ASYNC)
+            if (reviewDTO.getRating() != null && !oldRating.equals(reviewDTO.getRating())) {
+                updateMonthScoreAfterRatingChange(bookId, oldRating, updatedReview.getRating());
+            }
+            
         } catch (Exception e) {
             logger.error("Failed to update review in Neo4j or statistics", e);
             // Don't rollback MongoDB, log error and continue (eventual consistency will fix)
@@ -273,6 +305,16 @@ public class ReviewService {
             // 6. Remove from user reviews and reviews_year
             removeReviewFromUser(userId, reviewId);
             
+            // 7. Update author statistics (eventual consistency)
+            if (book != null) {
+                removeReviewFromAuthorStatistics(book.getAuthor().getId(), rating);
+            }
+            
+            // 8. Update month score after removal (eventual consistency - ASYNC)
+            if (book != null) {
+                updateMonthScore(bookId, -rating, -1);
+            }
+            
         } catch (Exception e) {
             logger.error("Failed to delete review from Neo4j or update statistics", e);
             // Review already deleted from MongoDB, log the error
@@ -321,11 +363,12 @@ public class ReviewService {
     }
 
     /**
-     * Update book statistics after new review (eventual consistency)
+     * Update book statistics after new review (eventual consistency - ASYNC)
      * - Updates stats_per_year
      * - Updates recent_reviews_snapshot
      * - Adds review ID to reviews array
      */
+    @Async
     private void updateBookStatistics(BookDocument book, Review review) {
         int currentYear = LocalDateTime.now().getYear();
         
@@ -386,8 +429,9 @@ public class ReviewService {
     }
 
     /**
-     * Update book statistics after rating change
+     * Update book statistics after rating change (ASYNC)
      */
+    @Async
     private void updateBookStatisticsAfterRatingChange(BookDocument book, Integer oldRating, Integer newRating) {
         int currentYear = LocalDateTime.now().getYear();
         
@@ -414,8 +458,9 @@ public class ReviewService {
     }
 
     /**
-     * Remove review from book statistics after deletion
+     * Remove review from book statistics after deletion (ASYNC)
      */
+    @Async
     private void removeReviewFromBookStatistics(BookDocument book, Integer rating, String reviewId) {
         int currentYear = LocalDateTime.now().getYear();
         
@@ -503,5 +548,144 @@ public class ReviewService {
         
         mongoTemplate.updateFirst(query, update, RegisteredUser.class);
         logger.info("Removed review from user: {}", userId);
+    }
+
+    /**
+     * Update author statistics after new review (eventual consistency - ASYNC)
+     */
+    @Async
+    private void updateAuthorStatistics(String authorId, Integer rating) {
+        Query query = new Query(Criteria.where("_id").is(authorId));
+        Update update = new Update();
+        
+        update.inc("ratings_count", 1);
+        update.inc("sum_ratings", rating);
+        
+        mongoTemplate.updateFirst(query, update, AuthorDocument.class);
+        
+        // Recalculate average
+        AuthorDocument author = mongoTemplate.findOne(query, AuthorDocument.class);
+        if (author != null && author.getRatingsCount() != null && author.getRatingsCount() > 0) {
+            double newAvg = (double) author.getSumRatings() / author.getRatingsCount();
+            Update avgUpdate = new Update().set("average_rating", newAvg);
+            mongoTemplate.updateFirst(query, avgUpdate, AuthorDocument.class);
+        }
+        
+        logger.info("Updated author statistics for author: {}", authorId);
+    }
+
+    /**
+     * Update author statistics after rating change (eventual consistency - ASYNC)
+     */
+    @Async
+    private void updateAuthorStatisticsAfterRatingChange(String authorId, Integer oldRating, Integer newRating) {
+        Query query = new Query(Criteria.where("_id").is(authorId));
+        Update update = new Update();
+        
+        int ratingDiff = newRating - oldRating;
+        update.inc("sum_ratings", ratingDiff);
+        
+        mongoTemplate.updateFirst(query, update, AuthorDocument.class);
+        
+        // Recalculate average
+        AuthorDocument author = mongoTemplate.findOne(query, AuthorDocument.class);
+        if (author != null && author.getRatingsCount() != null && author.getRatingsCount() > 0) {
+            double newAvg = (double) author.getSumRatings() / author.getRatingsCount();
+            Update avgUpdate = new Update().set("average_rating", newAvg);
+            mongoTemplate.updateFirst(query, avgUpdate, AuthorDocument.class);
+        }
+        
+        logger.info("Updated author statistics after rating change for author: {}", authorId);
+    }
+
+    /**
+     * Remove review from author statistics (eventual consistency - ASYNC)
+     */
+    @Async
+    private void removeReviewFromAuthorStatistics(String authorId, Integer rating) {
+        Query query = new Query(Criteria.where("_id").is(authorId));
+        Update update = new Update();
+        
+        update.inc("ratings_count", -1);
+        update.inc("sum_ratings", -rating);
+        
+        mongoTemplate.updateFirst(query, update, AuthorDocument.class);
+        
+        // Recalculate average
+        AuthorDocument author = mongoTemplate.findOne(query, AuthorDocument.class);
+        if (author != null && author.getRatingsCount() != null && author.getRatingsCount() > 0) {
+            double newAvg = (double) author.getSumRatings() / author.getRatingsCount();
+            Update avgUpdate = new Update().set("average_rating", newAvg);
+            mongoTemplate.updateFirst(query, avgUpdate, AuthorDocument.class);
+        } else if (author != null && author.getRatingsCount() != null && author.getRatingsCount() == 0) {
+            // Reset average if no more reviews
+            Update avgUpdate = new Update().set("average_rating", 0.0);
+            mongoTemplate.updateFirst(query, avgUpdate, AuthorDocument.class);
+        }
+        
+        logger.info("Removed review from author statistics for author: {}", authorId);
+    }
+
+    /**
+     * Update month score for trending analysis (eventual consistency - ASYNC)
+     * This is called when a new review is added or removed
+     * 
+     * @param bookId The book ID
+     * @param ratingDelta The rating change (positive for add, negative for remove)
+     * @param countDelta The count change (1 for add, -1 for remove)
+     */
+    @Async
+    private void updateMonthScore(String bookId, Integer ratingDelta, Integer countDelta) {
+        int currentMonth = LocalDateTime.now().getMonthValue();
+        
+        Query query = new Query(Criteria.where("_id").is(bookId));
+        
+        // Fetch current book to check if month_score needs reset
+        BookDocument book = mongoTemplate.findOne(query, BookDocument.class);
+        
+        if (book != null) {
+            Update update = new Update();
+            
+            // Check if we need to reset for new month
+            if (book.getMonthScore() == null || book.getMonthScore().getCurrentMonth() == null || 
+                !book.getMonthScore().getCurrentMonth().equals(currentMonth)) {
+                // New month - reset the score
+                BookDocument.MonthScore newScore = new BookDocument.MonthScore();
+                newScore.setCurrentMonth(currentMonth);
+                newScore.setRatingCount(countDelta > 0 ? countDelta : 0);
+                newScore.setSumRating(ratingDelta > 0 ? ratingDelta : 0);
+                newScore.setRating(ratingDelta > 0 ? (double) ratingDelta : 0.0);
+                
+                update.set("month_score", newScore);
+            } else {
+                // Same month - increment
+                update.inc("month_score.rating_count", countDelta);
+                update.inc("month_score.sum_rating", ratingDelta);
+                
+                // Recalculate average
+                int newCount = book.getMonthScore().getRatingCount() + countDelta;
+                int newSum = book.getMonthScore().getSumRating() + ratingDelta;
+                
+                if (newCount > 0) {
+                    double newAvg = (double) newSum / newCount;
+                    update.set("month_score.rating", newAvg);
+                } else {
+                    // Reset if no reviews this month
+                    update.set("month_score.rating", 0.0);
+                }
+            }
+            
+            mongoTemplate.updateFirst(query, update, BookDocument.class);
+            logger.info("Updated month score for book: {}", bookId);
+        }
+    }
+
+    /**
+     * Update month score after rating change (eventual consistency - ASYNC)
+     */
+    @Async
+    private void updateMonthScoreAfterRatingChange(String bookId, Integer oldRating, Integer newRating) {
+        int ratingDelta = newRating - oldRating;
+        updateMonthScore(bookId, ratingDelta, 0); // Count stays the same
     }
 }

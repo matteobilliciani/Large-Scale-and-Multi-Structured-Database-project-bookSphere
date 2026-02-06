@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
-@RestController
+@RestController("registeredReviewController")
 @RequestMapping("/api/v1/me/reviews")
 @RequiredArgsConstructor
 @SecurityRequirement(name = "bearerAuth")

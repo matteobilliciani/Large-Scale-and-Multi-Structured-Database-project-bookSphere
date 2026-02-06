@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@RestController
+@RestController("openReviewController")
 @RequestMapping("/api/v1/reviews")
 @RequiredArgsConstructor
 @Tag(name = "Reviews (Open)", description = "Public review endpoints accessible to all users")

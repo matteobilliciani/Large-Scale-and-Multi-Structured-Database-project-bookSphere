@@ -93,6 +93,12 @@ public interface UserNodeRepository extends Neo4jRepository<UserNode, String> {
         """)
     List<Map<String, Object>> getFollowedUsers(@Param("userId") String userId);
     
+    /**
+     * Check if user A follows user B (alias for isFollowing for backward compatibility)
+     */
+    @Query("MATCH (a:User {mongoId: $userAId})-[r:FOLLOWS]->(b:User {mongoId: $userBId}) RETURN COUNT(r) > 0")
+    boolean userFollowsUser(@Param("userAId") String userAId, @Param("userBId") String userBId);
+    
     // ========== GET OR CREATE METHODS ==========
     
     /**

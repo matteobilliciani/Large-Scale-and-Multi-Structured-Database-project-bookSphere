@@ -20,7 +20,7 @@ public interface BookMapper {
     @Mapping(target = "averageRating", ignore = true)
     @Mapping(target = "totalRatingsCount", ignore = true)
     @Mapping(target = "totalSumRating", ignore = true)
-    @Mapping(target = "trendScore.updatedAt", source = "trendScore.updatedAt", qualifiedByName = "instantToLocalDateTime")
+    @Mapping(target = "trendScore", source = "monthScore")
     BookDTO toDTO(BookDocument document);
 
     /**
@@ -74,16 +74,16 @@ public interface BookMapper {
     StatsPerYearDTO toStatsPerYearDTO(BookDocument.YearStat yearStat);
 
     /**
-     * Convert BookDocument.TrendScore to TrendScoreDTO
+     * Convert BookDocument.MonthScore to TrendScoreDTO
      */
-    @Mapping(target = "updatedAt", source = "updatedAt", qualifiedByName = "instantToLocalDateTime")
-    TrendScoreDTO toTrendScoreDTO(BookDocument.TrendScore trendScore);
+    @Mapping(target = "updatedAt", expression = "java(java.time.LocalDateTime.now())")
+    TrendScoreDTO toTrendScoreDTO(BookDocument.MonthScore monthScore);
 
     /**
      * Convert BookDTO to BookDocument (for create/update operations)
      */
     @Mapping(target = "externalIds.isbns", source = "isbns")
-    @Mapping(target = "trendScore.updatedAt", source = "trendScore.updatedAt", qualifiedByName = "localDateTimeToInstant")
+    @Mapping(target = "monthScore", source = "trendScore")
     BookDocument toDocument(BookDTO dto);
 
     /**
@@ -103,10 +103,12 @@ public interface BookMapper {
     BookDocument.YearStat toYearStat(StatsPerYearDTO dto);
 
     /**
-     * Convert TrendScoreDTO to BookDocument.TrendScore
+     * Convert TrendScoreDTO to BookDocument.MonthScore
      */
-    @Mapping(target = "updatedAt", source = "updatedAt", qualifiedByName = "localDateTimeToInstant")
-    BookDocument.TrendScore toTrendScore(TrendScoreDTO dto);
+    @Mapping(target = "ratingCount", ignore = true)
+    @Mapping(target = "sumRating", ignore = true)
+    @Mapping(target = "currentMonth", ignore = true)
+    BookDocument.MonthScore toMonthScore(TrendScoreDTO dto);
 
     /**
      * Convert BookDocument to BookSummaryDTO (simplified version)
