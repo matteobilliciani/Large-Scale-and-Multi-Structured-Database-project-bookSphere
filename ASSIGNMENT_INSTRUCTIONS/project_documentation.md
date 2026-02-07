@@ -1,11 +1,11 @@
-dLARGE-SCALE
+LARGE-SCALE
 
 Colori:
 -	Danilo Team Leader
 -	Matteo Team Boxer
 -	Matteo Team Donna
 
-Platform introduction
+Platform introduction[MB1.1][MB1.2]
 Welcome to BookSphere, the ultimate social platform for book lovers designed to help you organize your reading life and connect with a global community. Beyond simply searching for titles and authors, BookSphere allows you to curate your own digital library by marking books as "To-Read," "Reading," or "Read," ensuring you never lose track of your literary journey.
 The experience is deeply social and smart: you can follow friends to instantly see their latest updates and ratings or discover "Real Influencers" - expert reviewers identified by the quality of their engagement rather than just follower count - to get the best recommendations for your favourite genres. The platform goes beyond standard suggestions by offering unique insights, such as a "Trending Probability" that predicts the next viral hit and an "Internationality Index" that shows you how far a book is traveling around the globe. You can share your own voice by leaving one-to-one-hundred ratings and written reviews, and at the end of every year, you’ll receive a personalized "Yearly Wrapped" recap to celebrate your reading highlights, top authors, and most-read genres.
 
@@ -54,7 +54,7 @@ Admin
 4.	The System must allow an Admin to view any Registered User.
 5.	The System must enable an Admin to view any review.
 6.	The System must enable an Admin to delete any review.
-7.	The System must enable an Admin to ban any Registered User.
+7.	The System must enable an Admin to ban any Registered User[DP2.1].
 Non-Functional Requirements
 1.	The System must follow RESTful design principles
 2.	The System must avoid permanent data loss
@@ -217,7 +217,7 @@ db.users.aggregate([
 ________________________________________
 Popularity prediction	Popularity prediction of a book
 a.	Rating of the publications of the same author
-b.	Genre of the book appearance on rankings	Query 3: Author Popularity Prediction (Hybrid Model)
+b.	Genre of the book appearance on rankings[MI3.1]	Query 3: Author Popularity Prediction (Hybrid Model)
 Obiettivo: Predire il trend futuro (Rising/Falling).
 Logica: Combina la "Reputazione Storica" (60%) con il "Momentum Recente" (40%).
 JavaScript
@@ -352,8 +352,7 @@ RETURN r.mongoId AS ReviewID,
        collect(u.username) AS LikedBy
 ORDER BY LikeCount DESC
 LIMIT 1
-```
-
+```[MI4.1]
 | **4. Genre Influencer:** Identify "Real Influencers" in a genre—users whose reviews consistently receive high engagement rather than just high volume.
 
 Identify influencer users for a specific genre
@@ -393,7 +392,7 @@ ORDER BY AvgLikesPerReview DESC
 LIMIT 5
 
 Find authors that have written books of different genres (versatility).
-	TO DO	TO DO
+	TO DO	TO DO[MI5.1]
 
 GRAPH indexes
 GEMINI GIUSTAMENTE CONSIGLIA:
@@ -692,7 +691,7 @@ X	GET	/api/v1/books/{id}	pathVariable	Visualizza dettagli libro, snapshot recens
 X	GET	/api/v1/books?title = …	Query string	Ricerca il Libro dal titolo	MongoDB
 X	GET	/api/v1/authors/{id}	Author’s Id	Visualizza profilo autore, opere pubblicate e rating	MongoDB
 X	GET	/api/v1/authors?author_name = …	Query string	Ricerca Autore dal nome, opere pubblicate e rating	
-X	GET	/api/v1/users/username/{username}	Path Variable 	Visualizza profilo utente e attività (bookshelf e reviews dell’anno e lista delle reviewID)	Mongo
+X	GET	/api/v1/users/username/{username[DP6.1]}	Path Variable 	Visualizza profilo utente e attività (bookshelf e reviews dell’anno e lista delle reviewID)	Mongo
 X	GET	/api/v1/users/{id}	Path variable 	Ricerca utente per ID	
 X	GET	/api/v1/analytics/rankings/trendingbooks		Lista di Libri di tendenza	MongoDB
 X	GET	/api/v1/analytics/rankings/books?year = …	Query string 	Classifiche dei libri per un anno specifico o di sempre
@@ -739,16 +738,15 @@ Volendo anche solo ID.
 Andrà fatta l’interazione per recuperare le info con Neo4j in questo caso.
 Da un libro ottenere tutte le recensioni.
 Administrator	POST	/api/v1/admin/books	Auth + corpo Book	Aggiunta di un nuovo libro al catalogo	MongoDB + Neo4j
-X	PUT	/api/v1/admin/books/{id}	Auth + corpo book modificato + path variable	Aggiornamento informazioni libro	MongoDB + Neo4J
-X	DELETE	/api/v1/admin/books/{id}	Auth + path variable	Rimozione di un libro dal sistema	MongoDB + Neo4J
+X	PUT	/api/v1/admin/books/{id}	Auth + corpo book modificato + path variable	Aggiornamento informazioni libro(Only master update)	MongoDB + Neo4J
+X	DELETE	/api/v1/admin/books/{id}	Auth + path variable	Rimozione di un libro dal sistema(Soft Delete)	MongoDB + Neo4J
 X	DELETE	/api/v1/admin/reviews/{id}	Auth + path variable	Moderazione: elimina recensione offensiva	Mongo + Neo
 X	PATCH	/api/v1/admin/users/{id}/ban	Auth + path variable + status banned	Ban di un utente dalla piattaforma	MongoDB
 X	POST	/api/v1/admin/authors	Auth + authors’ information fields	Inserisci autore	Mongo + neo
-X	PUT	/api/v1/admin/authors/{id}	Auth + path variable + update author info	Aggiorna autore	Mongo + neo
-X	DELETE	/api/v1/admin/authors/{id}	Auth + path variable	Elimina autore	Mongo + neo
-X	POST	/api/v1/admin/genres	Auth + corpo genre	Inserisci nuovo genere	Neo
+X	PUT	/api/v1/admin/authors/{id}	Auth + path variable + update author info	Aggiorna autor(Only Master Update)	Mongo + neo
+X	POST	/api/v1/admin/genres	Auth + corpo genre	Inserisci nuovo genere	Neo 
 
-
+NEL CODICE CI SONO ANCHE LE API PER RITORNARE TUTTI GLI USER E REVIEW LE TENIAMO?
 
 
 Implementation
@@ -877,13 +875,147 @@ Neo:
 
 
 
-Aggiunta di un nuovo libro al catalogo	MongoDB + Neo4j	
-Aggiornamento informazioni libro	MongoDB + Neo4J	
-Rimozione di un libro dal sistema	MongoDB + Neo4J	
-Moderazione: elimina recensione offensiva	Mongo +  Neo4J	
-Ban di un utente dalla piattaforma	MongoDB	
-Inserisci autore	Mongo +  Neo4J	
-Aggiorna autore	Mongo +  Neo4J	
-Elimina autore	Mongo +  Neo4J	
-Inserisci nuovo genere	Neo	
 Nota: Una volta eliminato l’account rimuovere ovunque il campo col nome utente eliminato.
+
+Operazione	Strict Consistency (Sincrono - Immediato)	Eventual Consistency (Asincrono)
+POST /admin/books
+
+
+(Nuovo Libro)	MONGO:
+- Insert in books collection.
+NEO:
+- Create (:Book) Node.
+- Create Relation (:Author)-[:WROTE]->(:Book).	(Nessuna azione)
+PUT /admin/books/{id}
+
+
+(Update Info)	MONGO:
+- Update Document Master in books collection.
+NEO:
+- Update property b.title sul nodo.	NESSUNA AZIONE.
+
+
+(Le copie del titolo nelle review e bookshelf restano col vecchio nome come dato storico).
+DELETE /admin/books/{id}
+
+
+(Soft Delete)	MONGO:
+- Set status: "ARCHIVED" in books collection.
+NEO:
+- DETACH DELETE nodo Libro (per bloccare raccomandazioni).	NESSUNA AZIONE.
+
+
+(Il libro resta visibile nelle librerie utente e nelle review esistenti).
+POST /admin/authors
+
+
+(Nuovo Autore)	MONGO:
+- Insert in authors collection.
+NEO:
+- Create (:Author) Node.	(Nessuna azione)
+PUT /admin/authors/{id}
+
+
+(Update Info)	MONGO:
+- Update Document Master in authors collection.
+NEO:
+- Update property a.name sul nodo.	NESSUNA AZIONE.
+
+
+(I nomi embedded nei libri e nelle review restano invariati).
+DELETE /admin/authors/{id}
+
+
+(Soft Delete)	MONGO:
+- Set status: "ARCHIVED" in authors.
+NEO:
+- DETACH DELETE nodo Autore (o rimozione label).	NESSUNA AZIONE.
+DELETE /admin/reviews/{id}
+
+
+(Moderazione)	MONGO:
+- Delete Document in reviews.
+- $pull da review_ids e snapshots in books (Critico per rimuovere contenuti offensivi).
+NEO:
+- Detach Delete Node.	MONGO:
+
+
+- Update stats in books e authors.
+- $pull da review_ids e reviews_year in users.
+
+(Qui la pulizia serve perché stiamo rimuovendo un contenuto tossico, non un'entità catalogo).
+PATCH /admin/users/{id}/ban
+
+
+(Ban Utente)	MONGO:
+- Set status: "BANNED" in users.
+NEO:
+- Set label (:BannedUser).	MONGO (Cleanup):
+- Set is_banned: true su reviews.
+- $pull review dagli snapshots dei libri.
+
+
+(Anche qui: pulizia necessaria per nascondere lo spammer).
+POST /admin/genres
+(Nuovo Genere)	NEO:
+- Create (:Genre) Node.	(Nessuna azione)
+
+
+
+
+
+
+Le relationship di neo4j non vengono modellate su Java perché non verranno utilizzate e verranno usate solo su neo4j per raccomandazioni ecc… . Le relationship vengono create tramite query mongo DB tramite CREATE ad esempio un LIKE ad un autore lo facciamo con
+
+MATCH (u:User {mongoId: $userId})
+        MATCH (a:Author {mongoId: $authorId})
+        CREATE (u)-[r:LIKES {timestamp: $timestamp}]->(a)
+RETURN r
+
+Questo perché salvandoci le relationship su java quello che succedeva era che alcuni super nodi soprattutto i generi che erano collegati a tanti i libri riempivano la memoria della JVM.
+
+
+
+
+Query Name	Logica di Business	Integrazione MongoDB (Backend Logic)	Cypher Query (Neo4j)
+1. User Recommendations	Suggerisce libri non letti basandosi su:
+
+
+1. Gusti utenti seguiti
+
+
+2. Autori piaciuti
+
+
+3. Generi piaciuti.
+
+
+
+Logica Graph: Percorsi a 2-3 salti (FOLLOWS/LIKES, LIKES/WROTE, LIKES/BELONGS_TO).	PRE-QUERY (Blacklist):
+
+
+1. Backend chiama db.users.findOne({username: $username}, {bookshelf: 1}).
+
+
+2. Estrae i book_id con status "read".
+
+
+3. Passa questa lista come parametro $excludedMongoIds a Neo4j.	cypher<br>// PARAM: $username, $excludedMongoIds<br>MATCH (u:User {username: $username})<br><br>// Path A: Books liked by people I follow<br>OPTIONAL MATCH (u)-[:FOLLOWS]->(:User)-[:LIKES]->(b1:Book)<br><br>// Path B: Books written by authors I like<br>OPTIONAL MATCH (u)-[:LIKES]->(:Author)-[:WROTE]->(b2:Book)<br><br>// Path C: Books belonging to genres I like<br>OPTIONAL MATCH (u)-[:LIKES]->(:Genre)<-[:BELONGS_TO]-(b3:Book)<br><br>WITH collect(b1) + collect(b2) + collect(b3) AS recommendations, u<br>UNWIND recommendations AS book<br><br>// Filter out books reviewed OR read in Mongo Bookshelf<br>WHERE NOT (u)-[:POSTED]->(:Review)-[:REFER_TO]->(book)<br> AND NOT book.mongoId IN $excludedMongoIds<br><br>RETURN book.title, book.mongoId, count(*) AS score<br>ORDER BY score DESC<br>LIMIT 10<br>
+2. Internationality Index	Calcola "quanto viaggia" un libro/autore analizzando la provenienza geografica di chi mette Like o scrive recensioni.		#### 2. Internationality Index (Book/Author Travel)
+```cypher
+MATCH (target) 
+WHERE (target:Book {id:"ID"}) OR (target:Author {id:"ID"})
+// Match users who interacted via Review or direct Like
+MATCH (u:User)-[:POSTED|LIKES]->(interaction)
+WHERE (interaction)-[:REFER_TO]->(target) OR interaction = target
+RETURN u.country AS Country, 
+       count(DISTINCT u) AS UniqueUsers, 
+       count(interaction) AS TotalInteractions
+ORDER BY UniqueUsers DESC
+```
+
+4. Genre Influencer	Identifica i "Veri Influencer" in un genere (Quality over Quantity).
+
+
+Trova chi scrive review che ricevono molti Like in un dato genere.		cypher<br>// PARAM: $genreName (es. "Fantasy")<br>MATCH (g:Genre {name: $genreName})<-[:BELONGS_TO]-(b:Book)<-[:REFER_TO]-(r:Review)<-[:POSTED]-(influencer:User)<br><br>// Chi ha messo like alla review?<br>MATCH (r)<-[:LIKES]-(fan:User)<br><br>WITH influencer,<br> count(DISTINCT r) AS num_reviews,<br> count(fan) AS total_likes<br><br>// Filter for statistical relevance<br>WHERE num_reviews > 1<br><br>RETURN influencer.username AS Influencer,<br> total_likes AS TotalEngagement,<br> (toFloat(total_likes) / num_reviews) AS AvgLikesPerReview<br>ORDER BY AvgLikesPerReview DESC<br>LIMIT 5<br>
+

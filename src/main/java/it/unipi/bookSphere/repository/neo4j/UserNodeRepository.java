@@ -1,6 +1,7 @@
 package it.unipi.bookSphere.repository.neo4j;
 
 import it.unipi.bookSphere.model.neo4j.UserNode;
+import it.unipi.bookSphere.repository.neo4j.projections.RecommendationProjection;
 import org.springframework.data.neo4j.repository.Neo4jRepository;
 import org.springframework.data.neo4j.repository.query.Query;
 import org.springframework.data.repository.query.Param;
@@ -127,4 +128,30 @@ public interface UserNodeRepository extends Neo4jRepository<UserNode, String> {
                     return save(newNode);
                 });
     }
+    
+    // ========== ANALYTICS METHODS ==========
+    
+    /**
+     * Generate book recommendations for a user based on their social graph and preferences
+     * Considers: books liked by followed users, books by liked authors, books in liked genres
+     * Excludes books the user has already reviewed
+     */
+    @Query("""
+        MATCH (u:User {mongoId: $userId})
+        OPTIONAL MATCH (u)-[:FOLLOWS]->(:User)-[:LIKES]->(b1:Book)
+        OPTIONAL MATCH (u)-[:LIKES]->(:Author)-[:WROTE]->(b2:Book)
+        OPTIONAL MATCH (u)-[:LIKES]->(:Genre)<-[:BELONGS_TO]-(b3:Book)
+        WITH collect(b1) + collect(b2) + collect(b3) AS recommendations, u
+        UNWIND recommendations AS book
+        WITH u, book
+        WHERE NOT EXISTS((u)-[:POSTED]->(:Review)-[:REFER_TO]->(book)) AND book IS NOT NULL
+        WITH book.mongoId AS bookId, 
+             book.title AS title, 
+             book.year AS publicationYear,
+             count(*) AS score
+        RETURN bookId, title, publicationYear, score
+        ORDER BY score DESC
+        LIMIT $limit
+        """)
+    List<RecommendationProjection> getUserRecommendations(@Param("userId") String userId, @Param("limit") int limit);
 }

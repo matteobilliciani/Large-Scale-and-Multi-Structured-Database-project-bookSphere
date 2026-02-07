@@ -3,9 +3,14 @@ package it.unipi.bookSphere.controller.open;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import it.unipi.bookSphere.dto.InfluencerDTO;
+import it.unipi.bookSphere.dto.InternationalityDTO;
+import it.unipi.bookSphere.service.AnalyticsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/analytics")
@@ -13,8 +18,7 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Analytics (Open)", description = "Public analytics and statistics endpoints")
 public class AnalyticsController {
 
-    // TODO: Inject AnalyticsService when implemented
-    // private final AnalyticsService analyticsService;
+    private final AnalyticsService analyticsService;
 
     @Operation(
             summary = "Get trending books",
@@ -105,31 +109,31 @@ public class AnalyticsController {
 
     @Operation(
             summary = "Calculate Internationality Index",
-            description = "Measure how far a book or author travels across the globe. Pass either a book ID or author ID."
+            description = "Measure how far a book or author travels across the globe. Specify the entity type (BOOK or AUTHOR) and its MongoDB ObjectId."
     )
     @GetMapping("/internationality/{entityId}")
-    public ResponseEntity<?> calculateInternationality(
+    public ResponseEntity<List<InternationalityDTO>> calculateInternationality(
             @Parameter(description = "MongoDB ObjectId of the book or author", example = "65b3f...")
-            @PathVariable String entityId
+            @PathVariable String entityId,
+            @Parameter(description = "Type of entity: BOOK or AUTHOR", example = "BOOK")
+            @RequestParam String entityType
     ) {
-        // TODO: Implement service call - Neo4j Query 2
-        // Map<String, Object> internationality = analyticsService.calculateInternationality(entityId);
-        // return ResponseEntity.ok(internationality);
-        throw new UnsupportedOperationException("Not yet implemented");
+        List<InternationalityDTO> internationality = analyticsService.calculateInternationality(entityId, entityType);
+        return ResponseEntity.ok(internationality);
     }
 
     @Operation(
             summary = "Identify genre influencers",
-            description = "Find real influencers in a genre based on review engagement quality"
+            description = "Find real influencers in a genre based on review engagement quality. If genre not specified, returns top influencers across all genres."
     )
     @GetMapping("/influencers")
-    public ResponseEntity<?> getInfluencers(
+    public ResponseEntity<List<InfluencerDTO>> getInfluencers(
             @Parameter(description = "Genre name (optional)", example = "Fantasy")
-            @RequestParam(required = false) String genre
+            @RequestParam(required = false) String genre,
+            @Parameter(description = "Maximum number of influencers to return (default 10)", example = "10")
+            @RequestParam(required = false) Integer limit
     ) {
-        // TODO: Implement service call - Neo4j Query 4
-        // List<Map<String, Object>> influencers = analyticsService.getInfluencers(genre);
-        // return ResponseEntity.ok(influencers);
-        throw new UnsupportedOperationException("Not yet implemented");
+        List<InfluencerDTO> influencers = analyticsService.getInfluencers(genre, limit);
+        return ResponseEntity.ok(influencers);
     }
 }

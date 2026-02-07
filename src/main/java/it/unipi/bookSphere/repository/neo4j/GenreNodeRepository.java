@@ -1,6 +1,7 @@
 package it.unipi.bookSphere.repository.neo4j;
 
 import it.unipi.bookSphere.model.neo4j.GenreNode;
+import it.unipi.bookSphere.repository.neo4j.projections.InfluencerProjection;
 import org.springframework.data.neo4j.repository.Neo4jRepository;
 import org.springframework.data.neo4j.repository.query.Query;
 import org.springframework.data.repository.query.Param;
@@ -93,4 +94,45 @@ public interface GenreNodeRepository extends Neo4jRepository<GenreNode, String> 
                     return save(newNode);
                 });
     }
+    
+    // ========== ANALYTICS METHODS ==========
+    
+    /**
+     * Find influencers for a specific genre based on review engagement quality
+     * Returns users whose reviews consistently receive high engagement
+     */
+    @Query("""
+        MATCH (g:Genre {name: $genreName})<-[:BELONGS_TO]-(b:Book)<-[:REFER_TO]-(r:Review)<-[:POSTED]-(influencer:User)
+        MATCH (r)<-[:LIKES]-(fan:User)
+        WITH influencer,
+             count(DISTINCT r) AS numReviews,
+             count(fan) AS totalLikes
+        WHERE numReviews > 1
+        RETURN influencer.username AS username,
+               totalLikes AS totalEngagement,
+               numReviews AS numReviews,
+               toFloat(totalLikes) / numReviews AS avgLikesPerReview
+        ORDER BY avgLikesPerReview DESC
+        LIMIT $limit
+        """)
+    List<InfluencerProjection> findGenreInfluencers(@Param("genreName") String genreName, @Param("limit") int limit);
+    
+    /**
+     * Find top influencers across all genres
+     */
+    @Query("""
+        MATCH (r:Review)<-[:POSTED]-(influencer:User)
+        MATCH (r)<-[:LIKES]-(fan:User)
+        WITH influencer,
+             count(DISTINCT r) AS numReviews,
+             count(fan) AS totalLikes
+        WHERE numReviews > 1
+        RETURN influencer.username AS username,
+               totalLikes AS totalEngagement,
+               numReviews AS numReviews,
+               toFloat(totalLikes) / numReviews AS avgLikesPerReview
+        ORDER BY avgLikesPerReview DESC
+        LIMIT $limit
+        """)
+    List<InfluencerProjection> findTopInfluencers(@Param("limit") int limit);
 }

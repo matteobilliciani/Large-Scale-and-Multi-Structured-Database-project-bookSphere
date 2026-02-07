@@ -1,6 +1,7 @@
 package it.unipi.bookSphere.repository.neo4j;
 
 import it.unipi.bookSphere.model.neo4j.BookNode;
+import it.unipi.bookSphere.repository.neo4j.projections.InternationalityProjection;
 import org.springframework.data.neo4j.repository.Neo4jRepository;
 import org.springframework.data.neo4j.repository.query.Query;
 import org.springframework.data.repository.query.Param;
@@ -121,4 +122,23 @@ public interface BookNodeRepository extends Neo4jRepository<BookNode, String> {
                     return save(newNode);
                 });
     }
+    
+    // ========== ANALYTICS METHODS ==========
+    
+     /**
+     * Calculate Internationality Index for a book
+     * Returns the geographical distribution of likes and reviews for the book
+     */
+    @Query("""
+        MATCH (b:Book {mongoId: $bookId})
+        OPTIONAL MATCH (b)<-[:REFER_TO]-(r:Review)<-[:POSTED]-(reviewer:User)
+        OPTIONAL MATCH (b)<-[:LIKES]-(liker:User)
+        WITH reviewer, liker
+        WITH collect(DISTINCT reviewer) + collect(DISTINCT liker) AS users
+        UNWIND users AS u
+        WITH u WHERE u IS NOT NULL AND u.country IS NOT NULL
+        RETURN u.country AS country, count(DISTINCT u.mongoId) AS uniqueUsers, count(*) AS totalInteractions
+        ORDER BY uniqueUsers DESC
+        """)
+    List<InternationalityProjection> calculateBookInternationality(@Param("bookId") String bookId);
 }
