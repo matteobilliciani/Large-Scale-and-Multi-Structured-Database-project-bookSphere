@@ -7,7 +7,6 @@ import lombok.NoArgsConstructor;
 import org.springframework.data.neo4j.core.schema.Id;
 import org.springframework.data.neo4j.core.schema.Node;
 import org.springframework.data.neo4j.core.schema.Property;
-import org.springframework.data.neo4j.core.schema.Relationship;
 
 import java.time.LocalDateTime;
 
@@ -28,12 +27,4 @@ public class ReviewNode {
 
     @Property("createdAt")
     private LocalDateTime createdAt;
-
-    // Relationships
-
-    @Relationship(type = "POSTED", direction = Relationship.Direction.INCOMING)
-    private UserNode author;
-
-    @Relationship(type = "REFER_TO", direction = Relationship.Direction.OUTGOING)
-    private BookNode book;
 }

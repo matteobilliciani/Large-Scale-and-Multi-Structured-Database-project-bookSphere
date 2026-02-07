@@ -78,4 +78,32 @@ public interface ReviewNodeRepository extends Neo4jRepository<ReviewNode, String
         ORDER BY l.timestamp DESC
         """)
     List<Map<String, Object>> getLikedReviewsByUser(@Param("userId") String userId);
+    
+    // ========== REVIEW RELATIONSHIP METHODS ==========
+    
+    /**
+     * Create POSTED relationship between user and review
+     */
+    @Query("""
+        MATCH (u:User {mongoId: $userId})
+        MATCH (r:Review {mongoId: $reviewId})
+        MERGE (u)-[:POSTED]->(r)
+        """)
+    void createPostedRelationship(
+        @Param("userId") String userId,
+        @Param("reviewId") String reviewId
+    );
+    
+    /**
+     * Create REFER_TO relationship between review and book
+     */
+    @Query("""
+        MATCH (r:Review {mongoId: $reviewId})
+        MATCH (b:Book {mongoId: $bookId})
+        MERGE (r)-[:REFER_TO]->(b)
+        """)
+    void createReferToRelationship(
+        @Param("reviewId") String reviewId,
+        @Param("bookId") String bookId
+    );
 }

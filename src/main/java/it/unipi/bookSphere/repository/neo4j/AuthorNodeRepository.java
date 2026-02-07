@@ -95,6 +95,16 @@ public interface AuthorNodeRepository extends Neo4jRepository<AuthorNode, String
         @Param("bookMongoId") String bookMongoId
     );
     
+    /**
+     * Delete all WROTE relationships for a specific book
+     */
+    @Query("""
+        MATCH (a:Author)-[r:WROTE]->(b:Book {mongoId: $bookMongoId})
+        DELETE r
+        RETURN COUNT(r)
+        """)
+    Long deleteWroteRelationshipsForBook(@Param("bookMongoId") String bookMongoId);
+    
     // ========== GET OR CREATE METHODS ==========
     
     /**

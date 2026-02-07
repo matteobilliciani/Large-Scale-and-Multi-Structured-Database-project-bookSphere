@@ -332,22 +332,13 @@ public class ReviewService {
         reviewNode.setRating(review.getRating());
         reviewNode.setCreatedAt(review.getCreatedAt().atZone(ZoneOffset.UTC).toLocalDateTime());
         
-        // Get or create UserNode using repository method
-        UserNode userNode = userNodeRepository.getOrCreate(
-            userId,
-            SecurityUtils.getCurrentUsername(),
-            null
-        );
-        
-        // Find BookNode
-        BookNode bookNode = bookNodeRepository.findByMongoId(bookId)
-                .orElseThrow(() -> new BookNotFoundException("BookNode not found in Neo4j"));
-        
-        reviewNode.setAuthor(userNode);
-        reviewNode.setBook(bookNode);
-        
         reviewNodeRepository.save(reviewNode);
-        logger.info("Created ReviewNode in Neo4j: {}", review.getId());
+        
+        // Create relationships
+        reviewNodeRepository.createPostedRelationship(userId, review.getId());
+        reviewNodeRepository.createReferToRelationship(review.getId(), bookId);
+        
+        logger.info("Created ReviewNode in Neo4j with relationships: {}", review.getId());
     }
 
     /**

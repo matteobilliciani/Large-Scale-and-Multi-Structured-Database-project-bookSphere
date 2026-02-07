@@ -95,6 +95,16 @@ public interface BookNodeRepository extends Neo4jRepository<BookNode, String> {
         @Param("genreName") String genreName
     );
     
+    /**
+     * Delete all BELONGS_TO relationships for a specific book
+     */
+    @Query("""
+        MATCH (b:Book {mongoId: $bookMongoId})-[r:BELONGS_TO]->(g:Genre)
+        DELETE r
+        RETURN COUNT(r)
+        """)
+    Long deleteBelongsToRelationshipsForBook(@Param("bookMongoId") String bookMongoId);
+    
     // ========== GET OR CREATE METHODS ==========
     
     /**

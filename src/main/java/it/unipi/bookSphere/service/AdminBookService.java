@@ -148,6 +148,10 @@ public class AdminBookService {
         BookDocument existingBook = bookRepository.findById(id)
                 .orElseThrow(() -> new BookNotFoundException("Book not found with ID: " + id));
         
+        // Track if author or genres have changed to update relationships
+        boolean authorChanged = false;
+        boolean genresChanged = false;
+        
         // 2. Update MongoDB document
         if (bookDTO.getTitle() != null) {
             existingBook.setTitle(bookDTO.getTitle());
@@ -159,12 +163,18 @@ public class AdminBookService {
             existingBook.setDescription(bookDTO.getDescription());
         }
         if (bookDTO.getAuthor() != null) {
+            // Check if author has changed
+            if (existingBook.getAuthor() == null || 
+                !existingBook.getAuthor().getId().equals(bookDTO.getAuthor().getId())) {
+                authorChanged = true;
+            }
             BookDocument.Author authorInfo = new BookDocument.Author();
             authorInfo.setId(bookDTO.getAuthor().getId());
             authorInfo.setName(bookDTO.getAuthor().getName());
             existingBook.setAuthor(authorInfo);
         }
         if (bookDTO.getGenres() != null) {
+            genresChanged = true; // Simplified: assume genres changed if provided
             existingBook.setGenres(bookDTO.getGenres());
         }
         if (bookDTO.getIsbns() != null) {
@@ -190,6 +200,43 @@ public class AdminBookService {
             
             bookNodeRepository.save(bookNode);
             logger.info("Book node updated in Neo4j");
+            
+            // 4. Update WROTE relationship if author changed
+            if (authorChanged) {
+                logger.info("Author changed, updating WROTE relationship");
+                // Delete old WROTE relationships
+                Long deletedCount = authorNodeRepository.deleteWroteRelationshipsForBook(id);
+                logger.info("Deleted {} old WROTE relationships", deletedCount);
+                
+                // Create or get new author node
+                AuthorNode newAuthorNode = authorNodeRepository.getOrCreate(
+                    updatedBook.getAuthor().getId(),
+                    updatedBook.getAuthor().getName()
+                );
+                
+                // Create new WROTE relationship
+                authorNodeRepository.createWroteRelationship(newAuthorNode.getMongoId(), id);
+                logger.info("Created new WROTE relationship with author: {}", newAuthorNode.getName());
+            }
+            
+            // 5. Update BELONGS_TO relationships if genres changed
+            if (genresChanged && updatedBook.getGenres() != null) {
+                logger.info("Genres changed, updating BELONGS_TO relationships");
+                // Delete old BELONGS_TO relationships
+                Long deletedCount = bookNodeRepository.deleteBelongsToRelationshipsForBook(id);
+                logger.info("Deleted {} old BELONGS_TO relationships", deletedCount);
+                
+                // Create new BELONGS_TO relationships
+                for (String genreName : updatedBook.getGenres()) {
+                    try {
+                        GenreNode genreNode = genreNodeRepository.getOrCreate(genreName);
+                        bookNodeRepository.createBelongsToRelationship(id, genreNode.getName());
+                    } catch (Exception e) {
+                        logger.warn("Failed to create BELONGS_TO relationship for genre: {}", genreName, e);
+                    }
+                }
+                logger.info("Created {} new BELONGS_TO relationships", updatedBook.getGenres().size());
+            }
             
         } catch (Exception e) {
             logger.error("Failed to update book in Neo4j", e);
