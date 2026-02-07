@@ -145,13 +145,15 @@ public interface UserNodeRepository extends Neo4jRepository<UserNode, String> {
         UNWIND recommendations AS book
         WITH u, book
         WHERE NOT EXISTS((u)-[:POSTED]->(:Review)-[:REFER_TO]->(book)) AND book IS NOT NULL
-        WITH book.mongoId AS bookId, 
-             book.title AS title, 
-             book.year AS publicationYear,
-             count(*) AS score
-        RETURN bookId, title, publicationYear, score
+        WITH book, count(*) AS score
         ORDER BY score DESC
         LIMIT $limit
+        MATCH (a:Author)-[:WROTE]->(book)
+        RETURN book.mongoId AS bookId, 
+            book.title AS title, 
+            book.year AS publicationYear,
+            score,
+            collect(a.name) AS authors // Uso collect per evitare righe duplicate se ci sono più autori
         """)
     List<RecommendationProjection> getUserRecommendations(@Param("userId") String userId, @Param("limit") int limit);
 }

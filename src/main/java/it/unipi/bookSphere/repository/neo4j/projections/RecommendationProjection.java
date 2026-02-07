@@ -7,5 +7,6 @@ public record RecommendationProjection(
     String bookId,
     String title,
     Integer publicationYear,
-    Long score
+    Long score,
+    String author
 ) {}

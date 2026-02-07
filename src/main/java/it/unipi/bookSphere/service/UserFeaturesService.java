@@ -3,12 +3,14 @@ package it.unipi.bookSphere.service;
 import it.unipi.bookSphere.dto.RecommendationDTO;
 import it.unipi.bookSphere.dto.WrappedDTO;
 import it.unipi.bookSphere.exceptions.UserNotFoundException;
+import it.unipi.bookSphere.mapper.WrappedMapper;
 import it.unipi.bookSphere.model.mongodb.AuthorDocument;
 import it.unipi.bookSphere.model.mongodb.BookDocument;
 import it.unipi.bookSphere.model.mongodb.RegisteredUser;
 import it.unipi.bookSphere.repository.mongo.AuthorRepository;
 import it.unipi.bookSphere.repository.mongo.BookRepository;
 import it.unipi.bookSphere.repository.mongo.RegisteredUserRepository;
+import it.unipi.bookSphere.repository.mongo.projections.WrappedAggregationResult;
 import it.unipi.bookSphere.repository.neo4j.UserNodeRepository;
 import it.unipi.bookSphere.repository.neo4j.projections.RecommendationProjection;
 import it.unipi.bookSphere.utils.SecurityUtils;
@@ -17,8 +19,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.aggregation.*;
+
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.stereotype.Service;
+
+import static org.springframework.data.mongodb.core.aggregation.Aggregation.*;
+
+import org.bson.Document;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Sort; 
+import java.time.ZoneId; // <--- Utile per conversione date
+import java.util.Date;   // <--- Utile per conversione date
 
 import java.time.LocalDate;
 import java.time.ZoneOffset;
@@ -39,11 +50,13 @@ public class UserFeaturesService {
     private static final Logger logger = LoggerFactory.getLogger(UserFeaturesService.class);
     private static final int DEFAULT_RECOMMENDATION_LIMIT = 10;
     
+    @Autowired
     private final MongoTemplate mongoTemplate;
     private final UserNodeRepository userNodeRepository;
     private final RegisteredUserRepository userRepository;
-    private final BookRepository bookRepository;
-    private final AuthorRepository authorRepository;
+
+    @Autowired
+    private WrappedMapper wrappedMapper;
 
     /**
      * Get personalized book recommendations for the current user
@@ -82,28 +95,7 @@ public class UserFeaturesService {
                 String title = proj.title();
                 Integer year = proj.publicationYear();
                 Long score = proj.score();
-                
-                // Try to get additional info from MongoDB
-                String authorName = null;
-                try {
-                    BookDocument book = bookRepository.findById(bookId).orElse(null);
-                    if (book != null && book.getAuthor() != null) {
-                        String authorId = book.getAuthor().getId();
-                        if (authorId != null) {
-                            AuthorDocument author = authorRepository.findById(authorId).orElse(null);
-                            if (author != null) {
-                                authorName = author.getName();
-                            }
-                        }
-                        // Use the year from MongoDB if not available from Neo4j
-                        if (year == null) {
-                            year = book.getPublicationYear();
-                        }
-                    }
-                } catch (Exception e) {
-                    logger.warn("Could not fetch author info for book {}: {}", bookId, e.getMessage());
-                }
-                
+                String authorName = proj.author();
                 return new RecommendationDTO(bookId, title, score, authorName, year);
             })
             .collect(Collectors.toList());
@@ -118,97 +110,86 @@ public class UserFeaturesService {
      */
     public WrappedDTO getYearlyWrapped() {
         String currentUserId = SecurityUtils.getCurrentUserId();
-        
         if (currentUserId == null) {
             throw new UserNotFoundException("User not authenticated");
         }
+
+        logger.info("Generating yearly wrapped for user: {}", currentUserId); 
         
-        logger.info("Generating yearly wrapped for user: {}", currentUserId);
-        
-        // Get user data
-        Optional<RegisteredUser> userOpt = userRepository.findById(currentUserId);
-        if (userOpt.isEmpty()) {
-            throw new UserNotFoundException("User not found: " + currentUserId);
-        }
-        
-        RegisteredUser user = userOpt.get();
+        // --- RIMOSSO userRepository.findById() per performance ---
+
         int currentYear = LocalDate.now().getYear();
         
-        // Initialize wrapped data
-        WrappedDTO wrapped = new WrappedDTO();
-        wrapped.setYear(currentYear);
-        
-        // Process bookshelf for read books
-        List<RegisteredUser.BookshelfItem> readBooks = new ArrayList<>();
-        if (user.getBookshelf() != null) {
-            readBooks = user.getBookshelf().stream()
-                .filter(item -> "read".equals(item.getStatus()))
-                .filter(item -> item.getAddedAt() != null && 
-                    item.getAddedAt().atZone(ZoneOffset.UTC).getYear() == currentYear)
-                .collect(Collectors.toList());
-        }
-        
-        wrapped.setTotalBooksRead(readBooks.size());
-        
-        // Process reviews for best/worst books
-        if (user.getReviewsYear() != null && !user.getReviewsYear().isEmpty()) {
-            List<RegisteredUser.ReviewYear> sortedReviews = user.getReviewsYear().stream()
-                .sorted((a, b) -> Integer.compare(b.getRating(), a.getRating()))
-                .collect(Collectors.toList());
+        // Date
+        Date startOfYear = Date.from(LocalDate.of(currentYear, 1, 1).atStartOfDay(ZoneId.systemDefault()).toInstant());
+        Date endOfYear = Date.from(LocalDate.of(currentYear, 12, 31).atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant());
+
+        // 1. Match User
+        MatchOperation matchUser = match(Criteria.where("_id").is(currentUserId));
+
+        // 2. AddFields
+        AddFieldsOperation prepareData = AddFieldsOperation.addField("best_book")
+            .withValue(ArrayOperators.ArrayElemAt.arrayOf(
+                ArrayOperators.SortArray.sortArray(
+                    // PROTEZIONE: Se reviews_year è null, usa un array vuoto []
+                    ConditionalOperators.ifNull("reviews_year").then(new ArrayList<>())
+                ).by(Sort.by(Sort.Direction.DESC, "rating"))
+            ).elementAt(0))
+            .addField("worst_book").withValue(ArrayOperators.ArrayElemAt.arrayOf(
+                ArrayOperators.SortArray.sortArray(
+                    ConditionalOperators.ifNull("reviews_year").then(new ArrayList<>())
+                ).by(Sort.by(Sort.Direction.ASC, "rating"))
+            ).elementAt(0))
+            .addField("yearly_books").withValue(ArrayOperators.Filter.filter(
+                    // PROTEZIONE: Se bookshelf è null, usa array vuoto
+                    ConditionalOperators.ifNull("bookshelf").then(new ArrayList<>())
+                )
+                .as("b")
+                .by(BooleanOperators.And.and(
+                    ComparisonOperators.Eq.valueOf("b.status").equalToValue("read"),
+                    ComparisonOperators.Gte.valueOf("b.added_at").greaterThanEqualToValue(startOfYear),
+                    ComparisonOperators.Lte.valueOf("b.added_at").lessThanEqualToValue(endOfYear)
+            )))
+            .build();
+
+        // 3. Facet (uguale a prima)
+        FacetOperation facets = facet()
+            .and(
+                project("yearly_books"),
+                unwind("yearly_books"),
+                group("yearly_books.author.name").count().as("count"),
+                sort(Sort.Direction.DESC, "count"),
+                limit(3)
+            ).as("top_authors")
+            .and(
+                project("yearly_books"),
+                unwind("yearly_books"),
+                unwind("yearly_books.genres"),
+                group("yearly_books.genres").count().as("count"),
+                sort(Sort.Direction.DESC, "count"),
+                limit(3)
+            ).as("top_genres")
+            .and(
+                project("best_book", "worst_book")
+                .and("yearly_books").size().as("total_books_read")
+            ).as("meta");
+
+        Aggregation aggregation = newAggregation(matchUser, prepareData, facets);
+
+        // 4. Esecuzione
+        AggregationResults<WrappedAggregationResult> results = 
+            mongoTemplate.aggregate(aggregation, "users", WrappedAggregationResult.class);
             
-            if (!sortedReviews.isEmpty()) {
-                RegisteredUser.ReviewYear best = sortedReviews.get(0);
-                wrapped.setBestBook(new WrappedDTO.BookSummaryWithRatingDTO(
-                    best.getId(),
-                    best.getBook(),
-                    "Unknown Author", // Simple version - could be enhanced
-                    best.getRating()
-                ));
-                
-                RegisteredUser.ReviewYear worst = sortedReviews.get(sortedReviews.size() - 1);
-                wrapped.setWorstBook(new WrappedDTO.BookSummaryWithRatingDTO(
-                    worst.getId(),
-                    worst.getBook(),
-                    "Unknown Author",
-                    worst.getRating()
-                ));
-            }
+        WrappedAggregationResult rawResult = results.getUniqueMappedResult();
+
+        // 5. Gestione "User Not Found" o "Empty Result"
+        // Se l'aggregazione non trova l'utente (perché il match fallisce), rawResult è null.
+        if (rawResult == null) {
+            // Qui decidi tu: o restituisci un Wrapped vuoto, o lanci l'eccezione che lanciavi prima
+            throw new UserNotFoundException("User not found: " + currentUserId);
         }
-        
-        // Calculate top authors from read books
-        Map<String, Integer> authorFreq = new HashMap<>();
-        for (RegisteredUser.BookshelfItem book : readBooks) {
-            if (book.getAuthor() != null && book.getAuthor().getName() != null) {
-                authorFreq.put(book.getAuthor().getName(),
-                    authorFreq.getOrDefault(book.getAuthor().getName(), 0) + 1);
-            }
-        }
-        
-        List<WrappedDTO.AuthorFrequencyDTO> topAuthors = authorFreq.entrySet().stream()
-            .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
-            .limit(3)
-            .map(entry -> new WrappedDTO.AuthorFrequencyDTO(entry.getKey(), entry.getValue()))
-            .collect(Collectors.toList());
-        wrapped.setTopAuthors(topAuthors);
-        
-        // Calculate top genres from read books
-        Map<String, Integer> genreFreq = new HashMap<>();
-        for (RegisteredUser.BookshelfItem book : readBooks) {
-            if (book.getGenres() != null) {
-                for (String genre : book.getGenres()) {
-                    genreFreq.put(genre, genreFreq.getOrDefault(genre, 0) + 1);
-                }
-            }
-        }
-        
-        List<WrappedDTO.GenreFrequencyDTO> topGenres = genreFreq.entrySet().stream()
-            .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
-            .limit(3)
-            .map(entry -> new WrappedDTO.GenreFrequencyDTO(entry.getKey(), entry.getValue()))
-            .collect(Collectors.toList());
-        wrapped.setTopGenres(topGenres);
-        
-        logger.info("Generated yearly wrapped for user {} with {} books read", currentUserId, wrapped.getTotalBooksRead());
-        return wrapped;
+
+        // 6. Mapping
+        return wrappedMapper.toDTO(rawResult, currentYear);
     }
 }

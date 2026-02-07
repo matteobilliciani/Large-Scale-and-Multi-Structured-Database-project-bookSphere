@@ -10,20 +10,38 @@ import it.unipi.bookSphere.dto.TpiPredictionDTO;
 import it.unipi.bookSphere.exceptions.BookNotFoundException;
 import it.unipi.bookSphere.exceptions.AuthorNotFoundException;
 import it.unipi.bookSphere.exceptions.GenreNotFoundException;
+import it.unipi.bookSphere.mapper.RankingMapper;
 import it.unipi.bookSphere.model.mongodb.BookDocument;
 import it.unipi.bookSphere.repository.mongo.AuthorRepository;
 import it.unipi.bookSphere.repository.mongo.BookRepository;
+import it.unipi.bookSphere.repository.mongo.projections.RankingProjection;
 import it.unipi.bookSphere.repository.neo4j.AuthorNodeRepository;
 import it.unipi.bookSphere.repository.neo4j.BookNodeRepository;
 import it.unipi.bookSphere.repository.neo4j.GenreNodeRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.aggregation.AccumulatorOperators;
+import org.springframework.data.mongodb.core.aggregation.AddFieldsOperation;
+import org.springframework.data.mongodb.core.aggregation.Aggregation;
+import org.springframework.data.mongodb.core.aggregation.AggregationOperation;
+import org.springframework.data.mongodb.core.aggregation.AggregationResults;
+import org.springframework.data.mongodb.core.aggregation.ArithmeticOperators;
+import org.springframework.data.mongodb.core.aggregation.ArrayOperators;
+import org.springframework.data.mongodb.core.aggregation.ComparisonOperators;
+import org.springframework.data.mongodb.core.aggregation.ConditionalOperators;
+import org.springframework.data.mongodb.core.aggregation.LimitOperation;
+import org.springframework.data.mongodb.core.aggregation.MatchOperation;
+import org.springframework.data.mongodb.core.aggregation.ProjectionOperation;
+import org.springframework.data.mongodb.core.aggregation.SortOperation;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
+import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -48,6 +66,9 @@ public class AnalyticsService {
     private final GenreNodeRepository genreNodeRepository;
     private final BookRepository bookRepository;
     private final AuthorRepository authorRepository;
+
+    @Autowired
+    private RankingMapper rankingMapper;
 
     /**
      * Calculate Internationality Index for a book or author
@@ -148,20 +169,27 @@ public class AnalyticsService {
      * Get trending books based on current month activity
      */
     public List<BookDTO> getTrendingBooks() {
-        logger.info("Getting trending books based on current month activity");
+        // 1. Calcola il mese corrente nel formato "yyyy-MM"
+        String currentMonthStr = YearMonth.now().format(DateTimeFormatter.ofPattern("yyyy-MM"));
         
+        logger.info("Getting trending books based on activity for month: {}", currentMonthStr);
+
         Query query = new Query();
+        
+        // 2. Aggiungi il controllo sul campo 'month_score.Current_Month'
         query.addCriteria(Criteria.where("status").is("ACTIVE")
-                .and("month_score.rating_count").gte(5));
+                .and("month_score.rating_count").gte(5)
+                .and("month_score.Current_Month").is(currentMonthStr)); // Filtra per mese corrente
+
         query.with(Sort.by(Sort.Direction.DESC, "month_score.rating"));
         query.limit(20);
-        
+
         List<BookDocument> results = mongoTemplate.find(query, BookDocument.class, "books");
-        
+
         List<BookDTO> trendingBooks = results.stream()
             .map(this::mapBookDocumentToDTO)
             .collect(Collectors.toList());
-        
+
         logger.info("Found {} trending books", trendingBooks.size());
         return trendingBooks;
     }
@@ -170,57 +198,89 @@ public class AnalyticsService {
      * Get book rankings for a specific year or all-time
      */
     public List<RankingDTO> getBookRankings(Integer year) {
-        logger.info("Getting book rankings for year: {}", year != null ? year : "all-time");
+        logger.info("Getting book rankings via Aggregation for year: {}", year != null ? year : "all-time");
+
+        List<AggregationOperation> pipeline = new ArrayList<>();
+
+        // 1. MATCH: ATTENZIONE! Nel documento che hai incollato NON VEDO il campo "status".
+        // Se il campo non esiste, questa riga fa fallire tutto.
+        // Se esiste ma non l'hai incollato, tienila. Altrimenti commentala.
+        // pipeline.add(Aggregation.match(Criteria.where("status").is("ACTIVE")));
+
+        // 2. CALCOLO TOTALI
+        if (year != null) {
+            // --- CASO ANNO SPECIFICO ---
+            
+            // A. Filtra l'array stats_per_year (SNAKE_CASE!)
+            pipeline.add(AddFieldsOperation.addField("targetStat")
+                .withValue(ArrayOperators.Filter.filter("stats_per_year") // <--- QUI ERA L'ERRORE
+                    .as("stat")
+                    .by(ComparisonOperators.Eq.valueOf("stat.year").equalToValue(year)))
+                .build());
+
+            // B. Estrai i valori (Assumo che dentro l'oggetto ci siano ratings_count e sum_rating in snake_case)
+            pipeline.add(AddFieldsOperation.addField("totalRatings")
+                .withValue(ConditionalOperators.ifNull(
+                    // Nota: stat.ratings_count (snake_case)
+                    ArrayOperators.ArrayElemAt.arrayOf("targetStat.ratings_count").elementAt(0) 
+                ).then(0))
+                .build());
+
+            pipeline.add(AddFieldsOperation.addField("sumRating")
+                .withValue(ConditionalOperators.ifNull(
+                    // Nota: stat.sum_rating (snake_case)
+                    ArrayOperators.ArrayElemAt.arrayOf("targetStat.sum_rating").elementAt(0)
+                ).then(0))
+                .build());
+
+        } else {
+            // --- CASO ALL-TIME ---
+            
+            // Somma su stats_per_year (SNAKE_CASE!)
+            pipeline.add(AddFieldsOperation.addField("totalRatings")
+                .withValue(AccumulatorOperators.Sum.sumOf(
+                    // Qui devi usare il percorso esatto nel JSON di Mongo
+                    "stats_per_year.ratings_count" 
+                ))
+                .build());
+
+            pipeline.add(AddFieldsOperation.addField("sumRating")
+                .withValue(AccumulatorOperators.Sum.sumOf(
+                    "stats_per_year.sum_rating"
+                ))
+                .build());
+        }
+
+        // 3. FILTER: Minimo voti
+        pipeline.add(Aggregation.match(Criteria.where("totalRatings").gt(5)));
+
+        // 4. CALCOLO MEDIA
+        pipeline.add(AddFieldsOperation.addField("averageRating")
+            .withValue(ArithmeticOperators.Divide.valueOf("sumRating").divideBy("totalRatings"))
+            .build());
+
+        // 5. SORT
+        pipeline.add(Aggregation.sort(Sort.Direction.DESC, "averageRating"));
+
+        // 6. LIMIT
+        pipeline.add(Aggregation.limit(50));
+
+        // 7. PROJECT
+        pipeline.add(Aggregation.project("averageRating", "totalRatings")
+            .and("title").as("name")
+            .and("author.name").as("additionalInfo") // Assumo author abbia il campo "name"
+            .and("_id").as("id"));
+
+        // Esecuzione
+        Aggregation aggregation = Aggregation.newAggregation(pipeline);
         
-        List<BookDocument> books = bookRepository.findByStatus("ACTIVE");
-        
-        List<RankingDTO> rankings = books.stream()
-            .map(book -> {
-                Double avgRating = null;
-                Long totalRatings = 0L;
-                
-                if (book.getStatsPerYear() != null && !book.getStatsPerYear().isEmpty()) {
-                    if (year != null) {
-                        // Find stats for specific year
-                        Optional<BookDocument.YearStat> yearStat = book.getStatsPerYear().stream()
-                            .filter(stat -> year.equals(stat.getYear()))
-                            .findFirst();
-                        if (yearStat.isPresent()) {
-                            avgRating = yearStat.get().getAverageRating();
-                            totalRatings = yearStat.get().getRatingsCount().longValue();
-                        }
-                    } else {
-                        // Calculate overall average
-                        int totalSum = book.getStatsPerYear().stream()
-                            .mapToInt(stat -> stat.getSumRating() != null ? stat.getSumRating() : 0)
-                            .sum();
-                        int totalCount = book.getStatsPerYear().stream()
-                            .mapToInt(stat -> stat.getRatingsCount() != null ? stat.getRatingsCount() : 0)
-                            .sum();
-                        if (totalCount > 0) {
-                            avgRating = (double) totalSum / totalCount;
-                            totalRatings = (long) totalCount;
-                        }
-                    }
-                }
-                
-                return new RankingDTO(
-                    book.getId(),
-                    book.getTitle(),
-                    avgRating,
-                    totalRatings,
-                    year,
-                    book.getAuthor() != null ? book.getAuthor().getName() : null
-                );
-            })
-            .filter(ranking -> ranking.getAverageRating() != null && ranking.getTotalRatings() > 5)
-            .sorted((a, b) -> Double.compare(b.getAverageRating(), a.getAverageRating()))
-            .limit(50)
-            .collect(Collectors.toList());
-        
-        logger.info("Found {} book rankings", rankings.size());
-        return rankings;
+        AggregationResults<RankingProjection> results = mongoTemplate.aggregate(
+            aggregation, "books", RankingProjection.class
+        );
+
+        return rankingMapper.toRankingDTOList(results.getMappedResults(), year);
     }
+
 
     /**
      * Get author rankings using in-memory processing
