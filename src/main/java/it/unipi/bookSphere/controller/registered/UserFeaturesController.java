@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import it.unipi.bookSphere.dto.RecommendationDTO;
+import it.unipi.bookSphere.dto.WrappedDTO;
 import it.unipi.bookSphere.service.UserFeaturesService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -39,10 +40,8 @@ public class UserFeaturesController {
             description = "Generate personalized yearly recap including highest/lowest rated books, most read authors and genres. Uses MongoDB Query 2."
     )
     @GetMapping("/wrapped")
-    public ResponseEntity<?> getYearlyWrapped() {
-        // TODO: Implement service call - MongoDB Query 2
-        // Map<String, Object> wrapped = userFeaturesService.getYearlyWrapped(currentUserId);
-        // return ResponseEntity.ok(wrapped);
-        throw new UnsupportedOperationException("Not yet implemented");
+    public ResponseEntity<WrappedDTO> getYearlyWrapped() {
+        WrappedDTO wrapped = userFeaturesService.getYearlyWrapped();
+        return ResponseEntity.ok(wrapped);
     }
 }

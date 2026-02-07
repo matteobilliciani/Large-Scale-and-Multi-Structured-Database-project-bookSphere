@@ -5,7 +5,7 @@ Colori:
 -	Matteo Team Boxer
 -	Matteo Team Donna
 
-Platform introduction[MB1.1][MB1.2]
+Platform introduction
 Welcome to BookSphere, the ultimate social platform for book lovers designed to help you organize your reading life and connect with a global community. Beyond simply searching for titles and authors, BookSphere allows you to curate your own digital library by marking books as "To-Read," "Reading," or "Read," ensuring you never lose track of your literary journey.
 The experience is deeply social and smart: you can follow friends to instantly see their latest updates and ratings or discover "Real Influencers" - expert reviewers identified by the quality of their engagement rather than just follower count - to get the best recommendations for your favourite genres. The platform goes beyond standard suggestions by offering unique insights, such as a "Trending Probability" that predicts the next viral hit and an "Internationality Index" that shows you how far a book is traveling around the globe. You can share your own voice by leaving one-to-one-hundred ratings and written reviews, and at the end of every year, you’ll receive a personalized "Yearly Wrapped" recap to celebrate your reading highlights, top authors, and most-read genres.
 
@@ -54,7 +54,7 @@ Admin
 4.	The System must allow an Admin to view any Registered User.
 5.	The System must enable an Admin to view any review.
 6.	The System must enable an Admin to delete any review.
-7.	The System must enable an Admin to ban any Registered User[DP2.1].
+7.	The System must enable an Admin to ban any Registered User.
 Non-Functional Requirements
 1.	The System must follow RESTful design principles
 2.	The System must avoid permanent data loss
@@ -217,61 +217,74 @@ db.users.aggregate([
 ________________________________________
 Popularity prediction	Popularity prediction of a book
 a.	Rating of the publications of the same author
-b.	Genre of the book appearance on rankings[MI3.1]	Query 3: Author Popularity Prediction (Hybrid Model)
+	Query 3: Author Popularity Prediction (Hybrid Model)
 Obiettivo: Predire il trend futuro (Rising/Falling).
 Logica: Combina la "Reputazione Storica" (60%) con il "Momentum Recente" (40%).
 JavaScript
-db.books.aggregate([
-    { $match: { "author.name": "Stephen King" } },
-    { $project: {
-        title: 1,
-        // A. Reputazione (Storica)
-        historical: { 
-            $cond: [{ $eq: [{ $sum: "$stats_per_year.ratings_count" }, 0] }, 0, 
-            { $divide: [{ $sum: "$stats_per_year.sum_rating" }, { $sum: "$stats_per_year.ratings_count" }] }] 
-        },
-        // B. Momentum (Recente - Snapshot)
-        momentum: { $avg: { $map: { input: "$recent_reviews_snapshot", as: "r", in: "$$r.rating" } } }
-    }},
-    // Gestione caso nessun dato recente (fallback sullo storico)
-    { $addFields: { momentum: { $ifNull: ["$momentum", "$historical"] } } },
-    { $group: {
-        _id: "$author.name",
-        avg_hist: { $avg: "$historical" },
-        avg_mom: { $avg: "$momentum" }
-    }},
-    { $project: {
-        // Formula Ibrida: 60% Storia, 40% Attualità
-        prediction_index: { $add: [{ $multiply: ["$avg_hist", 0.6] }, { $multiply: ["$avg_mom", 0.4] }] },
-        // Label Business Intelligence
-        trend: { $cond: [{ $gte: ["$avg_mom", "$avg_hist"] }, "RISING 📈", "FALLING 📉"] }
-    }}
-]);
-________________________________________
-Trending Books	1.	Bookshelves list of the users
-2.	Recent/popular reviews snapshots
-	Query 4: Trending Score (Real-Time Discovery)
-Obiettivo: Scoprire i trend attuali ignorando il passato.
-Logica: Calcolo in memoria basato solo su recent_reviews_snapshot (ultimi 3 voti).
-JavaScript
-db.books.aggregate([
-    // Considera solo libri con attività recente
-    { $match: { "recent_reviews_snapshot.0": { $exists: true } } },
-    { $project: {
-        title: 1,
-        genres: 1,
-        // Media aritmetica snapshot recente
-        recent_avg: { $avg: { $map: { input: "$recent_reviews_snapshot", as: "r", in: "$$r.rating" } } },
-        volume: { $size: "$recent_reviews_snapshot" }
-    }},
-    // Boosting: Premia chi ha più recensioni recenti (Volume Factor)
-    { $addFields: {
-        score: { $multiply: ["$recent_avg", { $cond: [{ $gte: ["$volume", 3] }, 1.0, 0.8] }] }
-    }},
-    { $sort: { score: -1 } },
-    { $limit: 10 }
-]);
+// Query 3: Popularity Prediction (Lightweight)
+// Target: Predire il trend per il libro "The Shining" di "Stephen King"
 
+db.books.aggregate([
+    // 1. Facet: Eseguiamo due calcoli rapidi in parallelo
+    { $facet: {
+        
+        // CALCOLO A: Media Storica dell'Autore (Requisito "a")
+        // Scansiona solo i libri di questo autore (veloce)
+        "author_stats": [
+            { $match: { "author.name": "Stephen King" } },
+            { $group: {
+                _id: null,
+                // Calcola la media pesata di tutti i suoi libri
+                avg_rating: { 
+                    $avg: { 
+                        $cond: [
+                            { $eq: [{ $sum: "$stats_per_year.ratings_count" }, 0] },
+                            0,
+                            { $divide: ["$stats_per_year.sum_rating", "$stats_per_year.ratings_count"] }
+                        ]
+                    }
+                }
+            }}
+        ],
+
+        // CALCOLO B: Momentum del Libro Target (Basato sul mese corrente)
+        "book_stats": [
+            { $match: { title: "The Shining" } },
+            { $project: { 
+                current_rating: "$month_score.rating",
+                current_activity: "$month_score.rating_count"
+            }}
+        ]
+    }},
+
+    // 2. Unione dei risultati
+    { $project: {
+        author_avg: { $arrayElemAt: ["$author_stats.avg_rating", 0] },
+        book_now:   { $arrayElemAt: ["$book_stats", 0] }
+    }},
+
+    // 3. Logica di Predizione (Confronto Diretto)
+    { $project: {
+        author_benchmark: { $round: ["$author_avg", 2] },
+        book_momentum:    { $ifNull: ["$book_now.current_rating", 0] },
+        
+        prediction: {
+            $switch: {
+                branches: [
+                    // Caso 1: Libro nuovo/inattivo questo mese -> Trend Incerto
+                    { case: { $eq: ["$book_now.current_activity", 0] }, then: "⏸️ STABLE (No recent data)" },
+                    
+                    // Caso 2: Il libro performa meglio del solito standard dell'autore (+5%)
+                    { case: { $gt: ["$book_now.current_rating", { $multiply: ["$author_avg", 1.05] }] }, then: "🚀 RISING STAR" },
+                    
+                    // Caso 3: Il libro performa peggio dello standard dell'autore (-5%)
+                    { case: { $lt: ["$book_now.current_rating", { $multiply: ["$author_avg", 0.95] }] }, then: "📉 UNDERPERFORMING" }
+                ],
+                default: "➡️ STABLE"
+            }
+        }
+    }}
+]);________________________________________
 Document Indexes (da definire quando le query sono implementate)
 Per ora GEMINI CONSIGLIA I SEGUENTI INDICI, e controllando hanno senso
 // --- BOOKS COLLECTION ---
@@ -352,7 +365,8 @@ RETURN r.mongoId AS ReviewID,
        collect(u.username) AS LikedBy
 ORDER BY LikeCount DESC
 LIMIT 1
-```[MI4.1]
+```
+
 | **4. Genre Influencer:** Identify "Real Influencers" in a genre—users whose reviews consistently receive high engagement rather than just high volume.
 
 Identify influencer users for a specific genre
@@ -392,7 +406,7 @@ ORDER BY AvgLikesPerReview DESC
 LIMIT 5
 
 Find authors that have written books of different genres (versatility).
-	TO DO	TO DO[MI5.1]
+	TO DO	TO DO
 
 GRAPH indexes
 GEMINI GIUSTAMENTE CONSIGLIA:
@@ -691,7 +705,7 @@ X	GET	/api/v1/books/{id}	pathVariable	Visualizza dettagli libro, snapshot recens
 X	GET	/api/v1/books?title = …	Query string	Ricerca il Libro dal titolo	MongoDB
 X	GET	/api/v1/authors/{id}	Author’s Id	Visualizza profilo autore, opere pubblicate e rating	MongoDB
 X	GET	/api/v1/authors?author_name = …	Query string	Ricerca Autore dal nome, opere pubblicate e rating	
-X	GET	/api/v1/users/username/{username[DP6.1]}	Path Variable 	Visualizza profilo utente e attività (bookshelf e reviews dell’anno e lista delle reviewID)	Mongo
+X	GET	/api/v1/users/username/{username}	Path Variable 	Visualizza profilo utente e attività (bookshelf e reviews dell’anno e lista delle reviewID)	Mongo
 X	GET	/api/v1/users/{id}	Path variable 	Ricerca utente per ID	
 X	GET	/api/v1/analytics/rankings/trendingbooks		Lista di Libri di tendenza	MongoDB
 X	GET	/api/v1/analytics/rankings/books?year = …	Query string 	Classifiche dei libri per un anno specifico o di sempre
@@ -1004,7 +1018,9 @@ Logica Graph: Percorsi a 2-3 salti (FOLLOWS/LIKES, LIKES/WROTE, LIKES/BELONGS_TO
 2. Internationality Index	Calcola "quanto viaggia" un libro/autore analizzando la provenienza geografica di chi mette Like o scrive recensioni.		#### 2. Internationality Index (Book/Author Travel)
 ```cypher
 MATCH (target) 
-WHERE (target:Book {id:"ID"}) OR (target:Author {id:"ID"})
+WHERE (target:Book {title: "The 
+
+Name of the Rose"}) OR (target:Author {name: "Umberto Eco"})
 // Match users who interacted via Review or direct Like
 MATCH (u:User)-[:POSTED|LIKES]->(interaction)
 WHERE (interaction)-[:REFER_TO]->(target) OR interaction = target
@@ -1019,3 +1035,209 @@ ORDER BY UniqueUsers DESC
 
 Trova chi scrive review che ricevono molti Like in un dato genere.		cypher<br>// PARAM: $genreName (es. "Fantasy")<br>MATCH (g:Genre {name: $genreName})<-[:BELONGS_TO]-(b:Book)<-[:REFER_TO]-(r:Review)<-[:POSTED]-(influencer:User)<br><br>// Chi ha messo like alla review?<br>MATCH (r)<-[:LIKES]-(fan:User)<br><br>WITH influencer,<br> count(DISTINCT r) AS num_reviews,<br> count(fan) AS total_likes<br><br>// Filter for statistical relevance<br>WHERE num_reviews > 1<br><br>RETURN influencer.username AS Influencer,<br> total_likes AS TotalEngagement,<br> (toFloat(total_likes) / num_reviews) AS AvgLikesPerReview<br>ORDER BY AvgLikesPerReview DESC<br>LIMIT 5<br>
 
+
+
+
+
+
+
+
+
+
+
+MONGODB
+Books and author ranking	AvgRating totale e per anno fatto da: somma delle stelle e contatore delle recensioni. Va tenuto aggiornato per ogni review aggiunta con eventual consistency. 
+c.	Rank books in descending rating order for a specified author/genre.
+d.	Find the highest rated books of a specific year, based on the reviews of that period (book publication year is not relevant).
+	Query 1: Ranking & Historical Analytics
+Obiettivo: Classifiche basate su dati storici aggregati (Bucket Pattern).
+1a. Ranking Libri per Autore (Media Storica Ponderata)
+Calcola la media esatta sommando i totali annuali.
+JavaScript
+db.books.aggregate([
+    { $match: { "author.name": "J.R.R. Tolkien" } },
+    { $addFields: {
+        // Calcolo media ponderata dai bucket annuali (Bucket Pattern)
+        hist_avg: { 
+            $cond: [
+                { $eq: [{ $sum: "$stats_per_year.ratings_count" }, 0] }, 
+                0, 
+                { $divide: [{ $sum: "$stats_per_year.sum_rating" }, { $sum: "$stats_per_year.ratings_count" }] }
+            ] 
+        }
+    }},
+    { $sort: { hist_avg: -1 } },
+    { $project: { title: 1, hist_avg: { $round: ["$hist_avg", 2] } } }
+]);
+1b. Top Libri dell'anno 2025
+Estrae chirurgicamente i dati del 2025 senza $unwind (usando $filter).
+JavaScript
+db.books.aggregate([
+    { $addFields: {
+        // Estrazione dati 2025 senza esplodere l'array
+        stats_25: { 
+            $arrayElemAt: [{ $filter: { input: "$stats_per_year", as: "s", cond: { $eq: ["$$s.year", 2025] } } }, 0] 
+        }
+    }},
+    { $match: { "stats_25.ratings_count": { $gte: 5 } } }, // Filtro significatività
+    { $sort: { "stats_25.average_rating": -1 } },
+    { $project: { title: 1, rating_2025: "$stats_25.average_rating" } },
+    { $limit: 10 }
+]);
+1c. Top Autori dell'anno 2025
+Aggrega i libri per trovare gli autori dominanti nell'anno corrente.
+JavaScript
+db.books.aggregate([
+    { $addFields: {
+        s25: { $arrayElemAt: [{ $filter: { input: "$stats_per_year", as: "s", cond: { $eq: ["$$s.year", 2025] } } }, 0] }
+    }},
+    { $match: { "s25": { $exists: true } } },
+    { $group: {
+        _id: "$author.name",
+        avg_rating: { $avg: "$s25.average_rating" },
+        total_votes: { $sum: "$s25.ratings_count" }
+    }},
+    { $match: { total_votes: { $gte: 10 } } }, 
+    { $sort: { avg_rating: -1 } },
+    { $limit: 5 }
+]);
+1d. Top Generi dell'anno 2025
+Richiede $unwind sui generi per il conteggio statistico corretto.
+JavaScript
+db.books.aggregate([
+    { $addFields: {
+        s25: { $arrayElemAt: [{ $filter: { input: "$stats_per_year", as: "s", cond: { $eq: ["$$s.year", 2025] } } }, 0] }
+    }},
+    { $match: { "s25": { $exists: true } } },
+    { $unwind: "$genres" }, 
+    { $group: {
+        _id: "$genres",
+        avg_rating: { $avg: "$s25.average_rating" },
+        books_count: { $sum: 1 }
+    }},
+    { $sort: { avg_rating: -1 } },
+    { $limit: 5 }
+]);
+________________________________________
+Yearly wrapped	Generate yearly wrapped that includes 
+d.	Highest and lowest rated books
+e.	Most read authors (from list)
+f.	Most read genres (from list)
+	Query 2: User Yearly Wrapped (2025)
+Obiettivo: Statistiche personali (Top Autori, Top Generi, Best Book).
+Ottimizzazione: Nessun JOIN grazie alla bookshelf arricchita. Uso di $facet per calcoli paralleli.
+JavaScript
+db.users.aggregate([
+    { $match: { username: "User_12345" } },
+
+    // 1. Best & Worst Book (da reviews_year embedded)
+    { $addFields: {
+        sorted_revs: { $sortArray: { input: "$reviews_year", sortBy: { rating: -1 } } }
+    }},
+    { $project: {
+        best_book: { $first: "$sorted_revs" },
+        worst_book: { $last: "$sorted_revs" },
+        // 2. Filtro Bookshelf per l'anno 2025 in memoria
+        books_2025: {
+            $filter: {
+                input: "$bookshelf", as: "b",
+                cond: { $and: [
+                    { $eq: ["$$b.status", "read"] },
+                    { $gte: ["$$b.added_at", ISODate("2025-01-01T00:00:00Z")] },
+                    { $lte: ["$$b.added_at", ISODate("2025-12-31T23:59:59Z")] }
+                ]}
+            }
+        }
+    }},
+    
+    // 3. Unwind necessario solo sui libri filtrati per contare le frequenze
+    { $unwind: "$books_2025" },
+    
+    // 4. Calcolo Parallelo Autori e Generi
+    { $facet: {
+        "top_authors": [
+            { $group: { _id: "$books_2025.author.name", count: { $sum: 1 } } },
+            { $sort: { count: -1 } }, { $limit: 3 }
+        ],
+        "top_genres": [
+            { $unwind: "$books_2025.genres" }, 
+            { $group: { _id: "$books_2025.genres", count: { $sum: 1 } } },
+            { $sort: { count: -1 } }, { $limit: 3 }
+        ],
+        "meta": [{ $limit: 1 }, { $project: { best_book: 1, worst_book: 1 } }]
+    }}
+]);
+________________________________________
+Popularity prediction	Popularity prediction of a book
+b.	Rating of the publications of the same author
+	Query 3: Author Popularity Prediction (Hybrid Model)
+Obiettivo: Predire il trend futuro (Rising/Falling).
+Logica: Combina la "Reputazione Storica" (60%) con il "Momentum Recente" (40%).
+JavaScript
+// Query 3: Popularity Prediction (Lightweight)
+// Target: Predire il trend per il libro "The Shining" di "Stephen King"
+
+db.books.aggregate([
+    // 1. Facet: Eseguiamo due calcoli rapidi in parallelo
+    { $facet: {
+        
+        // CALCOLO A: Media Storica dell'Autore (Requisito "a")
+        // Scansiona solo i libri di questo autore (veloce)
+        "author_stats": [
+            { $match: { "author.name": "Stephen King" } },
+            { $group: {
+                _id: null,
+                // Calcola la media pesata di tutti i suoi libri
+                avg_rating: { 
+                    $avg: { 
+                        $cond: [
+                            { $eq: [{ $sum: "$stats_per_year.ratings_count" }, 0] },
+                            0,
+                            { $divide: ["$stats_per_year.sum_rating", "$stats_per_year.ratings_count"] }
+                        ]
+                    }
+                }
+            }}
+        ],
+
+        // CALCOLO B: Momentum del Libro Target (Basato sul mese corrente)
+        "book_stats": [
+            { $match: { title: "The Shining" } },
+            { $project: { 
+                current_rating: "$month_score.rating",
+                current_activity: "$month_score.rating_count"
+            }}
+        ]
+    }},
+
+    // 2. Unione dei risultati
+    { $project: {
+        author_avg: { $arrayElemAt: ["$author_stats.avg_rating", 0] },
+        book_now:   { $arrayElemAt: ["$book_stats", 0] }
+    }},
+
+    // 3. Logica di Predizione (Confronto Diretto)
+    { $project: {
+        author_benchmark: { $round: ["$author_avg", 2] },
+        book_momentum:    { $ifNull: ["$book_now.current_rating", 0] },
+        
+        prediction: {
+            $switch: {
+                branches: [
+                    // Caso 1: Libro nuovo/inattivo questo mese -> Trend Incerto
+                    { case: { $eq: ["$book_now.current_activity", 0] }, then: "⏸️ STABLE (No recent data)" },
+                    
+                    // Caso 2: Il libro performa meglio del solito standard dell'autore (+5%)
+                    { case: { $gt: ["$book_now.current_rating", { $multiply: ["$author_avg", 1.05] }] }, then: "🚀 RISING STAR" },
+                    
+                    // Caso 3: Il libro performa peggio dello standard dell'autore (-5%)
+                    { case: { $lt: ["$book_now.current_rating", { $multiply: ["$author_avg", 0.95] }] }, then: "📉 UNDERPERFORMING" }
+                ],
+                default: "➡️ STABLE"
+            }
+        }
+    }}
+]);________________________________________
+
+
+Per internationality index aggiungo un flag per distinguere se BOOK o AUTHOR

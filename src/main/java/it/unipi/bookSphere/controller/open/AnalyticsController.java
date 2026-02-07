@@ -3,8 +3,7 @@ package it.unipi.bookSphere.controller.open;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import it.unipi.bookSphere.dto.InfluencerDTO;
-import it.unipi.bookSphere.dto.InternationalityDTO;
+import it.unipi.bookSphere.dto.*;
 import it.unipi.bookSphere.service.AnalyticsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -25,11 +24,9 @@ public class AnalyticsController {
             description = "Retrieve currently trending books based on recent reviews and ratings"
     )
     @GetMapping("/rankings/trendingbooks")
-    public ResponseEntity<?> getTrendingBooks() {
-        // TODO: Implement service call
-        // List<BookDTO> trendingBooks = analyticsService.getTrendingBooks();
-        // return ResponseEntity.ok(trendingBooks);
-        throw new UnsupportedOperationException("Not yet implemented");
+    public ResponseEntity<List<BookDTO>> getTrendingBooks() {
+        List<BookDTO> trendingBooks = analyticsService.getTrendingBooks();
+        return ResponseEntity.ok(trendingBooks);
     }
 
     @Operation(
@@ -37,14 +34,12 @@ public class AnalyticsController {
             description = "Get book rankings for a specific year or all-time"
     )
     @GetMapping("/rankings/books")
-    public ResponseEntity<?> getBookRankings(
+    public ResponseEntity<List<RankingDTO>> getBookRankings(
             @Parameter(description = "Year for rankings (optional)", example = "2025")
             @RequestParam(required = false) Integer year
     ) {
-        // TODO: Implement service call
-        // List<BookDTO> rankings = analyticsService.getBookRankings(year);
-        // return ResponseEntity.ok(rankings);
-        throw new UnsupportedOperationException("Not yet implemented");
+        List<RankingDTO> rankings = analyticsService.getBookRankings(year);
+        return ResponseEntity.ok(rankings);
     }
 
     @Operation(
@@ -52,14 +47,12 @@ public class AnalyticsController {
             description = "Get author rankings for a specific year or all-time"
     )
     @GetMapping("/rankings/authors")
-    public ResponseEntity<?> getAuthorRankings(
+    public ResponseEntity<List<RankingDTO>> getAuthorRankings(
             @Parameter(description = "Year for rankings (optional)", example = "2025")
             @RequestParam(required = false) Integer year
     ) {
-        // TODO: Implement service call
-        // List<AuthorDTO> rankings = analyticsService.getAuthorRankings(year);
-        // return ResponseEntity.ok(rankings);
-        throw new UnsupportedOperationException("Not yet implemented");
+        List<RankingDTO> rankings = analyticsService.getAuthorRankings(year);
+        return ResponseEntity.ok(rankings);
     }
 
     @Operation(
@@ -67,14 +60,12 @@ public class AnalyticsController {
             description = "Get genre rankings for a specific year or all-time"
     )
     @GetMapping("/rankings/genres")
-    public ResponseEntity<?> getGenreRankings(
+    public ResponseEntity<List<RankingDTO>> getGenreRankings(
             @Parameter(description = "Year for rankings (optional)", example = "2025")
             @RequestParam(required = false) Integer year
     ) {
-        // TODO: Implement service call
-        // List<GenreDTO> rankings = analyticsService.getGenreRankings(year);
-        // return ResponseEntity.ok(rankings);
-        throw new UnsupportedOperationException("Not yet implemented");
+        List<RankingDTO> rankings = analyticsService.getGenreRankings(year);
+        return ResponseEntity.ok(rankings);
     }
 
     @Operation(
@@ -82,14 +73,12 @@ public class AnalyticsController {
             description = "Predict how likely a book is to go viral based on author reputation and genre rankings"
     )
     @GetMapping("/tpi/{bookId}")
-    public ResponseEntity<?> calculateTPI(
+    public ResponseEntity<TpiPredictionDTO> calculateTPI(
             @Parameter(description = "MongoDB ObjectId of the book", example = "65b3f...")
             @PathVariable String bookId
     ) {
-        // TODO: Implement service call - MongoDB Query 3
-        // Double tpi = analyticsService.calculateTPI(bookId);
-        // return ResponseEntity.ok(Map.of("bookId", bookId, "tpi", tpi));
-        throw new UnsupportedOperationException("Not yet implemented");
+        TpiPredictionDTO tpi = analyticsService.calculateTPI(bookId);
+        return ResponseEntity.ok(tpi);
     }
 
     @Operation(
