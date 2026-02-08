@@ -412,7 +412,9 @@ public class AnalyticsIntegrationTest {
         String bookId = book.getId();
         bookNodeRepository.getOrCreate(bookId, title, year);
         authorNodeRepository.createWroteRelationship(testAuthorId, bookId);
-        bookNodeRepository.createBelongsToRelationship(bookId, TEST_GENRE);
+        // Normalize genre name for Neo4j relationship
+        String normalizedGenre = it.unipi.bookSphere.utils.NormalizationUtils.normalizeGenreName(TEST_GENRE);
+        bookNodeRepository.createBelongsToRelationship(bookId, normalizedGenre);
         System.out.println("  Created book: " + title);
         return bookId;
     }
