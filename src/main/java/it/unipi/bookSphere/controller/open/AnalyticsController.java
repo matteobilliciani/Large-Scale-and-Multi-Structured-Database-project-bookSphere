@@ -2,6 +2,8 @@ package it.unipi.bookSphere.controller.open;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import it.unipi.bookSphere.dto.*;
 import it.unipi.bookSphere.service.AnalyticsService;
@@ -30,44 +32,51 @@ public class AnalyticsController {
     }
 
     @Operation(
-            summary = "Get book rankings",
-            description = "Get book rankings for a specific year or all-time"
+        summary = "Get book rankings",
+        description = "Restituisce le classifiche. NOTA: Puoi filtrare per 'author' O per 'genre', ma non entrambi contemporaneamente."
     )
-    @GetMapping("/rankings/books")
-    public ResponseEntity<List<RankingDTO>> getBookRankings(
-            @Parameter(description = "Year for rankings (optional)", example = "2025")
-            @RequestParam(required = false) Integer year
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Classifica restituita con successo"),
+        @ApiResponse(responseCode = "400", description = "Errore: Non puoi specificare sia autore che genere")
+    })
+    @GetMapping("/books")
+    public ResponseEntity<?> getBookRankings( // Uso <?> o <Object> per poter ritornare sia la lista che un messaggio di errore stringa
+            
+            @Parameter(description = "Anno della classifica (opzionale)")
+            @RequestParam(required = false) Integer year,
+
+            @Parameter(description = "Filtra per nome autore (Mutuamente esclusivo con genre)")
+            @RequestParam(required = false) String author,
+
+            @Parameter(description = "Filtra per genere (Mutuamente esclusivo con author)")
+            @RequestParam(required = false) String genre
     ) {
-        List<RankingDTO> rankings = analyticsService.getBookRankings(year);
+        // --- VALIDAZIONE ---
+        // Se entrambi i parametri sono presenti (non null), blocchiamo la richiesta.
+        if (author != null && genre != null) {
+            return ResponseEntity
+                    .badRequest()
+                    .body("Errore: Non è possibile filtrare contemporaneamente per 'author' e 'genre'. Scegline solo uno.");
+        }
+
+        // --- CHIAMATA AL SERVICE ---
+        // A questo punto siamo sicuri che author e genre non sono entrambi valorizzati
+        List<RankingDTO> rankings = analyticsService.getBookRankings(year, author, genre);
+        
         return ResponseEntity.ok(rankings);
     }
 
     @Operation(
             summary = "Get author rankings",
-            description = "Get author rankings for a specific year or all-time"
+            description = "Get author rankings all-time"
     )
     @GetMapping("/rankings/authors")
-    public ResponseEntity<List<RankingDTO>> getAuthorRankings(
-            @Parameter(description = "Year for rankings (optional)", example = "2025")
-            @RequestParam(required = false) Integer year
-    ) {
-        List<RankingDTO> rankings = analyticsService.getAuthorRankings(year);
+    public ResponseEntity<List<RankingDTO>> getAuthorRankings(){
+        List<RankingDTO> rankings = analyticsService.getAuthorRankings();
         return ResponseEntity.ok(rankings);
     }
 
-    @Operation(
-            summary = "Get genre rankings",
-            description = "Get genre rankings for a specific year or all-time"
-    )
-    @GetMapping("/rankings/genres")
-    public ResponseEntity<List<RankingDTO>> getGenreRankings(
-            @Parameter(description = "Year for rankings (optional)", example = "2025")
-            @RequestParam(required = false) Integer year
-    ) {
-        List<RankingDTO> rankings = analyticsService.getGenreRankings(year);
-        return ResponseEntity.ok(rankings);
-    }
-
+    /* 
     @Operation(
             summary = "Calculate Trending Probability Index (TPI)",
             description = "Predict how likely a book is to go viral based on author reputation and genre rankings"
@@ -80,6 +89,7 @@ public class AnalyticsController {
         TpiPredictionDTO tpi = analyticsService.calculateTPI(bookId);
         return ResponseEntity.ok(tpi);
     }
+    */
 
     @Operation(
             summary = "Calculate Author Versatility Index",

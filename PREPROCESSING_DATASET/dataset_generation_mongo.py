@@ -1,10 +1,10 @@
 """
-SCRIPT 1: MongoDB Data Generation - FINAL V13 (MONTH SCORE & SUMMARY)
+SCRIPT 1: MongoDB Data Generation - FINAL V14 (NO PRE-CALC AVERAGES)
 - Features:
-    - Month Score: Replaces Trend Score (Stats for the current/latest month).
-    - Snapshots: Use 'summary' instead of 'snippet'.
-    - Review: Includes 'username'.
-    - Book: Includes 'review_ids' + Snapshots with 'user_id'.
+    - Month Score: Keeps 'rating' for immediate UI display (Snapshot logic).
+    - Stats Per Year: REMOVED 'average_rating'. Only 'sum' and 'count' remain.
+    - Authors: REMOVED 'average_rating'. Only 'sum' and 'count' remain.
+    - Snapshots: Use 'summary'.
     - Bookshelf: Fully embedded (Status only).
 """
 
@@ -122,7 +122,7 @@ def load_checkpoint(step):
     return None
 
 # --- MAIN ETL ---
-print("="*60 + "\nMONGO GENERATOR V13 (MONTH SCORE & SUMMARY)\n" + "="*60)
+print("="*60 + "\nMONGO GENERATOR V14 (NO PRE-CALC AVERAGES)\n" + "="*60)
 
 # STEP 1: RANKING & BOOKS
 step = 1
@@ -141,7 +141,7 @@ else:
     
     bc_books = pd.read_csv(BOOKCROSSING_BOOKS, sep=';', encoding='latin-1', on_bad_lines='skip', dtype=str)
     bc_books.rename(columns={'ISBN': 'isbn', 'Book-Title': 'title'}, inplace=True)
-    bc_books['clean_title'] = bc_books['Title'].apply(clean_key_fast)
+    bc_books['clean_title'] = bc_books['title'].apply(clean_key_fast)
     
     title_scores = {}
     isbn_count_map = bc_isbn_counts.to_dict()
@@ -526,6 +526,7 @@ for b in books_data:
         ratings = [x['rating'] for x in revs]
         total_sum = sum(ratings)
         count = len(ratings)
+        # avg kept locally for trend calculation, but not stored in stats_per_year
         avg = total_sum / count if count > 0 else 0
         
         # --- B. STATS PER YEAR ---
@@ -538,9 +539,9 @@ for b in books_data:
         for y, yr in by_year.items():
             rs = [x['rating'] for x in yr]
             y_sum = sum(rs)
+            # REMOVED: average_rating
             b['stats_per_year'].append({
                 "year": y,
-                "average_rating": round(y_sum/len(rs), 2),
                 "ratings_count": len(rs),
                 "sum_rating": y_sum 
             })
@@ -613,9 +614,7 @@ for ad in authors_map.values():
                 r = reviews_map[rid]
                 tot_ratings += 1            
                 sum_ratings += r['rating']   
-    if tot_ratings > 0: avg = round(sum_ratings / tot_ratings, 2)
-    else: avg = 0
-    ad['average_rating'] = avg
+    # REMOVED: average_rating calculation
     ad['ratings_count'] = tot_ratings
     ad['sum_ratings'] = sum_ratings
 
@@ -641,7 +640,7 @@ save([
         "_id": to_mongo_oid(v["id"]), 
         "name": v["name"], 
         "published_books": v.get("published_books", v.get("books", [])), 
-        "average_rating": v.get("average_rating", 0),
+        # REMOVED: average_rating key
         "ratings_count": v.get("ratings_count", 0),
         "sum_ratings": v.get("sum_ratings", 0),
     } 

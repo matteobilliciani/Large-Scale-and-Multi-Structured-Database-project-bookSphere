@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * Creates fresh test data for each run.
  */
 @SpringBootTest
-@ActiveProfiles("wsl")
+@ActiveProfiles("local")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class AnalyticsIntegrationTest {
 

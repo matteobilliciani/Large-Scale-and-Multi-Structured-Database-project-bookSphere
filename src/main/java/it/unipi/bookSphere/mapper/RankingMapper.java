@@ -7,25 +7,33 @@ import org.mapstruct.Mapping;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Mapper(componentModel = "spring")
 public interface RankingMapper {
 
-    // METODO DEFAULT: Gestisce il ciclo e passa il parametro 'year'
+    // METODO DEFAULT AGGIORNATO: Gestisce il ciclo e assegna la posizione
     default List<RankingDTO> toRankingDTOList(List<RankingProjection> projections, Integer year) {
         if (projections == null) {
             return new ArrayList<>();
         }
-        return projections.stream()
-                .map(proj -> toDTO(proj, year)) // Qui avviene la magia: passi l'anno a ogni riga
-                .collect(Collectors.toList());
+
+        List<RankingDTO> list = new ArrayList<>();
+        int rank = 1; // Contatore posizione
+
+        for (RankingProjection proj : projections) {
+            // Chiamiamo il metodo di mapping singolo passando anche il rank corrente
+            list.add(toDTO(proj, year, rank));
+            rank++; // Incrementiamo per il prossimo
+        }
+
+        return list;
     }
 
-    // MAPPING SINGOLO: MapStruct genererà l'implementazione di questo.
-    // I campi con lo stesso nome (id, name, averageRating, etc.) vengono mappati AUTOMATICAMENTE.
-    // Dobbiamo specificare solo 'year' perché viene dal secondo parametro.
+    // MAPPING SINGOLO AGGIORNATO
+    // Ora accetta 3 parametri: la proiezione, l'anno e la posizione.
+    // MapStruct mapperà automaticamente i campi con lo stesso nome dalla proiezione.
     
     @Mapping(target = "year", source = "yearInput")
-    RankingDTO toDTO(RankingProjection proj, Integer yearInput);
+    @Mapping(target = "position", source = "positionInput") // Mappa il parametro rank
+    RankingDTO toDTO(RankingProjection proj, Integer yearInput, Integer positionInput);
 }

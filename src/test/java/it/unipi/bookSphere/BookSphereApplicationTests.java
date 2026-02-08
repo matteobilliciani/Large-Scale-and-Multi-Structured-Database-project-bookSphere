@@ -19,7 +19,7 @@ import org.springframework.test.context.ActiveProfiles;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
-@ActiveProfiles({"wsl", "test-connection"})
+@ActiveProfiles({"local", "test-connection"})
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class BookSphereApplicationTests {
 
