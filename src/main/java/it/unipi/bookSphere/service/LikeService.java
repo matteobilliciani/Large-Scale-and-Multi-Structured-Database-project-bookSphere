@@ -5,11 +5,6 @@ import it.unipi.bookSphere.exceptions.*;
 import it.unipi.bookSphere.model.mongodb.AuthorDocument;
 import it.unipi.bookSphere.model.mongodb.BookDocument;
 import it.unipi.bookSphere.model.mongodb.Review;
-import it.unipi.bookSphere.model.neo4j.AuthorNode;
-import it.unipi.bookSphere.model.neo4j.BookNode;
-import it.unipi.bookSphere.model.neo4j.GenreNode;
-import it.unipi.bookSphere.model.neo4j.ReviewNode;
-import it.unipi.bookSphere.model.neo4j.UserNode;
 import it.unipi.bookSphere.repository.mongo.*;
 import it.unipi.bookSphere.repository.neo4j.*;
 import it.unipi.bookSphere.utils.NormalizationUtils;
@@ -131,7 +126,7 @@ public class LikeService {
         userNodeRepository.getOrCreate(currentUserId, SecurityUtils.getCurrentUsername(), null);
         
         // Get ReviewNode
-        ReviewNode reviewNode = reviewNodeRepository.findByMongoId(reviewId)
+        reviewNodeRepository.findByMongoId(reviewId)
                 .orElseThrow(() -> new ReviewNotFoundException("ReviewNode not found in Neo4j"));
         
         // Check if already liked using repository method

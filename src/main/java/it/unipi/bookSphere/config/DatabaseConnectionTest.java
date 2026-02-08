@@ -1,6 +1,5 @@
 package it.unipi.bookSphere.config;
 
-import com.mongodb.client.MongoClient;
 import org.neo4j.driver.Driver;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

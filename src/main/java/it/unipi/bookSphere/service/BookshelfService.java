@@ -1,7 +1,5 @@
 package it.unipi.bookSphere.service;
 
-import it.unipi.bookSphere.dto.BookshelfItemDTO;
-import it.unipi.bookSphere.dto.BookshelfRequestDTO;
 import it.unipi.bookSphere.exceptions.AlreadyExistsException;
 import it.unipi.bookSphere.exceptions.BookNotFoundException;
 import it.unipi.bookSphere.exceptions.UnauthorizedOperationException;
@@ -24,7 +22,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.List;
 
 /**
  * Service for managing user bookshelf

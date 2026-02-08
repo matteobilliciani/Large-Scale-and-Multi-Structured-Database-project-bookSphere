@@ -11,9 +11,7 @@ import it.unipi.bookSphere.model.neo4j.ReviewNode;
 import it.unipi.bookSphere.repository.mongo.BookRepository;
 import it.unipi.bookSphere.repository.mongo.RegisteredUserRepository;
 import it.unipi.bookSphere.repository.mongo.ReviewRepository;
-import it.unipi.bookSphere.repository.neo4j.BookNodeRepository;
 import it.unipi.bookSphere.repository.neo4j.ReviewNodeRepository;
-import it.unipi.bookSphere.repository.neo4j.UserNodeRepository;
 import it.unipi.bookSphere.utils.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -43,7 +41,6 @@ public class ReviewService {
 
     private static final Logger logger = LoggerFactory.getLogger(ReviewService.class);
     private static final int MAX_RECENT_REVIEWS = 3;
-    private static final int MAX_POPULAR_REVIEWS = 3;
     
     private final ReviewRepository reviewRepository;
     private final ReviewMapper reviewMapper;
@@ -53,8 +50,7 @@ public class ReviewService {
     
     // Neo4j repositories
     private final ReviewNodeRepository reviewNodeRepository;
-    private final UserNodeRepository userNodeRepository;
-    private final BookNodeRepository bookNodeRepository;
+
 
     /**
      * Get reviews by list of IDs

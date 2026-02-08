@@ -7,7 +7,6 @@ import it.unipi.bookSphere.model.mongodb.BookDocument;
 import it.unipi.bookSphere.model.mongodb.RegisteredUser;
 import it.unipi.bookSphere.model.neo4j.UserNode;
 import it.unipi.bookSphere.repository.mongo.RegisteredUserRepository;
-import it.unipi.bookSphere.repository.mongo.ReviewRepository;
 import it.unipi.bookSphere.repository.neo4j.UserNodeRepository;
 import it.unipi.bookSphere.utils.SecurityUtils;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +16,6 @@ import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
-import org.springframework.data.neo4j.core.Neo4jTemplate;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.scheduling.annotation.Async;
@@ -37,10 +35,8 @@ public class ProfileService {
     private static final Logger logger = LoggerFactory.getLogger(ProfileService.class);
     
     private final RegisteredUserRepository userRepository;
-    private final ReviewRepository reviewRepository;
     private final UserNodeRepository userNodeRepository;
     private final MongoTemplate mongoTemplate;
-    private final Neo4jTemplate neo4jTemplate;
 
     /**
      * Update username
@@ -54,7 +50,6 @@ public class ProfileService {
     )
     public void updateUsername(String newUsername) {
         String currentUserId = SecurityUtils.getCurrentUserId();
-        String currentUsername = SecurityUtils.getCurrentUsername();
         
         if (currentUserId == null) {
             throw new UnauthorizedOperationException("User not authenticated");
