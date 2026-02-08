@@ -5,7 +5,6 @@ import it.unipi.bookSphere.exceptions.InvalidCredentialsException;
 import it.unipi.bookSphere.exceptions.UserAlreadyExistsException;
 import it.unipi.bookSphere.mapper.UserMapper;
 import it.unipi.bookSphere.model.mongodb.RegisteredUser;
-import it.unipi.bookSphere.model.neo4j.UserNode;
 import it.unipi.bookSphere.repository.mongo.RegisteredUserRepository;
 import it.unipi.bookSphere.repository.neo4j.UserNodeRepository;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +17,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 
 /**

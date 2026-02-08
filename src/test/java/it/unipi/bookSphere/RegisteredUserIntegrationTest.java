@@ -54,8 +54,8 @@ public class RegisteredUserIntegrationTest {
     @Autowired
     private ProfileService profileService;
 
-    @Autowired
-    private AuthService authService;
+    // @Autowired
+    // private AuthService authService; // Not used in tests
 
     // Repositories for verification
     @Autowired
@@ -88,16 +88,17 @@ public class RegisteredUserIntegrationTest {
     // Test data
     private static String testUserId;
     private static String testUser2Id;
-    private static String testUser3Id; // For additional tests
+    // private static String testUser3Id; // For additional tests (not used)
     private static String testBookId;
-    private static String testBook2Id; // For additional book tests
+    // private static String testBook2Id; // For additional book tests (not used)
     private static String testAuthorId;
     private static String testReviewId;
-    private static String testReview2Id; // For additional review tests
+    // private static String testReview2Id; // For additional review tests (not used)
     private static final String TEST_USERNAME = "testuser_" + System.currentTimeMillis();
     private static final String TEST_USERNAME2 = "testuser2_" + System.currentTimeMillis();
-    private static final String TEST_USERNAME3 = "testuser3_" + System.currentTimeMillis();
+    // private static final String TEST_USERNAME3 = "testuser3_" + System.currentTimeMillis(); // not used
     private static final String TEST_GENRE = "TestGenre";
+    // private static final String TEST_GENRE2 = "TestGenre2"; // not used
     private static final String TEST_GENRE2 = "TestGenre2";
 
     @BeforeEach
@@ -123,7 +124,6 @@ public class RegisteredUserIntegrationTest {
         // Create test author
         AuthorDocument author = new AuthorDocument();
         author.setName("Test Author " + System.currentTimeMillis());
-        author.setAverageRating(0.0);
         author.setRatingsCount(0);
         author.setSumRatings(0);
         author = authorRepository.save(author);
@@ -249,7 +249,8 @@ public class RegisteredUserIntegrationTest {
         assertTrue(authorOpt.isPresent());
         AuthorDocument author = authorOpt.get();
         assertTrue(author.getRatingsCount() >= 1, "Author ratings count should be updated");
-        System.out.println("✓ Author statistics updated (count: " + author.getRatingsCount() + ", avg: " + author.getAverageRating() + ")");
+        double avgRating = author.getRatingsCount() > 0 ? (double) author.getSumRatings() / author.getRatingsCount() : 0.0;
+        System.out.println("✓ Author statistics updated (count: " + author.getRatingsCount() + ", avg: " + String.format("%.2f", avgRating) + ")");
 
         System.out.println("=== Review creation test passed ===\n");
     }
@@ -353,7 +354,9 @@ public class RegisteredUserIntegrationTest {
         likeService.likeGenre(TEST_GENRE);
         System.out.println("✓ Liked genre: " + TEST_GENRE);
 
-        boolean genreLiked = genreNodeRepository.userLikesGenre(testUserId, TEST_GENRE);
+        // Genre names are normalized to Title Case
+        String normalizedGenre = it.unipi.bookSphere.utils.NormalizationUtils.normalizeGenreName(TEST_GENRE);
+        boolean genreLiked = genreNodeRepository.userLikesGenre(testUserId, normalizedGenre);
         assertTrue(genreLiked, "Genre LIKES relationship should exist");
         System.out.println("✓ Genre LIKES relationship verified");
 

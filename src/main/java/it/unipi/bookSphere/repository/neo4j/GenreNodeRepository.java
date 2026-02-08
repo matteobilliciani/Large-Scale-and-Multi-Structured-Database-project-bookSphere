@@ -2,6 +2,7 @@ package it.unipi.bookSphere.repository.neo4j;
 
 import it.unipi.bookSphere.model.neo4j.GenreNode;
 import it.unipi.bookSphere.repository.neo4j.projections.InfluencerProjection;
+import it.unipi.bookSphere.utils.NormalizationUtils;
 import org.springframework.data.neo4j.repository.Neo4jRepository;
 import org.springframework.data.neo4j.repository.query.Query;
 import org.springframework.data.repository.query.Param;
@@ -85,12 +86,14 @@ public interface GenreNodeRepository extends Neo4jRepository<GenreNode, String> 
     /**
      * Get or create GenreNode - if not found, creates a new one with the given name
      * This is a default method to centralize the get-or-create pattern used across services
+     * Names are normalized to Title Case to prevent duplicates ("fantasy" -> "Fantasy")
      */
     default GenreNode getOrCreate(String name) {
-        return findByName(name)
+        String normalizedName = NormalizationUtils.normalizeGenreName(name);
+        return findByName(normalizedName)
                 .orElseGet(() -> {
                     GenreNode newNode = new GenreNode();
-                    newNode.setName(name);
+                    newNode.setName(normalizedName);
                     return save(newNode);
                 });
     }

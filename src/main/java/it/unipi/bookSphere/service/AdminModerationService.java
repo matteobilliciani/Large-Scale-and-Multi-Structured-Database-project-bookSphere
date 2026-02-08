@@ -34,11 +34,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Date;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.Optional;
 
 /**
  * Admin service for content moderation and user management.
@@ -263,11 +261,9 @@ public class AdminModerationService {
             if (yearStat != null && yearStat.getRatingsCount() > 0) {
                 int newCount = Math.max(0, yearStat.getRatingsCount() - 1);
                 int newSum = Math.max(0, yearStat.getSumRating() - rating);
-                double newAverage = newCount > 0 ? (double) newSum / newCount : 0.0;
                 
                 update.set("stats_per_year.$[elem].ratings_count", newCount);
                 update.set("stats_per_year.$[elem].sum_rating", newSum);
-                update.set("stats_per_year.$[elem].average_rating", newAverage);
                 update.filterArray(Criteria.where("elem.year").is(reviewYear));
                 
                 mongoTemplate.updateFirst(query, update, BookDocument.class);
@@ -309,11 +305,9 @@ public class AdminModerationService {
             
             int newCount = Math.max(0, currentCount - 1);
             int newSum = Math.max(0, currentSum - rating);
-            double newAverage = newCount > 0 ? (double) newSum / newCount : 0.0;
             
             author.setRatingsCount(newCount);
             author.setSumRatings(newSum);
-            author.setAverageRating(newAverage);
             
             authorRepository.save(author);
             logger.info("ASYNC: Author statistics updated successfully");

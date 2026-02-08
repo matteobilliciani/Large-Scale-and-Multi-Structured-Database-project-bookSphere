@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import it.unipi.bookSphere.dto.BookDTO;
 import it.unipi.bookSphere.service.AdminBookService;
+import it.unipi.bookSphere.utils.ValidationUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -43,6 +44,7 @@ public class AdminBookController {
             @PathVariable String id,
             @Valid @RequestBody BookDTO bookDTO
     ) {
+        ValidationUtils.validateObjectId(id, "id");
         BookDTO updated = adminBookService.updateBook(id, bookDTO);
         return ResponseEntity.ok(updated);
     }
@@ -56,6 +58,7 @@ public class AdminBookController {
             @Parameter(description = "MongoDB ObjectId of the book", example = "65b3f...")
             @PathVariable String id
     ) {
+        ValidationUtils.validateObjectId(id, "id");
         adminBookService.deleteBook(id);
         return ResponseEntity.noContent().build();
     }

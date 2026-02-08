@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import it.unipi.bookSphere.dto.*;
 import it.unipi.bookSphere.service.LikeService;
+import it.unipi.bookSphere.utils.ValidationUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -33,7 +34,8 @@ public class LikeController {
             @Parameter(description = "Book ID in request body")
             @RequestBody Map<String, String> requestBody
     ) {
-        String bookId = requestBody.get("bookId");
+        String bookId = ValidationUtils.extractAndValidateField(requestBody, "bookId");
+        ValidationUtils.validateObjectId(bookId, "bookId");
         likeService.likeBook(bookId);
         return ResponseEntity.ok(Map.of("message", "Book liked successfully"));
     }
@@ -47,6 +49,7 @@ public class LikeController {
             @Parameter(description = "MongoDB ObjectId of the book", example = "65b3f...")
             @PathVariable String bookID
     ) {
+        ValidationUtils.validateObjectId(bookID, "bookID");
         likeService.unlikeBook(bookID);
         return ResponseEntity.ok(Map.of("message", "Book unliked successfully"));
     }
@@ -62,7 +65,8 @@ public class LikeController {
             @Parameter(description = "Review ID in request body")
             @RequestBody Map<String, String> requestBody
     ) {
-        String reviewId = requestBody.get("reviewId");
+        String reviewId = ValidationUtils.extractAndValidateField(requestBody, "reviewId");
+        ValidationUtils.validateObjectId(reviewId, "reviewId");
         likeService.likeReview(reviewId);
         return ResponseEntity.ok(Map.of("message", "Review liked successfully"));
     }
@@ -76,6 +80,7 @@ public class LikeController {
             @Parameter(description = "MongoDB ObjectId of the review", example = "99a1...")
             @PathVariable String reviewid
     ) {
+        ValidationUtils.validateObjectId(reviewid, "reviewid");
         likeService.unlikeReview(reviewid);
         return ResponseEntity.ok(Map.of("message", "Review unliked successfully"));
     }
@@ -91,7 +96,8 @@ public class LikeController {
             @Parameter(description = "Genre name in request body")
             @RequestBody Map<String, String> requestBody
     ) {
-        String genreName = requestBody.get("genreName");
+        String genreName = ValidationUtils.extractAndValidateField(requestBody, "genreName");
+        ValidationUtils.validateGenreName(genreName);
         likeService.likeGenre(genreName);
         return ResponseEntity.ok(Map.of("message", "Genre liked successfully"));
     }
@@ -105,6 +111,7 @@ public class LikeController {
             @Parameter(description = "Genre name", example = "Fantasy")
             @PathVariable String name
     ) {
+        ValidationUtils.validateGenreName(name);
         likeService.unlikeGenre(name);
         return ResponseEntity.ok(Map.of("message", "Genre unliked successfully"));
     }
@@ -120,7 +127,8 @@ public class LikeController {
             @Parameter(description = "Author ID in request body")
             @RequestBody Map<String, String> requestBody
     ) {
-        String authorId = requestBody.get("authorId");
+        String authorId = ValidationUtils.extractAndValidateField(requestBody, "authorId");
+        ValidationUtils.validateObjectId(authorId, "authorId");
         likeService.likeAuthor(authorId);
         return ResponseEntity.ok(Map.of("message", "Author liked successfully"));
     }
@@ -134,6 +142,7 @@ public class LikeController {
             @Parameter(description = "Author ID", example = "65b3a...")
             @PathVariable String authorID
     ) {
+        ValidationUtils.validateObjectId(authorID, "authorID");
         likeService.unlikeAuthor(authorID);
         return ResponseEntity.ok(Map.of("message", "Author unliked successfully"));
     }

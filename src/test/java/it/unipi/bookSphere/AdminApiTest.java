@@ -503,10 +503,12 @@ public class AdminApiTest {
         // Add genre
         GenreDTO created = adminCatalogService.addGenre(genreDTO);
 
-        assertEquals(TEST_GENRE_1, created.getName(), "Genre name should match");
+        // Genre name will be normalized to Title Case
+        String expectedName = it.unipi.bookSphere.utils.NormalizationUtils.normalizeGenreName(TEST_GENRE_1);
+        assertEquals(expectedName, created.getName(), "Genre name should match (normalized)");
 
         // Verify in Neo4j
-        boolean genreExists = genreNodeRepository.existsByName(TEST_GENRE_1);
+        boolean genreExists = genreNodeRepository.existsByName(expectedName);
         assertTrue(genreExists, "Genre should exist in Neo4j");
 
         System.out.println("Genre added successfully: " + TEST_GENRE_1);

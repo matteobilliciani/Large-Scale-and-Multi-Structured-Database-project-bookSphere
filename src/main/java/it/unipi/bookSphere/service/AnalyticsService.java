@@ -135,14 +135,16 @@ public class AnalyticsService {
         List<? extends it.unipi.bookSphere.repository.neo4j.projections.InfluencerProjection> results;
         
         if (genre != null && !genre.isEmpty()) {
-            logger.info("Finding influencers for genre: {}", genre);
+            // Normalize genre name for consistency
+            String normalizedGenre = it.unipi.bookSphere.utils.NormalizationUtils.normalizeGenreName(genre);
+            logger.info("Finding influencers for genre: {} (normalized: {})", genre, normalizedGenre);
             
             // Verify genre exists
-            if (!genreNodeRepository.existsByName(genre)) {
+            if (!genreNodeRepository.existsByName(normalizedGenre)) {
                 throw new GenreNotFoundException("Genre not found: " + genre);
             }
             
-            results = genreNodeRepository.findGenreInfluencers(genre, resultLimit);
+            results = genreNodeRepository.findGenreInfluencers(normalizedGenre, resultLimit);
         } else {
             logger.info("Finding top influencers across all genres");
             results = genreNodeRepository.findTopInfluencers(resultLimit);
@@ -312,8 +314,8 @@ public class AnalyticsService {
                     Optional<BookDocument.YearStat> yearStat = book.getStatsPerYear().stream()
                         .filter(stat -> year.equals(stat.getYear()))
                         .findFirst();
-                    if (yearStat.isPresent()) {
-                        bookAvg = yearStat.get().getAverageRating();
+                    if (yearStat.isPresent() && yearStat.get().getRatingsCount() > 0) {
+                        bookAvg = (double) yearStat.get().getSumRating() / yearStat.get().getRatingsCount();
                     }
                 } else {
                     int totalSum = book.getStatsPerYear().stream()

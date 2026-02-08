@@ -15,7 +15,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.ActiveProfiles;
 
-import java.time.Instant;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -170,7 +170,6 @@ public class ComprehensiveApiTest {
         // Create test author 1
         AuthorDocument author1 = new AuthorDocument();
         author1.setName("Test Author One " + TIMESTAMP);
-        author1.setAverageRating(0.0);
         author1.setRatingsCount(0);
         author1.setSumRatings(0);
         author1 = authorRepository.save(author1);
@@ -180,7 +179,6 @@ public class ComprehensiveApiTest {
         // Create test author 2
         AuthorDocument author2 = new AuthorDocument();
         author2.setName("Test Author Two " + TIMESTAMP);
-        author2.setAverageRating(0.0);
         author2.setRatingsCount(0);
         author2.setSumRatings(0);
         author2 = authorRepository.save(author2);
@@ -637,8 +635,9 @@ public class ComprehensiveApiTest {
         likeService.likeGenre(TEST_GENRE_1);
         System.out.println("✓ Genre liked: " + TEST_GENRE_1);
 
-        // Verify Neo4j relationship
-        boolean liked = genreNodeRepository.userLikesGenre(testUserId1, TEST_GENRE_1);
+        // Verify Neo4j relationship (genre names are normalized to Title Case)
+        String normalizedGenre = it.unipi.bookSphere.utils.NormalizationUtils.normalizeGenreName(TEST_GENRE_1);
+        boolean liked = genreNodeRepository.userLikesGenre(testUserId1, normalizedGenre);
         assertTrue(liked, "LIKES relationship should exist for genre");
         System.out.println("✓ Genre LIKES relationship verified in Neo4j");
 

@@ -27,9 +27,6 @@ public class AuthorDocument {
     private List<PublishedBook> publishedBooks;
 
     // PATTERN: Computed (Pre-calculated aggregations from all reviews of their books)
-    @Field("average_rating")
-    private Double averageRating;
-
     @Field("ratings_count")
     private Integer ratingsCount; // Total votes received (Counter
     

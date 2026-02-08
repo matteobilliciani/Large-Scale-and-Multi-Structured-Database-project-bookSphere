@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import it.unipi.bookSphere.dto.BookshelfRequestDTO;
 import it.unipi.bookSphere.service.BookshelfService;
+import it.unipi.bookSphere.utils.ValidationUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -45,7 +46,9 @@ public class BookshelfController {
             @Parameter(description = "New status", example = "read")
             @RequestBody Map<String, String> requestBody
     ) {
-        String status = requestBody.get("status");
+        ValidationUtils.validateObjectId(bookID, "bookID");
+        String status = ValidationUtils.extractAndValidateField(requestBody, "status");
+        ValidationUtils.validateBookshelfStatus(status);
         bookshelfService.updateBookStatus(bookID, status);
         return ResponseEntity.ok(Map.of("message", "Book status updated"));
     }
@@ -59,6 +62,7 @@ public class BookshelfController {
             @Parameter(description = "MongoDB ObjectId of the book", example = "65b3f...")
             @PathVariable String bookId
     ) {
+        ValidationUtils.validateObjectId(bookId, "bookId");
         bookshelfService.removeBookFromBookshelf(bookId);
         return ResponseEntity.noContent().build();
     }

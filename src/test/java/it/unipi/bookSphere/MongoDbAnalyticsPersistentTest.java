@@ -14,8 +14,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZoneOffset;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -189,14 +188,12 @@ public class MongoDbAnalyticsPersistentTest {
         List<BookDocument.YearStat> yearStats1 = new ArrayList<>();
         BookDocument.YearStat stat1_2025 = new BookDocument.YearStat();
         stat1_2025.setYear(CURRENT_YEAR);
-        stat1_2025.setAverageRating(80.0);
         stat1_2025.setRatingsCount(50);
         stat1_2025.setSumRating(4000);
         yearStats1.add(stat1_2025);
         
         BookDocument.YearStat stat1_2024 = new BookDocument.YearStat();
         stat1_2024.setYear(LAST_YEAR);
-        stat1_2024.setAverageRating(75.0);
         stat1_2024.setRatingsCount(30);
         stat1_2024.setSumRating(2250);
         yearStats1.add(stat1_2024);
@@ -222,14 +219,12 @@ public class MongoDbAnalyticsPersistentTest {
         List<BookDocument.YearStat> yearStats2 = new ArrayList<>();
         BookDocument.YearStat stat2_2025 = new BookDocument.YearStat();
         stat2_2025.setYear(CURRENT_YEAR);
-        stat2_2025.setAverageRating(85.0);
         stat2_2025.setRatingsCount(80);
         stat2_2025.setSumRating(6800);
         yearStats2.add(stat2_2025);
         
         BookDocument.YearStat stat2_2024 = new BookDocument.YearStat();
         stat2_2024.setYear(LAST_YEAR);
-        stat2_2024.setAverageRating(82.0);
         stat2_2024.setRatingsCount(60);
         stat2_2024.setSumRating(4920);
         yearStats2.add(stat2_2024);
@@ -255,14 +250,12 @@ public class MongoDbAnalyticsPersistentTest {
         List<BookDocument.YearStat> yearStats3 = new ArrayList<>();
         BookDocument.YearStat stat3_2025 = new BookDocument.YearStat();
         stat3_2025.setYear(CURRENT_YEAR);
-        stat3_2025.setAverageRating(60.0);
         stat3_2025.setRatingsCount(40);
         stat3_2025.setSumRating(2400);
         yearStats3.add(stat3_2025);
         
         BookDocument.YearStat stat3_2024 = new BookDocument.YearStat();
         stat3_2024.setYear(LAST_YEAR);
-        stat3_2024.setAverageRating(55.0);
         stat3_2024.setRatingsCount(25);
         stat3_2024.setSumRating(1375);
         yearStats3.add(stat3_2024);
@@ -285,7 +278,6 @@ public class MongoDbAnalyticsPersistentTest {
         List<BookDocument.YearStat> yearStats4 = new ArrayList<>();
         BookDocument.YearStat stat4_2024 = new BookDocument.YearStat();
         stat4_2024.setYear(LAST_YEAR);
-        stat4_2024.setAverageRating(50.0);
         stat4_2024.setRatingsCount(10);
         stat4_2024.setSumRating(500);
         yearStats4.add(stat4_2024);
@@ -389,7 +381,7 @@ public class MongoDbAnalyticsPersistentTest {
         assertTrue(result.size() > 0, "Expected at least 1 book ranking");
         
         // Check that Book 2 (highest rated) appears in top rankings
-        boolean hasTopBook = result.stream()
+        result.stream()
             .anyMatch(dto -> testBookId2.equals(dto.getId()));
         
         // Verify rankings are sorted by rating
@@ -687,7 +679,6 @@ public class MongoDbAnalyticsPersistentTest {
             start.setYear(2010);
             start.setSumRating(1);
             start.setRatingsCount(10);
-            start.setAverageRating(0.1);
             stats.add(start);
 
             // Anno Corrente: Voto massimo (100.0)
@@ -695,7 +686,6 @@ public class MongoDbAnalyticsPersistentTest {
             end.setYear(CURRENT_YEAR);
             end.setSumRating(10000);
             end.setRatingsCount(100);
-            end.setAverageRating(100.0);
             stats.add(end);
 
             b.setStatsPerYear(stats);

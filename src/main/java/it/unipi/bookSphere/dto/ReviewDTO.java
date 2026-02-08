@@ -1,9 +1,11 @@
 package it.unipi.bookSphere.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import it.unipi.bookSphere.validation.ValidObjectId;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -23,13 +25,16 @@ public class ReviewDTO {
     private Integer rating;
 
     @Schema(description = "Review text", example = "An amazing book that changed my life...")
+    @Size(max = 5000, message = "Review text cannot exceed 5000 characters")
     private String text;
 
     @Schema(description = "Review summary", example = "Must read")
+    @Size(max = 200, message = "Review summary cannot exceed 200 characters")
     private String summary;
 
     @Schema(description = "MongoDB ObjectId of the book being reviewed")
     @NotNull(message = "Book ID is mandatory")
+    @ValidObjectId
     private String bookId;
 
     @Schema(description = "Book title", example = "The Fellowship of the Ring")

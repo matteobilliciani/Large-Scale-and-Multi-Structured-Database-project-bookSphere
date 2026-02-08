@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import it.unipi.bookSphere.service.AdminModerationService;
+import it.unipi.bookSphere.utils.ValidationUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -29,6 +30,7 @@ public class AdminModerationController {
             @Parameter(description = "MongoDB ObjectId of the review", example = "99a1...")
             @PathVariable String id
     ) {
+        ValidationUtils.validateObjectId(id, "id");
         adminModerationService.deleteReview(id);
         return ResponseEntity.noContent().build();
     }
@@ -42,6 +44,7 @@ public class AdminModerationController {
             @Parameter(description = "MongoDB ObjectId of the user", example = "65d1...")
             @PathVariable String id
     ) {
+        ValidationUtils.validateObjectId(id, "id");
         adminModerationService.banUser(id);
         return ResponseEntity.ok(Map.of("message", "User banned successfully", "userId", id));
     }

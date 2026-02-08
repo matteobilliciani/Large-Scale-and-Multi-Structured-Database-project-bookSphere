@@ -20,6 +20,18 @@ public interface AuthorMapper {
     AuthorDTO toDTO(AuthorDocument document);
 
     /**
+     * AfterMapping: Calculate average rating from sum and count
+     */
+    @org.mapstruct.AfterMapping
+    default void calculateAuthorAverage(@org.mapstruct.MappingTarget AuthorDTO dto, AuthorDocument document) {
+        if (document.getRatingsCount() != null && document.getRatingsCount() > 0 && document.getSumRatings() != null) {
+            dto.setAverageRating((double) document.getSumRatings() / document.getRatingsCount());
+        } else {
+            dto.setAverageRating(0.0);
+        }
+    }
+
+    /**
      * Convert AuthorDocument.PublishedBook to BookSummaryDTO
      */
     BookSummaryDTO toBookSummaryDTO(AuthorDocument.PublishedBook publishedBook);

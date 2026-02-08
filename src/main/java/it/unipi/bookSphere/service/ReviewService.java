@@ -7,9 +7,7 @@ import it.unipi.bookSphere.model.mongodb.BookDocument;
 import it.unipi.bookSphere.model.mongodb.RegisteredUser;
 import it.unipi.bookSphere.model.mongodb.Review;
 import it.unipi.bookSphere.model.mongodb.AuthorDocument;
-import it.unipi.bookSphere.model.neo4j.BookNode;
 import it.unipi.bookSphere.model.neo4j.ReviewNode;
-import it.unipi.bookSphere.model.neo4j.UserNode;
 import it.unipi.bookSphere.repository.mongo.BookRepository;
 import it.unipi.bookSphere.repository.mongo.RegisteredUserRepository;
 import it.unipi.bookSphere.repository.mongo.ReviewRepository;
@@ -371,19 +369,9 @@ public class ReviewService {
             book.getStatsPerYear().stream().anyMatch(s -> s.getYear().equals(currentYear));
         
         if (yearExists) {
-            // Increment existing yearupdate.inc("stats_per_year.$[elem].ratings_count", 1);
+            // Increment existing year
+            update.inc("stats_per_year.$[elem].ratings_count", 1);
             update.inc("stats_per_year.$[elem].sum_rating", review.getRating());
-            
-            // Calculate new average
-            BookDocument.YearStat stat = book.getStatsPerYear().stream()
-                .filter(s -> s.getYear().equals(currentYear))
-                .findFirst()
-                .get();
-            int newCount = stat.getRatingsCount() + 1;
-            int newSum = stat.getSumRating() + review.getRating();
-            double newAvg = (double) newSum / newCount;
-            
-            update.set("stats_per_year.$[elem].average_rating", newAvg);
             update.filterArray(Criteria.where("elem.year").is(currentYear));
         } else {
             // Add new year stat
@@ -391,7 +379,6 @@ public class ReviewService {
             newStat.setYear(currentYear);
             newStat.setRatingsCount(1);
             newStat.setSumRating(review.getRating());
-            newStat.setAverageRating((double) review.getRating());
             
             update.push("stats_per_year", newStat);
         }
@@ -437,10 +424,8 @@ public class ReviewService {
         
         if (stat != null) {
             int newSum = stat.getSumRating() - oldRating + newRating;
-            double newAvg = (double) newSum / stat.getRatingsCount();
             
             update.set("stats_per_year.$[elem].sum_rating", newSum);
-            update.set("stats_per_year.$[elem].average_rating", newAvg);
             update.filterArray(Criteria.where("elem.year").is(currentYear));
             
             mongoTemplate.updateFirst(query, update, BookDocument.class);
@@ -467,13 +452,10 @@ public class ReviewService {
             : null;
         
         if (stat != null && stat.getRatingsCount() > 1) {
-            int newCount = stat.getRatingsCount() - 1;
             int newSum = stat.getSumRating() - rating;
-            double newAvg = (double) newSum / newCount;
             
             update.inc("stats_per_year.$[elem].ratings_count", -1);
             update.set("stats_per_year.$[elem].sum_rating", newSum);
-            update.set("stats_per_year.$[elem].average_rating", newAvg);
             update.filterArray(Criteria.where("elem.year").is(currentYear));
         } else if (stat != null && stat.getRatingsCount() == 1) {
             // Remove the year stat entirely
@@ -554,14 +536,6 @@ public class ReviewService {
         
         mongoTemplate.updateFirst(query, update, AuthorDocument.class);
         
-        // Recalculate average
-        AuthorDocument author = mongoTemplate.findOne(query, AuthorDocument.class);
-        if (author != null && author.getRatingsCount() != null && author.getRatingsCount() > 0) {
-            double newAvg = (double) author.getSumRatings() / author.getRatingsCount();
-            Update avgUpdate = new Update().set("average_rating", newAvg);
-            mongoTemplate.updateFirst(query, avgUpdate, AuthorDocument.class);
-        }
-        
         logger.info("Updated author statistics for author: {}", authorId);
     }
 
@@ -578,14 +552,6 @@ public class ReviewService {
         
         mongoTemplate.updateFirst(query, update, AuthorDocument.class);
         
-        // Recalculate average
-        AuthorDocument author = mongoTemplate.findOne(query, AuthorDocument.class);
-        if (author != null && author.getRatingsCount() != null && author.getRatingsCount() > 0) {
-            double newAvg = (double) author.getSumRatings() / author.getRatingsCount();
-            Update avgUpdate = new Update().set("average_rating", newAvg);
-            mongoTemplate.updateFirst(query, avgUpdate, AuthorDocument.class);
-        }
-        
         logger.info("Updated author statistics after rating change for author: {}", authorId);
     }
 
@@ -601,18 +567,6 @@ public class ReviewService {
         update.inc("sum_ratings", -rating);
         
         mongoTemplate.updateFirst(query, update, AuthorDocument.class);
-        
-        // Recalculate average
-        AuthorDocument author = mongoTemplate.findOne(query, AuthorDocument.class);
-        if (author != null && author.getRatingsCount() != null && author.getRatingsCount() > 0) {
-            double newAvg = (double) author.getSumRatings() / author.getRatingsCount();
-            Update avgUpdate = new Update().set("average_rating", newAvg);
-            mongoTemplate.updateFirst(query, avgUpdate, AuthorDocument.class);
-        } else if (author != null && author.getRatingsCount() != null && author.getRatingsCount() == 0) {
-            // Reset average if no more reviews
-            Update avgUpdate = new Update().set("average_rating", 0.0);
-            mongoTemplate.updateFirst(query, avgUpdate, AuthorDocument.class);
-        }
         
         logger.info("Removed review from author statistics for author: {}", authorId);
     }

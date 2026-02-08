@@ -2,6 +2,7 @@ package it.unipi.bookSphere.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.util.List;
@@ -13,6 +14,7 @@ public class AuthorDTO {
 
     @Schema(description = "Author name", example = "J.R.R. Tolkien")
     @NotBlank(message = "Author name is mandatory")
+    @Size(min = 1, max = 200, message = "Author name must be between 1 and 200 characters")
     private String name;
 
     @Schema(description = "List of published books")

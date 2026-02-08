@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import it.unipi.bookSphere.dto.UserDTO;
 import it.unipi.bookSphere.service.FollowService;
+import it.unipi.bookSphere.utils.ValidationUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -31,7 +32,8 @@ public class FollowController {
             @Parameter(description = "User ID to follow (MongoDB ObjectId)")
             @RequestBody Map<String, String> requestBody
     ) {
-        String userId = requestBody.get("userId");
+        String userId = ValidationUtils.extractAndValidateField(requestBody, "userId");
+        ValidationUtils.validateObjectId(userId, "userId");
         followService.followUser(userId);
         return ResponseEntity.ok(Map.of("message", "Successfully followed user"));
     }
@@ -45,6 +47,7 @@ public class FollowController {
             @Parameter(description = "User ID to unfollow", example = "65d1...")
             @PathVariable String userId
     ) {
+        ValidationUtils.validateObjectId(userId, "userId");
         followService.unfollowUser(userId);
         return ResponseEntity.ok(Map.of("message", "Successfully unfollowed user"));
     }

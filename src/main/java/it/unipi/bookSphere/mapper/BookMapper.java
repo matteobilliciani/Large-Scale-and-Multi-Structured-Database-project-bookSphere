@@ -74,6 +74,18 @@ public interface BookMapper {
     StatsPerYearDTO toStatsPerYearDTO(BookDocument.YearStat yearStat);
 
     /**
+     * AfterMapping: Calculate average rating from sum and count
+     */
+    @AfterMapping
+    default void calculateYearAverage(@MappingTarget StatsPerYearDTO dto, BookDocument.YearStat yearStat) {
+        if (yearStat.getRatingsCount() != null && yearStat.getRatingsCount() > 0 && yearStat.getSumRating() != null) {
+            dto.setAverageRating((double) yearStat.getSumRating() / yearStat.getRatingsCount());
+        } else {
+            dto.setAverageRating(0.0);
+        }
+    }
+
+    /**
      * Convert BookDocument.MonthScore to TrendScoreDTO
      */
     @Mapping(target = "updatedAt", expression = "java(java.time.LocalDateTime.now())")

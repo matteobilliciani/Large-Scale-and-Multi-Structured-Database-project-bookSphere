@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import it.unipi.bookSphere.dto.AuthorDTO;
 import it.unipi.bookSphere.dto.GenreDTO;
 import it.unipi.bookSphere.service.AdminCatalogService;
+import it.unipi.bookSphere.utils.ValidationUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -46,6 +47,7 @@ public class AdminCatalogController {
             @PathVariable String id,
             @Valid @RequestBody AuthorDTO authorDTO
     ) {
+        ValidationUtils.validateObjectId(id, "id");
         AuthorDTO updated = adminCatalogService.updateAuthor(id, authorDTO);
         return ResponseEntity.ok(updated);
     }
@@ -59,6 +61,7 @@ public class AdminCatalogController {
             @Parameter(description = "MongoDB ObjectId of the author", example = "65b3a...")
             @PathVariable String id
     ) {
+        ValidationUtils.validateObjectId(id, "id");
         adminCatalogService.deleteAuthor(id);
         return ResponseEntity.noContent().build();
     }

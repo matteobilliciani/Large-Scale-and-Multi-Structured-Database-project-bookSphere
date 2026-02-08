@@ -104,9 +104,6 @@ public class BookDocument {
     public static class YearStat {
         private Integer year;
 
-        @Field("average_rating")
-        private Double averageRating;
-
         @Field("ratings_count")
         private Integer ratingsCount;
 

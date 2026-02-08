@@ -12,6 +12,7 @@ import it.unipi.bookSphere.model.neo4j.ReviewNode;
 import it.unipi.bookSphere.model.neo4j.UserNode;
 import it.unipi.bookSphere.repository.mongo.*;
 import it.unipi.bookSphere.repository.neo4j.*;
+import it.unipi.bookSphere.utils.NormalizationUtils;
 import it.unipi.bookSphere.utils.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -199,23 +200,26 @@ public class LikeService {
             throw new UnauthorizedOperationException("User not authenticated");
         }
         
+        // Normalize genre name for consistency
+        String normalizedGenreName = NormalizationUtils.normalizeGenreName(genreName);
+        
         // Get or create UserNode using repository method
         userNodeRepository.getOrCreate(currentUserId, SecurityUtils.getCurrentUsername(), null);
         
         // Get or create GenreNode using repository method
-        genreNodeRepository.getOrCreate(genreName);
+        genreNodeRepository.getOrCreate(normalizedGenreName);
         
         // Check if already liked using repository method
-        boolean alreadyLiked = genreNodeRepository.userLikesGenre(currentUserId, genreName);
+        boolean alreadyLiked = genreNodeRepository.userLikesGenre(currentUserId, normalizedGenreName);
         
         if (alreadyLiked) {
             throw new AlreadyExistsException("Already liked this genre");
         }
         
         // Create LIKES relationship using repository method
-        genreNodeRepository.createLikesRelationship(currentUserId, genreName, LocalDateTime.now());
+        genreNodeRepository.createLikesRelationship(currentUserId, normalizedGenreName, LocalDateTime.now());
         
-        logger.info("User {} liked genre {}", currentUserId, genreName);
+        logger.info("User {} liked genre {}", currentUserId, normalizedGenreName);
     }
 
     /**
@@ -229,13 +233,16 @@ public class LikeService {
             throw new UnauthorizedOperationException("User not authenticated");
         }
         
+        // Normalize genre name for consistency
+        String normalizedGenreName = NormalizationUtils.normalizeGenreName(genreName);
+        
         // Remove LIKES relationship using repository method
-        Long deleted = genreNodeRepository.deleteLikesRelationship(currentUserId, genreName);
+        Long deleted = genreNodeRepository.deleteLikesRelationship(currentUserId, normalizedGenreName);
         
         if (deleted == 0) {
-            logger.warn("User {} had not liked genre {}", currentUserId, genreName);
+            logger.warn("User {} had not liked genre {}", currentUserId, normalizedGenreName);
         } else {
-            logger.info("User {} unliked genre {}", currentUserId, genreName);
+            logger.info("User {} unliked genre {}", currentUserId, normalizedGenreName);
         }
     }
 

@@ -10,6 +10,7 @@ import it.unipi.bookSphere.model.neo4j.GenreNode;
 import it.unipi.bookSphere.repository.mongo.AuthorRepository;
 import it.unipi.bookSphere.repository.neo4j.AuthorNodeRepository;
 import it.unipi.bookSphere.repository.neo4j.GenreNodeRepository;
+import it.unipi.bookSphere.utils.NormalizationUtils;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,15 +60,15 @@ public class AdminCatalogService {
     public AuthorDTO addAuthor(AuthorDTO authorDTO) {
         logger.info("Admin adding new author: {}", authorDTO.getName());
         
+        // Normalize author name for consistency
+        String normalizedName = NormalizationUtils.normalizeAuthorName(authorDTO.getName());
+        authorDTO.setName(normalizedName);
+        
         // 1. Create author in MongoDB
         AuthorDocument authorDocument = authorMapper.toDocument(authorDTO);
         authorDocument.setStatus("ACTIVE");
         
-        
         // Initialize statistics
-        if (authorDocument.getAverageRating() == null) {
-            authorDocument.setAverageRating(0.0);
-        }
         if (authorDocument.getRatingsCount() == null) {
             authorDocument.setRatingsCount(0);
         }
@@ -121,6 +122,12 @@ public class AdminCatalogService {
     )
     public AuthorDTO updateAuthor(String id, AuthorDTO authorDTO) {
         logger.info("Admin updating author with ID: {}", id);
+        
+        // Normalize author name for consistency
+        if (authorDTO.getName() != null) {
+            String normalizedName = NormalizationUtils.normalizeAuthorName(authorDTO.getName());
+            authorDTO.setName(normalizedName);
+        }
         
         // 1. Find existing author in MongoDB
         AuthorDocument existingAuthor = authorRepository.findById(id)
@@ -219,16 +226,21 @@ public class AdminCatalogService {
     public GenreDTO addGenre(GenreDTO genreDTO) {
         logger.info("Admin adding new genre: {}", genreDTO.getName());
         
+        // Normalize genre name for consistency
+        String normalizedName = NormalizationUtils.normalizeGenreName(genreDTO.getName());
+        
         // Check if genre already exists
-        if (genreNodeRepository.existsByName(genreDTO.getName())) {
-            logger.warn("Genre already exists: {}", genreDTO.getName());
-            throw new IllegalArgumentException("Genre already exists: " + genreDTO.getName());
+        if (genreNodeRepository.existsByName(normalizedName)) {
+            logger.warn("Genre already exists: {}", normalizedName);
+            throw new IllegalArgumentException("Genre already exists: " + normalizedName);
         }
         
-        // Create GenreNode in Neo4j (centralized in repository)
-        GenreNode genreNode = genreNodeRepository.getOrCreate(genreDTO.getName());
+        // Create GenreNode in Neo4j (centralized in repository) - will auto-normalize
+        GenreNode genreNode = genreNodeRepository.getOrCreate(normalizedName);
         logger.info("Genre node ready in Neo4j: {}", genreNode.getName());
         
+        // Return with normalized name
+        genreDTO.setName(genreNode.getName());
         return genreDTO;
     }
 }

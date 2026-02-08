@@ -4,11 +4,6 @@ import it.unipi.bookSphere.dto.RecommendationDTO;
 import it.unipi.bookSphere.dto.WrappedDTO;
 import it.unipi.bookSphere.exceptions.UserNotFoundException;
 import it.unipi.bookSphere.mapper.WrappedMapper;
-import it.unipi.bookSphere.model.mongodb.AuthorDocument;
-import it.unipi.bookSphere.model.mongodb.BookDocument;
-import it.unipi.bookSphere.model.mongodb.RegisteredUser;
-import it.unipi.bookSphere.repository.mongo.AuthorRepository;
-import it.unipi.bookSphere.repository.mongo.BookRepository;
 import it.unipi.bookSphere.repository.mongo.RegisteredUserRepository;
 import it.unipi.bookSphere.repository.mongo.projections.WrappedAggregationResult;
 import it.unipi.bookSphere.repository.neo4j.UserNodeRepository;
@@ -25,18 +20,14 @@ import org.springframework.stereotype.Service;
 
 import static org.springframework.data.mongodb.core.aggregation.Aggregation.*;
 
-import org.bson.Document;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort; 
 import java.time.ZoneId; // <--- Utile per conversione date
 import java.util.Date;   // <--- Utile per conversione date
 
 import java.time.LocalDate;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 

@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import it.unipi.bookSphere.dto.ReviewDTO;
 import it.unipi.bookSphere.service.ReviewService;
+import it.unipi.bookSphere.utils.ValidationUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -45,6 +46,7 @@ public class ReviewController {
             @PathVariable String reviewID,
             @Valid @RequestBody ReviewDTO reviewDTO
     ) {
+        ValidationUtils.validateObjectId(reviewID, "reviewID");
         ReviewDTO updated = reviewService.updateReview(reviewID, reviewDTO);
         return ResponseEntity.ok(updated);
     }
@@ -58,6 +60,7 @@ public class ReviewController {
             @Parameter(description = "MongoDB ObjectId of the review", example = "99a1...")
             @PathVariable String reviewID
     ) {
+        ValidationUtils.validateObjectId(reviewID, "reviewID");
         reviewService.deleteReview(reviewID);
         return ResponseEntity.noContent().build();
     }

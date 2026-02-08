@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * Creates fresh test data for each run.
  */
 @SpringBootTest
-@ActiveProfiles("local")
+@ActiveProfiles("wsl")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class AnalyticsIntegrationTest {
 
@@ -43,7 +43,7 @@ public class AnalyticsIntegrationTest {
     @Autowired private AuthorNodeRepository authorNodeRepository;
     @Autowired private GenreNodeRepository genreNodeRepository;
     @Autowired private UserNodeRepository userNodeRepository;
-    @Autowired private ReviewNodeRepository reviewNodeRepository;
+    // @Autowired private ReviewNodeRepository reviewNodeRepository; // Not used in tests
 
     private static String testUserId1, testUserId2, testUserId3, testUserId4, testUserId5;
     private static String testBookId1, testBookId2, testBookId3, testBookId4;
@@ -187,7 +187,7 @@ public class AnalyticsIntegrationTest {
         // User 2 (USA): Reviews book1, likes book3, follows user1, likes user1's reviews, likes genre
         auth(testUserId2, TEST_USERNAME2);
         followService.followUser(testUserId1);
-        String review2_1 = postReview(testBookId1, "Good book!", 4);
+        postReview(testBookId1, "Good book!", 4);
         likeService.likeBook(testBookId3);
         likeService.likeGenre(TEST_GENRE);  // Add genre like for recommendations
         likeService.likeReview(review1_1);
@@ -199,8 +199,8 @@ public class AnalyticsIntegrationTest {
         followService.followUser(testUserId1);
         likeService.likeAuthor(testAuthorId);
         likeService.likeGenre(TEST_GENRE);
-        String review3_1 = postReview(testBookId2, "Interesting read!", 4);
-        String review3_2 = postReview(testBookId4, "Nice book!", 4);
+        postReview(testBookId2, "Interesting read!", 4);
+        postReview(testBookId4, "Nice book!", 4);
         likeService.likeReview(review1_1);
         likeService.likeReview(review1_2);
         likeService.likeReview(review1_3);
@@ -208,14 +208,14 @@ public class AnalyticsIntegrationTest {
         
         // User 4 (France): Reviews book2, likes book3, likes user1's reviews
         auth(testUserId4, TEST_USERNAME4);
-        String review4_1 = postReview(testBookId2, "Great book!", 5);
+        postReview(testBookId2, "Great book!", 5);
         likeService.likeBook(testBookId3);
         likeService.likeReview(review1_1);
         System.out.println("  User4: Reviewed, liked");
         
         // User 5 (Germany): Reviews book3, likes author
         auth(testUserId5, TEST_USERNAME5);
-        String review5_1 = postReview(testBookId3, "Superb!", 5);
+        postReview(testBookId3, "Superb!", 5);
         likeService.likeAuthor(testAuthorId);
         System.out.println("  User5: Reviewed, liked author");
         

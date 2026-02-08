@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import it.unipi.bookSphere.service.ProfileService;
+import it.unipi.bookSphere.utils.ValidationUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -29,7 +30,8 @@ public class ProfileController {
             @Parameter(description = "New username", example = "NewUsername123")
             @RequestBody Map<String, String> requestBody
     ) {
-        String newUsername = requestBody.get("username");
+        String newUsername = ValidationUtils.extractAndValidateField(requestBody, "username");
+        ValidationUtils.validateUsername(newUsername);
         profileService.updateUsername(newUsername);
         return ResponseEntity.ok(Map.of("message", "Username updated successfully", "newUsername", newUsername));
     }

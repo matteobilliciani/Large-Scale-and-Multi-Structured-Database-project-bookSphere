@@ -11,6 +11,7 @@ import it.unipi.bookSphere.repository.mongo.BookRepository;
 import it.unipi.bookSphere.repository.neo4j.AuthorNodeRepository;
 import it.unipi.bookSphere.repository.neo4j.BookNodeRepository;
 import it.unipi.bookSphere.repository.neo4j.GenreNodeRepository;
+import it.unipi.bookSphere.utils.NormalizationUtils;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,7 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
-import java.util.List;
+import java.util.Optional;
 
 /**
  * Admin service for managing books in the catalog.
@@ -59,6 +60,14 @@ public class AdminBookService {
     )
     public BookDTO addBook(BookDTO bookDTO) {
         logger.info("Admin adding new book: {}", bookDTO.getTitle());
+        
+        // Normalize book title and author name for consistency
+        if (bookDTO.getTitle() != null) {
+            bookDTO.setTitle(NormalizationUtils.normalizeBookTitle(bookDTO.getTitle()));
+        }
+        if (bookDTO.getAuthor() != null && bookDTO.getAuthor().getName() != null) {
+            bookDTO.getAuthor().setName(NormalizationUtils.normalizeAuthorName(bookDTO.getAuthor().getName()));
+        }
         
         // 1. Create book in MongoDB
         BookDocument bookDocument = bookMapper.toDocument(bookDTO);
@@ -143,6 +152,14 @@ public class AdminBookService {
     )
     public BookDTO updateBook(String id, BookDTO bookDTO) {
         logger.info("Admin updating book with ID: {}", id);
+        
+        // Normalize book title and author name for consistency
+        if (bookDTO.getTitle() != null) {
+            bookDTO.setTitle(NormalizationUtils.normalizeBookTitle(bookDTO.getTitle()));
+        }
+        if (bookDTO.getAuthor() != null && bookDTO.getAuthor().getName() != null) {
+            bookDTO.getAuthor().setName(NormalizationUtils.normalizeAuthorName(bookDTO.getAuthor().getName()));
+        }
         
         // 1. Find existing book in MongoDB
         BookDocument existingBook = bookRepository.findById(id)
