@@ -433,9 +433,7 @@ public class LikeService {
             snapshot.setUserId(review.getUserId());
             snapshot.setUsername(review.getUsername());
             snapshot.setRating(review.getRating());
-            snapshot.setSnippet(review.getText() != null && review.getText().length() > 100 
-                ? review.getText().substring(0, 100) + "..." 
-                : review.getText());
+            snapshot.setSummary(review.getSummary());
             snapshot.setNumOfLike(review.getLikesCount());
             snapshot.setDate(review.getCreatedAt());
             snapshots.add(snapshot);

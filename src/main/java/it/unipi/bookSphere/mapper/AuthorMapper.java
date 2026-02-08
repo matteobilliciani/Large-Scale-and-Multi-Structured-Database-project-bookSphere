@@ -5,13 +5,14 @@ import it.unipi.bookSphere.dto.BookSummaryDTO;
 import it.unipi.bookSphere.model.mongodb.AuthorDocument;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.ReportingPolicy;
 
 import java.util.List;
 
 /**
  * MapStruct mapper for AuthorDocument <-> AuthorDTO conversion
  */
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", unmappedSourcePolicy = ReportingPolicy.IGNORE, unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface AuthorMapper {
 
     /**

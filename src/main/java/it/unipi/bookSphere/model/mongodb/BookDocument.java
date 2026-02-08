@@ -88,7 +88,7 @@ public class BookDocument {
 
         private String username;
         private Integer rating;
-        private String snippet;
+        private String summary;
 
         // Using Integer object (not int primitive) allows it to be null safely.
         @Field("num_of_like")
