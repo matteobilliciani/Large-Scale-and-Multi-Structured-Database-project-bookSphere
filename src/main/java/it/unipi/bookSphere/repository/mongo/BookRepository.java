@@ -14,6 +14,14 @@ import java.util.Optional;
 public interface BookRepository extends MongoRepository<BookDocument, String> {
     
     /**
+     * Find book by id
+     * 
+     * @param id IDs
+     * @return Book if found
+     */
+    Optional<BookDocument> findById(String id);
+
+    /**
      * Find book by title (exact match)
      * 
      * @param title Book title

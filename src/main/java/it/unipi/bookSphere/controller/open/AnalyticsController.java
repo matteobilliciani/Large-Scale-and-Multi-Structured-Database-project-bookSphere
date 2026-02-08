@@ -76,34 +76,37 @@ public class AnalyticsController {
         return ResponseEntity.ok(rankings);
     }
 
-    /* 
     @Operation(
-            summary = "Calculate Trending Probability Index (TPI)",
-            description = "Predict how likely a book is to go viral based on author reputation and genre rankings"
+            summary = "Get book revaluation",
+            description = "Retrieve books that have been revaluated recently"
     )
-    @GetMapping("/tpi/{bookId}")
-    public ResponseEntity<TpiPredictionDTO> calculateTPI(
-            @Parameter(description = "MongoDB ObjectId of the book", example = "65b3f...")
-            @PathVariable String bookId
-    ) {
-        TpiPredictionDTO tpi = analyticsService.calculateTPI(bookId);
-        return ResponseEntity.ok(tpi);
+    @GetMapping("/books/revaluated")
+    public ResponseEntity<List<BookTrendDTO>> getBookRevaluation() {
+        List<BookTrendDTO> bookRevaluation = analyticsService.getBookRevaluation();
+        return ResponseEntity.ok(bookRevaluation);
     }
-    */
 
     @Operation(
-            summary = "Calculate Author Versatility Index",
-            description = "Measure how versatile an author is in terms of covered genres"
+        summary = "Get book rankings by an author V2",
+        description = "Restituisce le classifiche. NOTA: Puoi filtrare per 'author' O per 'genre', ma non entrambi contemporaneamente."
     )
-    @GetMapping("/versatility/{authorId}")
-    public ResponseEntity<?> calculateAuthorVersatility(
-            @Parameter(description = "MongoDB ObjectId of the author", example = "65b3a...")
-            @PathVariable String authorId
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Classifica restituita con successo"),
+        @ApiResponse(responseCode = "400", description = "Errore: Non puoi specificare sia autore che genere")
+    })
+    @GetMapping("/booksAuthorV2")
+    public ResponseEntity<?> getBookRankingsAuthorV2( // Uso <?> o <Object> per poter ritornare sia la lista che un messaggio di errore stringa
+            
+            @Parameter(description = "Anno della classifica (opzionale)")
+            @RequestParam(required = false) Integer year,
+
+            @Parameter(description = "Filtra per nome autore (Mutuamente esclusivo con genre)")
+            @RequestParam(required = true) String author
     ) {
-        // TODO: Implement service call - Neo4j Query
-        // Double versatility = analyticsService.calculateAuthorVersatility(authorId);
-        // return ResponseEntity.ok(Map.of("authorId", authorId, "versatility", versatility));
-        throw new UnsupportedOperationException("Not yet implemented");
+
+        List<RankingDTO> rankings = analyticsService.getBookRankingsAuthorV2(year, author);
+        
+        return ResponseEntity.ok(rankings);
     }
 
     @Operation(

@@ -2,15 +2,14 @@ package it.unipi.bookSphere.service;
 
 import it.unipi.bookSphere.dto.AuthorDTO;
 import it.unipi.bookSphere.dto.BookDTO;
-import it.unipi.bookSphere.dto.GenreDTO;
 import it.unipi.bookSphere.dto.InfluencerDTO;
 import it.unipi.bookSphere.dto.InternationalityDTO;
 import it.unipi.bookSphere.dto.RankingDTO;
-import it.unipi.bookSphere.dto.TpiPredictionDTO;
 import it.unipi.bookSphere.exceptions.BookNotFoundException;
 import it.unipi.bookSphere.exceptions.AuthorNotFoundException;
 import it.unipi.bookSphere.exceptions.GenreNotFoundException;
 import it.unipi.bookSphere.mapper.RankingMapper;
+import it.unipi.bookSphere.model.mongodb.AuthorDocument;
 import it.unipi.bookSphere.model.mongodb.BookDocument;
 import it.unipi.bookSphere.repository.mongo.AuthorRepository;
 import it.unipi.bookSphere.repository.mongo.BookRepository;
@@ -19,6 +18,9 @@ import it.unipi.bookSphere.repository.neo4j.AuthorNodeRepository;
 import it.unipi.bookSphere.repository.neo4j.BookNodeRepository;
 import it.unipi.bookSphere.repository.neo4j.GenreNodeRepository;
 import lombok.RequiredArgsConstructor;
+import java.util.Optional;
+
+import org.bson.types.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,12 +41,9 @@ import java.util.stream.Collectors;
 
 import static org.springframework.data.mongodb.core.aggregation.Aggregation.*;
 
+
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Collectors;
+import java.util.Collections;
 
 /**
  * Service for analytics operations using MongoDB and Neo4j
@@ -294,7 +293,7 @@ public class AnalyticsService {
     }
     
 
-    public List<BookTrendDTO> getBookTrends() {
+    public List<BookTrendDTO> getBookRevaluation() {
         logger.info("Calculating book rating trends using dynamic averages (Sum/Count)");
 
         List<AggregationOperation> pipeline = new ArrayList<>();
@@ -344,6 +343,87 @@ public class AnalyticsService {
         );
 
         return bookTrendMapper.toDtoList(results.getMappedResults());
+    }
+
+    /**
+     * Get book rankings FOR A SPECIFIC AUTHOR utilizing the Author's published_books array.
+     * App-Side Join approach: Fetch IDs from Author -> Query Books by IDs.
+     */
+    
+    public List<RankingDTO> getBookRankingsAuthorV2(Integer year, String authorName) {
+        logger.info("Starting ranking calculation for author: '{}', year: {}", authorName, year);
+
+        // 1. Fetch Author using Repository
+        Optional<AuthorDocument> authorOpt = authorRepository.findByName(authorName);
+
+        if (authorOpt.isEmpty()) {
+            logger.info("Author '{}' not found in database.", authorName);
+            return Collections.emptyList();
+        }
+
+        AuthorDocument authorDoc = authorOpt.get();
+
+        // Check if the list of published books is empty or null
+        if (authorDoc.getPublishedBooks() == null || authorDoc.getPublishedBooks().isEmpty()) {
+            logger.info("Author '{}' found, but has no published books associated.", authorName);
+            return Collections.emptyList();
+        }
+
+        // 2. Extract IDs and CONVERT String -> ObjectId
+        List<ObjectId> bookIds = authorDoc.getPublishedBooks().stream()
+                .map(book -> new ObjectId(book.getId()))
+                .collect(Collectors.toList());
+
+        logger.info("Found {} book IDs for author '{}'. Proceeding with aggregation.", bookIds.size(), authorName);
+
+        // 3. Setup Pipeline on BOOKS collection using IDs
+        List<AggregationOperation> pipeline = new ArrayList<>();
+
+        // MATCH by IDs (Primary Key) AND ensure status is ACTIVE
+        pipeline.add(Aggregation.match(Criteria.where("_id").in(bookIds).and("status").is("ACTIVE")));
+
+        if (year != null) {
+            // Year context: Filter the array first to isolate the target year
+            pipeline.add(Aggregation.project("title", "author")
+                    .and(ArrayOperators.Filter.filter("stats_per_year")
+                            .as("stat")
+                            .by(ComparisonOperators.Eq.valueOf("stat.year").equalToValue(year)))
+                    .as("targetStat"));
+
+            // Sum the filtered array
+            pipeline.add(Aggregation.project("title", "author")
+                    .and(AccumulatorOperators.Sum.sumOf("targetStat.ratings_count")).as("totalRatings")
+                    .and(AccumulatorOperators.Sum.sumOf("targetStat.sum_rating")).as("sumRating"));
+
+        } else {
+            // All-time context: Sum over the entire array
+            pipeline.add(Aggregation.project("title", "author")
+                    .and(AccumulatorOperators.Sum.sumOf("stats_per_year.ratings_count")).as("totalRatings")
+                    .and(AccumulatorOperators.Sum.sumOf("stats_per_year.sum_rating")).as("sumRating"));
+        }
+
+        // 3. Threshold Filter
+        pipeline.add(Aggregation.match(Criteria.where("totalRatings").gt(5)));
+
+        // 4. Calculate Average & Format Output
+        pipeline.add(Aggregation.project("totalRatings")
+                .and("title").as("name")
+                .and("author.name").as("additionalInfo")
+                .and(ArithmeticOperators.Divide.valueOf("sumRating").divideBy("totalRatings")).as("averageRating"));
+
+        // 5. Sort & Limit
+        pipeline.add(Aggregation.sort(Sort.Direction.DESC, "averageRating"));
+        pipeline.add(Aggregation.limit(25));
+
+        // Execute Aggregation
+        AggregationResults<RankingProjection> results = mongoTemplate.aggregate(
+                Aggregation.newAggregation(pipeline), "books", RankingProjection.class
+        );
+
+        List<RankingProjection> mappedResults = results.getMappedResults();
+        logger.info("Aggregation finished. Found {} ranked books matching criteria.", mappedResults.size());
+
+        return rankingMapper.toRankingDTOList(mappedResults, year);
     }
 
     // Helper method to map BookDocument to BookDTO
