@@ -1,7 +1,7 @@
 """
-SCRIPT 1: MongoDB Data Generation - FINAL V14 (NO PRE-CALC AVERAGES)
+SCRIPT 1: MongoDB Data Generation - FINAL V15 (PURE RAW DATA)
 - Features:
-    - Month Score: Keeps 'rating' for immediate UI display (Snapshot logic).
+    - Month Score: REMOVED 'rating'. Only 'sum' and 'count' remain.
     - Stats Per Year: REMOVED 'average_rating'. Only 'sum' and 'count' remain.
     - Authors: REMOVED 'average_rating'. Only 'sum' and 'count' remain.
     - Snapshots: Use 'summary'.
@@ -122,7 +122,7 @@ def load_checkpoint(step):
     return None
 
 # --- MAIN ETL ---
-print("="*60 + "\nMONGO GENERATOR V14 (NO PRE-CALC AVERAGES)\n" + "="*60)
+print("="*60 + "\nMONGO GENERATOR V15 (PURE RAW DATA - NO AVG)\n" + "="*60)
 
 # STEP 1: RANKING & BOOKS
 step = 1
@@ -141,7 +141,7 @@ else:
     
     bc_books = pd.read_csv(BOOKCROSSING_BOOKS, sep=';', encoding='latin-1', on_bad_lines='skip', dtype=str)
     bc_books.rename(columns={'ISBN': 'isbn', 'Book-Title': 'title'}, inplace=True)
-    bc_books['clean_title'] = bc_books['Title'].apply(clean_key_fast)
+    bc_books['clean_title'] = bc_books['title'].apply(clean_key_fast)
     
     title_scores = {}
     isbn_count_map = bc_isbn_counts.to_dict()
@@ -207,8 +207,8 @@ else:
             "review_ids": [], 
             
             # REPLACED trend_score WITH month_score
+            # REMOVED rating (Calculated on the fly via sum/count)
             "month_score": {
-                "rating": 0,
                 "rating_count": 0,
                 "sum_rating": 0,
                 "Current_Month": "2025-12" # Default init
@@ -526,7 +526,7 @@ for b in books_data:
         ratings = [x['rating'] for x in revs]
         total_sum = sum(ratings)
         count = len(ratings)
-        # avg kept locally for trend calculation, but not stored in stats_per_year
+        # avg kept locally for trend calculation only, not stored
         avg = total_sum / count if count > 0 else 0
         
         # --- B. STATS PER YEAR ---
@@ -560,10 +560,10 @@ for b in books_data:
             
             m_count = len(month_revs)
             m_sum = sum(r['rating'] for r in month_revs)
-            m_avg = round(m_sum / m_count, 2) if m_count > 0 else 0
+            # REMOVED: m_avg calculation entirely
             
             b['month_score'] = {
-                "rating": m_avg,
+                # REMOVED: "rating": m_avg,
                 "rating_count": m_count,
                 "sum_rating": m_sum,
                 "Current_Month": current_month_str

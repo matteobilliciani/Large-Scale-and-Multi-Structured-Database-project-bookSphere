@@ -115,8 +115,6 @@ public class BookDocument {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class MonthScore {
-        private Double rating;
-
         @Field("rating_count")
         private Integer ratingCount;
 

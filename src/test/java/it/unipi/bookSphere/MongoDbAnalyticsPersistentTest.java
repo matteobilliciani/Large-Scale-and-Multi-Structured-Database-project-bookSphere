@@ -37,7 +37,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * - Yearly Wrapped
  */
 @SpringBootTest
-@ActiveProfiles("wsl")
+@ActiveProfiles("local")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class MongoDbAnalyticsPersistentTest {
 
@@ -180,7 +180,7 @@ public class MongoDbAnalyticsPersistentTest {
         
         // Add month score (current activity)
         BookDocument.MonthScore monthScore1 = new BookDocument.MonthScore();
-        monthScore1.setRating(80.0);
+        monthScore1.setSumRating(4000);
         monthScore1.setRatingCount(50);
         book1.setMonthScore(monthScore1);
         
@@ -212,7 +212,7 @@ public class MongoDbAnalyticsPersistentTest {
         book2.setStatus("ACTIVE");
         
         BookDocument.MonthScore monthScore2 = new BookDocument.MonthScore();
-        monthScore2.setRating(85.0);
+        monthScore2.setSumRating(1700);
         monthScore2.setRatingCount(20);
         book2.setMonthScore(monthScore2);
         
@@ -243,7 +243,7 @@ public class MongoDbAnalyticsPersistentTest {
         book3.setStatus("ACTIVE");
         
         BookDocument.MonthScore monthScore3 = new BookDocument.MonthScore();
-        monthScore3.setRating(60.0);
+        monthScore3.setSumRating(900);
         monthScore3.setRatingCount(15);
         book3.setMonthScore(monthScore3);
         

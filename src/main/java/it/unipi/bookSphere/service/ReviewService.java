@@ -599,7 +599,6 @@ public class ReviewService {
                 newScore.setCurrentMonth(currentMonth);
                 newScore.setRatingCount(countDelta > 0 ? countDelta : 0);
                 newScore.setSumRating(ratingDelta > 0 ? ratingDelta : 0);
-                newScore.setRating(ratingDelta > 0 ? (double) ratingDelta : 0.0);
                 
                 update.set("month_score", newScore);
             } else {

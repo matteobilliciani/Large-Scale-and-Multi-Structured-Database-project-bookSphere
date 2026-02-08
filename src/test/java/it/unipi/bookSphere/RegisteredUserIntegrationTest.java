@@ -35,7 +35,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * - Edge cases and boundary conditions
  */
 @SpringBootTest
-@ActiveProfiles("wsl")
+@ActiveProfiles("local")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class RegisteredUserIntegrationTest {
 
@@ -242,7 +242,7 @@ public class RegisteredUserIntegrationTest {
         assertTrue(book.getReviews().contains(testReviewId), "Book should contain review ID");
         assertNotNull(book.getMonthScore(), "Month score should be initialized");
         assertTrue(book.getMonthScore().getRatingCount() >= 1, "Month score count should be updated");
-        System.out.println("✓ Book statistics updated (month_score: " + book.getMonthScore().getRating() + ")");
+        System.out.println("✓ Book statistics updated (month_score: " + book.getMonthScore().getSumRating()/book.getMonthScore().getRatingCount() + ")");
 
         // Verify author statistics updated
         Optional<AuthorDocument> authorOpt = authorRepository.findById(testAuthorId);
