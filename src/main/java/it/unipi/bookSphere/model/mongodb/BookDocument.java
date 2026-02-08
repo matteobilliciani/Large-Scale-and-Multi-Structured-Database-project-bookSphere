@@ -121,8 +121,8 @@ public class BookDocument {
         @Field("sum_rating")
         private Integer sumRating;
 
-        @Field("current_month")
-        private Integer currentMonth; // Month number (1-12)
+        @Field("Current_Month")
+        private String currentMonth; // Year+Month number (2022-12)
     }
 
 }

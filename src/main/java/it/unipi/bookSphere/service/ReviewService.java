@@ -581,46 +581,40 @@ public class ReviewService {
      */
     @Async
     private void updateMonthScore(String bookId, Integer ratingDelta, Integer countDelta) {
-        int currentMonth = LocalDateTime.now().getMonthValue();
-        
+        String currentMonth = java.time.YearMonth.now().toString();
+
         Query query = new Query(Criteria.where("_id").is(bookId));
         
-        // Fetch current book to check if month_score needs reset
+        // Fetch to determine if a monthly reset is needed
         BookDocument book = mongoTemplate.findOne(query, BookDocument.class);
-        
+
         if (book != null) {
             Update update = new Update();
-            
-            // Check if we need to reset for new month
-            if (book.getMonthScore() == null || book.getMonthScore().getCurrentMonth() == null || 
-                !book.getMonthScore().getCurrentMonth().equals(currentMonth)) {
-                // New month - reset the score
+            BookDocument.MonthScore currentScore = book.getMonthScore();
+
+            // Check for month transition or missing data
+            boolean isNewMonth = currentScore == null || 
+                                currentScore.getCurrentMonth() == null || 
+                                !currentScore.getCurrentMonth().equals(currentMonth);
+
+            if (isNewMonth) {
+                // New Month: Full reset
                 BookDocument.MonthScore newScore = new BookDocument.MonthScore();
                 newScore.setCurrentMonth(currentMonth);
-                newScore.setRatingCount(countDelta > 0 ? countDelta : 0);
-                newScore.setSumRating(ratingDelta > 0 ? ratingDelta : 0);
+                
+                // Initialize values (prevent negatives on reset)
+                newScore.setRatingCount(Math.max(countDelta, 0));
+                newScore.setSumRating(Math.max(ratingDelta, 0));
                 
                 update.set("month_score", newScore);
             } else {
-                // Same month - increment
+                // Same Month: Atomic increment
                 update.inc("month_score.rating_count", countDelta);
                 update.inc("month_score.sum_rating", ratingDelta);
-                
-                // Recalculate average
-                int newCount = book.getMonthScore().getRatingCount() + countDelta;
-                int newSum = book.getMonthScore().getSumRating() + ratingDelta;
-                
-                if (newCount > 0) {
-                    double newAvg = (double) newSum / newCount;
-                    update.set("month_score.rating", newAvg);
-                } else {
-                    // Reset if no reviews this month
-                    update.set("month_score.rating", 0.0);
-                }
             }
             
             mongoTemplate.updateFirst(query, update, BookDocument.class);
-            logger.info("Updated month score for book: {}", bookId);
+            logger.info("Updated month score stats for book: {}", bookId);
         }
     }
 

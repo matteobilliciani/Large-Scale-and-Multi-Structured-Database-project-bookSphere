@@ -182,6 +182,7 @@ public class MongoDbAnalyticsPersistentTest {
         BookDocument.MonthScore monthScore1 = new BookDocument.MonthScore();
         monthScore1.setSumRating(4000);
         monthScore1.setRatingCount(50);
+        monthScore1.setCurrentMonth("2026-02");
         book1.setMonthScore(monthScore1);
         
         // Add stats per year
@@ -214,6 +215,7 @@ public class MongoDbAnalyticsPersistentTest {
         BookDocument.MonthScore monthScore2 = new BookDocument.MonthScore();
         monthScore2.setSumRating(1700);
         monthScore2.setRatingCount(20);
+        monthScore2.setCurrentMonth("2026-02");
         book2.setMonthScore(monthScore2);
         
         List<BookDocument.YearStat> yearStats2 = new ArrayList<>();
