@@ -1,11 +1,12 @@
 """
-SCRIPT 1: MongoDB Data Generation - FINAL V15 (PURE RAW DATA)
+SCRIPT 1: MongoDB Data Generation - FINAL V16 (NORMALIZED SOURCE & PURE RAW DATA)
 - Features:
-    - Month Score: REMOVED 'rating'. Only 'sum' and 'count' remain.
-    - Stats Per Year: REMOVED 'average_rating'. Only 'sum' and 'count' remain.
-    - Authors: REMOVED 'average_rating'. Only 'sum' and 'count' remain.
+    - DATA CLEANING: Applies Java-style normalization to Genres and Authors BEFORE saving to Mongo.
+    - Month Score: Only 'sum' and 'count' (Calculated on the fly).
+    - Stats Per Year: Only 'sum' and 'count'.
+    - Authors: Only 'sum' and 'count'.
     - Snapshots: Use 'summary'.
-    - Bookshelf: Fully embedded (Status only).
+    - Bookshelf: Fully embedded.
 """
 
 import pandas as pd
@@ -44,6 +45,33 @@ END_DATE_CAP = datetime(2025, 12, 31)
 SHIFT_YEARS = 12
 SHIFT_DAYS = (365 * SHIFT_YEARS) + 3
 
+# --- NORMALIZATION FUNCTIONS (JAVA STYLE) ---
+def normalize_genre_java_style(name):
+    """Clean genres like Java app: 'science fiction' -> 'Science Fiction'"""
+    if not isinstance(name, str) or not name: return "General"
+    # Trim and normalize spaces
+    normalized = " ".join(name.strip().split())
+    # Title Case
+    words = normalized.split()
+    capitalized_words = [w[0].upper() + w[1:].lower() for w in words if w]
+    return " ".join(capitalized_words)
+
+def normalize_author_java_style(name):
+    """Clean authors like Java app: 'j.k. rowling' -> 'J.K. Rowling'"""
+    if not isinstance(name, str) or not name: return "Unknown Author"
+    normalized = " ".join(name.strip().split())
+    words = normalized.split()
+    capitalized_words = []
+    for w in words:
+        if not w: continue
+        if '.' in w: # Handle initials
+            parts = w.split('.')
+            new_parts = [p[0].upper() + (p[1:].lower() if len(p) > 1 else "") if p else "" for p in parts]
+            capitalized_words.append(".".join(new_parts))
+        else:
+            capitalized_words.append(w[0].upper() + w[1:].lower())
+    return " ".join(capitalized_words)
+
 # --- UTILS ---
 def generate_object_id(): return str(ObjectId())
 
@@ -54,7 +82,7 @@ def clean_key_fast(text):
     text = RE_CLEAN.sub('', text)
     return text.strip()
 
-# --- AUTHOR NORMALIZATION ---
+# --- AUTHOR NORMALIZATION KEY (FOR DEDUPLICATION) ---
 def normalize_author_key(name):
     if not name: return "unknown"
     s = name.lower().replace('.', '').replace(',', '').replace(' ', '')
@@ -122,7 +150,7 @@ def load_checkpoint(step):
     return None
 
 # --- MAIN ETL ---
-print("="*60 + "\nMONGO GENERATOR V15 (PURE RAW DATA - NO AVG)\n" + "="*60)
+print("="*60 + "\nMONGO GENERATOR V16 (NORMALIZED + RAW DATA)\n" + "="*60)
 
 # STEP 1: RANKING & BOOKS
 step = 1
@@ -172,46 +200,52 @@ else:
         mid = generate_object_id()
         clean = row['clean_title']
         
-        # --- AUTHOR NORMALIZATION ---
+        # --- AUTHOR HANDLING (NORMALIZED) ---
         raw_auth_name = parse_authors(row.get('authors'))[0]
+        # Use aggressive key for grouping ("j.k. rowling" == "J.K. Rowling")
         norm_key = normalize_author_key(raw_auth_name)
+        # Use clean name for display ("J.K. Rowling")
+        display_name = normalize_author_java_style(raw_auth_name)
         
         if norm_key in author_normalization_map:
             auth_id = author_normalization_map[norm_key]
-            display_name = authors_map[auth_id]["name"]
+            # Keep existing clean name
+            final_auth_name = authors_map[auth_id]["name"]
         else:
             auth_id = generate_object_id()
             author_normalization_map[norm_key] = auth_id
-            display_name = raw_auth_name 
+            final_auth_name = display_name 
             authors_map[auth_id] = {
                 "id": auth_id, 
-                "name": display_name, 
+                "name": final_auth_name, 
                 "books": []
             }
 
-        genres = parse_genres(row.get('categories'))
+        # --- GENRE HANDLING (NORMALIZED) ---
+        raw_genres = parse_genres(row.get('categories'))
+        clean_genres = [normalize_genre_java_style(g) for g in raw_genres]
         
         book = {
             "_id": to_mongo_oid(mid),
             "title": str(row['Title']),
             "publication_year": 2000,
             "description": str(row.get('description', ''))[:500],
-            "author": {"id": to_mongo_oid(auth_id), "name": display_name}, 
-            "genres": genres,
+            "author": {"id": to_mongo_oid(auth_id), "name": final_auth_name}, 
+            "genres": clean_genres, # Clean genres stored in Mongo
             "external_ids": {"isbns": []}, 
             
-            # --- UPDATED STRUCTURES ---
+            # --- STRUCTURES (V15 Logic) ---
             "recent_reviews_snapshot": [], 
             "popular_reviews_snapshot": [], 
             "stats_per_year": [],
             "review_ids": [], 
             
             # REPLACED trend_score WITH month_score
-            # REMOVED rating (Calculated on the fly via sum/count)
+            # REMOVED rating (Calculated on the fly)
             "month_score": {
                 "rating_count": 0,
                 "sum_rating": 0,
-                "Current_Month": "2025-12" # Default init
+                "Current_Month": "2025-12"
             },
             
             "source": "amazon_master",
@@ -220,8 +254,8 @@ else:
         books_data.append(book)
         books_map[clean] = book
         title_to_book_id[clean] = mid
-        book_id_to_genres[mid] = genres
-        genres_set.update(genres)
+        book_id_to_genres[mid] = clean_genres
+        genres_set.update(clean_genres)
         authors_map[auth_id]["books"].append({"_id": to_mongo_oid(mid), "title": book["title"]})
 
     # 4. MAPPING
@@ -285,8 +319,6 @@ else:
             "password_hashed": hashlib.sha256(f"password_{uid}".encode()).hexdigest(),
             "email": f"user_{uid}@bx.com", "country": random_country(),
             "joined_at": to_mongo_date(random_date(2023, 2024)), "status": "active",
-            
-            # --- UPDATED STRUCTURES ---
             "bookshelf": [], 
             "reviews_year": [],
             "review_ids": [] 
@@ -305,7 +337,6 @@ book_reviews = {}
 
 bid_to_book_obj = {b['_id']['$oid']: b for b in books_data}
 
-# Helper to get username safely
 def get_username(uid):
     if uid in users_data: return users_data[uid]['username']
     return "Unknown User"
@@ -337,15 +368,11 @@ for _, row in bc_valid.iterrows():
     raw_author = target_book['author'] if target_book else {"id": "", "name": "Unknown"}
     book_author_snap = {"id": raw_author.get("id"), "name": raw_author.get("name")}
     book_genres = target_book['genres'] if target_book else []
-    # ---------------------
-
+    
     rev = {
         "_id": to_mongo_oid(rid), 
         "user_id": to_mongo_oid(mongo_uid),
-        
-        # --- DENORMALIZATION: USERNAME ADDED ---
         "username": get_username(row['user_id']),
-        
         "rating": rating, 
         "source": "bookcrossing", 
         "text": "",
@@ -394,21 +421,16 @@ for _, row in amz_valid.iterrows():
         
     summary = str(row.get('review/summary', ''))[:150]
 
-    # --- FETCH DETAILS ---
     target_book = bid_to_book_obj.get(mongo_bid)
     book_title = target_book['title'] if target_book else "Unknown Title"
     raw_author = target_book['author'] if target_book else {"id": "", "name": "Unknown"}
     book_author_snap = {"id": raw_author.get("id"), "name": raw_author.get("name")}
     book_genres = target_book['genres'] if target_book else []
-    # ---------------------
     
     rev = {
         "_id": to_mongo_oid(rid), 
         "user_id": to_mongo_oid(mongo_uid),
-        
-        # --- DENORMALIZATION: USERNAME ADDED ---
         "username": get_username(row['User_id']),
-        
         "rating": rating, 
         "source": "amazon", 
         "text": str(row.get('review/text', ''))[:500],
@@ -449,10 +471,9 @@ print(f"    Mapped {count_isbns} ISBNs into book documents.")
 for uid, act in user_activity.items():
     u = users_data[uid]
     
-    # --- POPULATE REVIEW_IDS (User side) ---
     u["review_ids"] = [to_mongo_oid(rid) for rid in act['review_ids']]
     
-    # --- BOOKSHELF LOGIC (PURE STATUS - NO RATING) ---
+    # BOOKSHELF (STATUS ONLY)
     u["bookshelf"] = []
     for bid in list(act['read_books'])[:20]:
         tb = bid_to_book_obj.get(bid)
@@ -466,7 +487,7 @@ for uid, act in user_activity.items():
                 "genres": tb['genres']
             })
 
-    # --- WANT TO READ GENERATION ---
+    # WANT TO READ GENERATION
     user_genres_counter = Counter()
     for bid in act['read_books']:
         g_list = book_id_to_genres.get(bid, [])
@@ -500,7 +521,7 @@ for uid, act in user_activity.items():
                     "genres": tb['genres'] 
                 })
     
-    # --- REVIEWS YEAR (SNAPSHOT FOR WRAPPED) ---
+    # REVIEWS YEAR (SNAPSHOT)
     for rid in act['review_ids']:
         if rid in reviews_map:
             r = reviews_map[rid]
@@ -517,19 +538,16 @@ for b in books_data:
     bid = b['_id']['$oid']
     
     if bid in book_reviews:
-        # Convert all string RIDs to Mongo OIDs
         b["review_ids"] = [to_mongo_oid(rid) for rid in book_reviews[bid]]
-        
         revs = [reviews_map[rid] for rid in book_reviews[bid]]
         
-        # --- A. GLOBAL STATS (Historical) ---
+        # A. GLOBAL STATS
         ratings = [x['rating'] for x in revs]
         total_sum = sum(ratings)
         count = len(ratings)
-        # avg kept locally for trend calculation only, not stored
-        avg = total_sum / count if count > 0 else 0
+        # avg not stored
         
-        # --- B. STATS PER YEAR ---
+        # B. STATS PER YEAR
         by_year = {}
         for r in revs:
             y = int(r['created_at']['$date'][:4])
@@ -539,7 +557,7 @@ for b in books_data:
         for y, yr in by_year.items():
             rs = [x['rating'] for x in yr]
             y_sum = sum(rs)
-            # REMOVED: average_rating
+            # ONLY SUM AND COUNT
             b['stats_per_year'].append({
                 "year": y,
                 "ratings_count": len(rs),
@@ -547,34 +565,27 @@ for b in books_data:
             })
         b['stats_per_year'].sort(key=lambda k: k['year'])
 
-        # --- C. MONTH SCORE (Replaces Trend) ---
-        # Logic: Find the latest month of activity for this book and calculate stats
+        # C. MONTH SCORE
         if revs:
-            # Sort by date descending
             latest_rev = sorted(revs, key=lambda x: x['created_at']['$date'], reverse=True)[0]
-            latest_date_str = latest_rev['created_at']['$date'] # "2025-12-15T..."
-            current_month_str = latest_date_str[:7] # "2025-12"
+            latest_date_str = latest_rev['created_at']['$date'] 
+            current_month_str = latest_date_str[:7]
             
-            # Filter reviews for this month
             month_revs = [r for r in revs if r['created_at']['$date'].startswith(current_month_str)]
             
             m_count = len(month_revs)
             m_sum = sum(r['rating'] for r in month_revs)
-            # REMOVED: m_avg calculation entirely
-            
+            # ONLY SUM AND COUNT
             b['month_score'] = {
-                # REMOVED: "rating": m_avg,
                 "rating_count": m_count,
                 "sum_rating": m_sum,
                 "Current_Month": current_month_str
             }
 
-        # --- D. SNAPSHOTS (Use 'summary') ---
-        # 1. POPULAR
+        # D. SNAPSHOTS
         top_likes = sorted(revs, key=lambda x: x.get('likes_count', 0), reverse=True)[:3]
         for tr in top_likes:
             real_username = tr.get("username", "Unknown")
-            # FIX: Use 'summary' if present, else fallback
             display_text = tr.get('summary') if tr.get('summary') else tr['text'][:50]
             
             b['popular_reviews_snapshot'].append({
@@ -583,11 +594,10 @@ for b in books_data:
                 'username': real_username, 
                 'rating': tr['rating'], 
                 'num_of_like': tr.get('likes_count', 0),
-                'summary': display_text, # SUMMARY
+                'summary': display_text, 
                 'date': tr['created_at']
             })
             
-        # 2. RECENT
         recents = sorted(revs, key=lambda x: x['created_at']['$date'], reverse=True)[:5]
         for tr in recents:
              real_username = tr.get("username", "Unknown")
@@ -598,7 +608,7 @@ for b in books_data:
                 'user_id': tr['user_id'], 
                 'username': real_username, 
                 'rating': tr['rating'], 
-                'summary': display_text, # SUMMARY
+                'summary': display_text, 
                 'date': tr['created_at']
             })
 
@@ -614,7 +624,7 @@ for ad in authors_map.values():
                 r = reviews_map[rid]
                 tot_ratings += 1            
                 sum_ratings += r['rating']   
-    # REMOVED: average_rating calculation
+    # ONLY SUM AND COUNT
     ad['ratings_count'] = tot_ratings
     ad['sum_ratings'] = sum_ratings
 
@@ -640,7 +650,6 @@ save([
         "_id": to_mongo_oid(v["id"]), 
         "name": v["name"], 
         "published_books": v.get("published_books", v.get("books", [])), 
-        # REMOVED: average_rating key
         "ratings_count": v.get("ratings_count", 0),
         "sum_ratings": v.get("sum_ratings", 0),
     } 

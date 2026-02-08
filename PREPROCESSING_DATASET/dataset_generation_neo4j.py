@@ -1,18 +1,18 @@
 """
-SCRIPT 2: Neo4j Data Export - FINAL V9 (SMART GENRES & AUTHORS)
+SCRIPT 2: Neo4j Data Export - FINAL V10 (NORMALIZED)
 - Input: JSONL files from Script 1 (MongoDB).
 - Output: Clean CSV files for Neo4j Import.
-- Logic Changes:
-    - LIKES_GENRE: Calculated from User's Bookshelf (Implicit Preferences).
-    - LIKES_AUTHOR: Calculated from User's Bookshelf.
+- IMPROVEMENT: Applies Java-like Normalization to Authors and Genres.
+  This ensures Graph Connectivity (e.g. "fantasy" and "Fantasy" merge into one node).
 """
 
 import pandas as pd
 import json
 import random
+import re
 from datetime import datetime, timedelta
 from pathlib import Path
-from collections import Counter # Necessario per contare i generi
+from collections import Counter
 
 # --- CONFIGURAZIONE ---
 random.seed(42)
@@ -20,6 +20,57 @@ random.seed(42)
 BASE_DIR = Path(__file__).resolve().parent
 MONGO_INPUT = BASE_DIR / "DATASET" / "MONGODB"
 NEO4J_OUTPUT = BASE_DIR / "DATASET" / "NEO4J"
+
+# --- NORMALIZATION UTILS (JAVA PORTING) ---
+def normalize_genre_java_style(name):
+    """
+    Python port of Java's NormalizationUtils.normalizeGenreName
+    "science fiction" -> "Science Fiction"
+    """
+    if not name or not isinstance(name, str): return "General"
+    
+    # 1. Trim and normalize spaces
+    normalized = " ".join(name.strip().split())
+    
+    # 2. Title Case logic
+    words = normalized.split()
+    capitalized_words = []
+    for w in words:
+        if w:
+            # Capitalize first letter, lowercase the rest
+            capitalized_words.append(w[0].upper() + w[1:].lower())
+    
+    return " ".join(capitalized_words)
+
+def normalize_author_java_style(name):
+    """
+    Python port of Java's NormalizationUtils.normalizeAuthorName
+    "j.k. rowling" -> "J.K. Rowling"
+    """
+    if not name or not isinstance(name, str): return "Unknown Author"
+    
+    normalized = " ".join(name.strip().split())
+    words = normalized.split()
+    capitalized_words = []
+    
+    for w in words:
+        if not w: continue
+        
+        # Handle initials like "J.K."
+        if '.' in w:
+            parts = w.split('.')
+            new_parts = []
+            for p in parts:
+                if p:
+                    new_parts.append(p[0].upper() + (p[1:].lower() if len(p) > 1 else ""))
+                else:
+                    new_parts.append("") # Keep empty strings for trailing dots
+            capitalized_words.append(".".join(new_parts))
+        else:
+            # Regular word
+            capitalized_words.append(w[0].upper() + w[1:].lower())
+            
+    return " ".join(capitalized_words)
 
 # --- UTILS ---
 def load_jsonl(filename):
@@ -56,7 +107,7 @@ def random_date_after_iso(iso_date_str):
         return iso_date_str
 
 # --- MAIN ---
-print("="*60 + "\nNEO4J CSV EXPORTER V9 (SMART GENRES)\n" + "="*60)
+print("="*60 + "\nNEO4J CSV EXPORTER V10 (NORMALIZED)\n" + "="*60)
 
 print("[1/4] Loading JSONL Data...")
 books = load_jsonl('books.jsonl')
@@ -66,10 +117,31 @@ authors = load_jsonl('authors.jsonl')
 
 NEO4J_OUTPUT.mkdir(parents=True, exist_ok=True)
 
-# Map per lookup veloce: BookID -> Genres
+# --- PRE-PROCESSING: NORMALIZE GENRES & AUTHORS ---
+print("      Creating Normalized Maps...")
+
+# Map: BookID -> Normalized Genres List
+# Questo è fondamentale: sovrascriviamo i generi grezzi con quelli puliti
 book_genres_map = {}
+all_genres_set = set()
+
 for b in books:
-    book_genres_map[get_oid(b["_id"])] = b.get("genres", [])
+    raw_genres = b.get("genres", [])
+    clean_genres = []
+    for g in raw_genres:
+        norm_g = normalize_genre_java_style(g)
+        clean_genres.append(norm_g)
+        all_genres_set.add(norm_g)
+    
+    # Salviamo la lista pulita per usarla dopo nei CSV
+    book_genres_map[get_oid(b["_id"])] = clean_genres
+
+# Map: AuthorID -> Normalized Name
+# Anche qui, forziamo il nome pulito per il CSV dei nodi Autore
+author_name_map = {}
+for a in authors:
+    clean_name = normalize_author_java_style(a["name"])
+    author_name_map[get_oid(a["_id"])] = clean_name
 
 # --- 1. NODES ---
 print("\n[2/4] Exporting Nodes CSV...")
@@ -77,7 +149,7 @@ print("\n[2/4] Exporting Nodes CSV...")
 # USERS
 df_users = pd.DataFrame([{
     "mongoId": get_oid(u["_id"]),
-    "username": u["username"],
+    "username": u["username"], # Username is usually handled case-insensitive by logic, but keeping raw is fine or lower()
     "country": u["country"]
 } for u in users])
 df_users.to_csv(NEO4J_OUTPUT / "users.csv", index=False)
@@ -98,18 +170,15 @@ df_reviews = pd.DataFrame([{
 } for r in reviews])
 df_reviews.to_csv(NEO4J_OUTPUT / "reviews.csv", index=False)
 
-# AUTHORS
+# AUTHORS (Using Normalized Names)
 df_authors = pd.DataFrame([{
     "mongoId": get_oid(a["_id"]),
-    "name": a["name"]
+    "name": author_name_map[get_oid(a["_id"])] # Use cleaned name
 } for a in authors])
 df_authors.to_csv(NEO4J_OUTPUT / "authors.csv", index=False)
 
-# GENRES
-genres_set = set()
-for b in books: 
-    for g in b.get("genres", []): genres_set.add(g)
-all_genres_list = sorted(list(genres_set))
+# GENRES (Normalized Set)
+all_genres_list = sorted(list(all_genres_set))
 df_genres = pd.DataFrame([{"name": g} for g in all_genres_list])
 df_genres.to_csv(NEO4J_OUTPUT / "genres.csv", index=False)
 
@@ -129,10 +198,10 @@ for b in books:
 pd.DataFrame(wrote_data).to_csv(NEO4J_OUTPUT / "wrote.csv", index=False)
 
 # BELONGS_TO (Book -> Genre)
+# Use the normalized map created earlier
 belongs_data = []
-for b in books:
-    bid = get_oid(b["_id"])
-    for g in b.get("genres", []):
+for bid, genres in book_genres_map.items():
+    for g in genres:
         belongs_data.append({"start_id": bid, "end_id": g})
 pd.DataFrame(belongs_data).to_csv(NEO4J_OUTPUT / "belongs_to.csv", index=False)
 
@@ -193,7 +262,7 @@ for r in reviews:
             })
 pd.DataFrame(likes_review_data).to_csv(NEO4J_OUTPUT / "user_likes_review.csv", index=False)
 
-# D. LIKES_GENRE (SMART LOGIC FROM BOOKSHELF)
+# D. LIKES_GENRE (SMART LOGIC WITH NORMALIZATION)
 # ----------------------------------------------------
 print("  - Calculating Smart Genre Preferences from Bookshelf...")
 likes_genre_data = []
@@ -204,23 +273,19 @@ for u in users:
     
     # 1. Analisi Bookshelf (Solo libri Letti)
     bookshelf = u.get("bookshelf", [])
-    has_read_books = False
     for item in bookshelf:
         if item.get("status") == "read":
             bid = get_oid(item["book_id"])
-            # Recuperiamo i generi reali dal libro
+            # Recuperiamo i generi NORMALIZZATI dalla mappa
             if bid in book_genres_map:
                 g_list = book_genres_map[bid]
                 user_genres_counter.update(g_list)
-                has_read_books = True
 
     # 2. Selezione Top 3 Generi
     top_genres = []
     if user_genres_counter:
         top_genres = [g for g, _ in user_genres_counter.most_common(3)]
     else:
-        # 3. Fallback (Cold Start): Se non ha letto nulla, assegniamo 1-2 generi a caso
-        # per non lasciare l'utente isolato nel grafo delle raccomandazioni
         if all_genres_list:
             top_genres = random.sample(all_genres_list, min(2, len(all_genres_list)))
 
@@ -239,7 +304,7 @@ for u in users:
     uid = get_oid(u["_id"])
     user_liked_authors = set()
     
-    # 1. Dagli scaffali (Libri Letti)
+    # 1. Dagli scaffali
     bookshelf = u.get("bookshelf", [])
     for item in bookshelf:
         if item.get("status") == "read":
@@ -247,7 +312,7 @@ for u in users:
             if bid in book_to_author_map:
                 user_liked_authors.add(book_to_author_map[bid])
     
-    # 2. Fallback Casuale
+    # 2. Fallback
     if len(user_liked_authors) < 2 and all_author_ids:
         num_random = random.randint(1, 3)
         random_picks = random.sample(all_author_ids, min(num_random, len(all_author_ids)))
@@ -260,23 +325,12 @@ pd.DataFrame(likes_author_data).to_csv(NEO4J_OUTPUT / "user_likes_author.csv", i
 
 # --- FINAL REPORT ---
 print("\n" + "="*30)
-print(" 📊 FINAL GENERATION REPORT")
+print(" 📊 FINAL GENERATION REPORT (NORMALIZED)")
 print("="*30)
 print(f"👤 Users:   {len(df_users)}")
 print(f"📖 Books:   {len(df_books)}")
 print(f"✍️  Authors: {len(df_authors)}")
 print(f"⭐ Reviews: {len(df_reviews)}")
-print(f"🏷️  Genres:  {len(df_genres)}")
+print(f"🏷️  Genres:  {len(df_genres)} (Cleaned)")
 print("-" * 20)
-print(f"➡️  WROTE:           {len(wrote_data)}")
-print(f"➡️  BELONGS_TO:      {len(belongs_data)}")
-print(f"➡️  POSTED:          {len(posted_data)}")
-print(f"➡️  REFER_TO:        {len(refer_data)}")
-print(f"➡️  FOLLOWS:         {len(follows_data)}")
-print("-" * 20)
-print(f"💖 LIKES (Book):    {len(likes_book_data)}")
-print(f"👍 LIKES (Review):  {len(likes_review_data)}")
-print(f"❤️  LIKES (Genre):   {len(likes_genre_data)}")
-print(f"✒️  LIKES (Author):  {len(likes_author_data)}")
-print("="*30)
-print(f"\n✅ FILES SAVED TO: {NEO4J_OUTPUT}")
+print(f"✅ FILES SAVED TO: {NEO4J_OUTPUT}")
