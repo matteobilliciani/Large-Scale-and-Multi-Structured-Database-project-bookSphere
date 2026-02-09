@@ -172,6 +172,7 @@ public class ComprehensiveApiTest {
         author1.setName("Test Author One " + TIMESTAMP);
         author1.setRatingsCount(0);
         author1.setSumRatings(0);
+        author1.setStatus("ACTIVE");
         author1 = authorRepository.save(author1);
         testAuthorId1 = author1.getId();
         System.out.println("✓ Created author 1: " + author1.getName());
@@ -181,6 +182,7 @@ public class ComprehensiveApiTest {
         author2.setName("Test Author Two " + TIMESTAMP);
         author2.setRatingsCount(0);
         author2.setSumRatings(0);
+        author2.setStatus("ACTIVE");
         author2 = authorRepository.save(author2);
         testAuthorId2 = author2.getId();
         System.out.println("✓ Created author 2: " + author2.getName());
@@ -195,6 +197,7 @@ public class ComprehensiveApiTest {
         bookAuthor1.setName(author1.getName());
         book1.setAuthor(bookAuthor1);
         book1.setGenres(List.of(TEST_GENRE_1, "Fiction"));
+        book1.setAvailability("ACTIVE");
         book1 = bookRepository.save(book1);
         testBookId1 = book1.getId();
         System.out.println("✓ Created book 1: " + book1.getTitle());
@@ -209,6 +212,7 @@ public class ComprehensiveApiTest {
         bookAuthor2.setName(author2.getName());
         book2.setAuthor(bookAuthor2);
         book2.setGenres(List.of(TEST_GENRE_2, "Mystery"));
+        book2.setAvailability("ACTIVE");
         book2 = bookRepository.save(book2);
         testBookId2 = book2.getId();
         System.out.println("✓ Created book 2: " + book2.getTitle());

@@ -79,6 +79,8 @@ public class AdminCatalogService {
         if (authorDocument.getPublishedBooks() == null) {
             authorDocument.setPublishedBooks(new ArrayList<>());
         }
+
+        authorDocument.setStatus("ACTIVE");
         
         AuthorDocument savedAuthor = authorRepository.save(authorDocument);
         logger.info("Author created in MongoDB with ID: {}", savedAuthor.getId());

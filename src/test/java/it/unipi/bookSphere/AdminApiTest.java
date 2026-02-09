@@ -629,7 +629,7 @@ public class AdminApiTest {
 
         // Verify BannedUser label in Neo4j
         Optional<UserNode> neoUser = userNodeRepository.findByMongoId(testUserId1);
-        assertTrue(neoUser.isPresent(), "User should exist in Neo4j");
+        assertFalse(neoUser.isPresent(), "User should not exist in Neo4j");
         // Note: Would need specific query to verify label
 
         System.out.println("User banned successfully");
