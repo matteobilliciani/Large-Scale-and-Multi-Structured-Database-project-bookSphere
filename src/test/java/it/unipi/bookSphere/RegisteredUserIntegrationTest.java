@@ -35,7 +35,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * - Edge cases and boundary conditions
  */
 @SpringBootTest
-@ActiveProfiles("wsl")
+@ActiveProfiles("clusterWSL")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class RegisteredUserIntegrationTest {
 

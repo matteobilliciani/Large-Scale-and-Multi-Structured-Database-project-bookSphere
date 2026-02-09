@@ -125,28 +125,28 @@ cypher-shell -u neo4j -p "$NEO4J_PASSWORD" "
 LOAD CSV WITH HEADERS FROM 'file:///user_likes_review.csv' AS row
 MATCH (u:User {mongoId: row.start_id})
 MATCH (r:Review {mongoId: row.end_id})
-CREATE (u)-[:LIKES_REVIEW {timestamp: datetime(row.timestamp)}]->(r);"
+CREATE (u)-[:LIKES {timestamp: datetime(row.timestamp)}]->(r);"
 
 echo "  - LIKES_BOOK..."
 cypher-shell -u neo4j -p "$NEO4J_PASSWORD" "
 LOAD CSV WITH HEADERS FROM 'file:///user_likes_book.csv' AS row
 MATCH (u:User {mongoId: row.start_id})
 MATCH (b:Book {mongoId: row.end_id})
-CREATE (u)-[:LIKES_BOOK {timestamp: datetime(row.timestamp)}]->(b);"
+CREATE (u)-[:LIKES {timestamp: datetime(row.timestamp)}]->(b);"
 
 echo "  - LIKES_AUTHOR..."
 cypher-shell -u neo4j -p "$NEO4J_PASSWORD" "
 LOAD CSV WITH HEADERS FROM 'file:///user_likes_author.csv' AS row
 MATCH (u:User {mongoId: row.start_id})
 MATCH (a:Author {mongoId: row.end_id})
-CREATE (u)-[:LIKES_AUTHOR]->(a);"
+CREATE (u)-[:LIKES]->(a);"
 
 echo "  - LIKES_GENRE..."
 cypher-shell -u neo4j -p "$NEO4J_PASSWORD" "
 LOAD CSV WITH HEADERS FROM 'file:///user_likes_genre.csv' AS row
 MATCH (u:User {mongoId: row.start_id})
 MATCH (g:Genre {name: row.end_id})
-CREATE (u)-[:LIKES_GENRE]->(g);"
+CREATE (u)-[:LIKES]->(g);"
 
 echo ""
 echo "=================================================="
