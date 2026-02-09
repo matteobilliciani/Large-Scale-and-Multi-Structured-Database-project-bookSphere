@@ -178,7 +178,7 @@ public class ReviewService {
     @Transactional
     @Retryable(
         retryFor = {RuntimeException.class},
-        noRetryFor = {UnauthorizedOperationException.class, ReviewNotFoundException.class, BookNotFoundException.class, UserNotFoundException.class},
+        noRetryFor = {UnauthorizedOperationException.class, ReviewNotFoundException.class, BookNotFoundException.class, UserNotFoundException.class, BookArchivedException.class},
         maxAttempts = 3,
         backoff = @Backoff(delay = 1000, multiplier = 2)
     )
@@ -224,6 +224,10 @@ public class ReviewService {
             if (reviewDTO.getRating() != null && !oldRating.equals(reviewDTO.getRating())) {
                 BookDocument book = bookRepository.findById(bookId)
                         .orElseThrow(() -> new BookNotFoundException("Book not found"));
+                
+                if(book.getAvailability().equals("ARCHIVED"))
+                    throw new BookArchivedException("The book is now archived");
+                
                 updateBookStatisticsAfterRatingChange(book, oldRating, updatedReview.getRating());
             }
             
