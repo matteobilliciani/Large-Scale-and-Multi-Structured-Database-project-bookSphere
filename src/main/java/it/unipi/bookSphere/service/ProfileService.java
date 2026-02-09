@@ -138,10 +138,10 @@ public class ProfileService {
             userRepository.save(user);
             logger.info("Deleted user data in MongoDB: {}", currentUserId);
             
-            // 3. Update UserNode in Neo4j to ANONYMOUS (strict consistency)
+            // 3. Update UserNode in Neo4j to "" (strict consistency)
             UserNode userNode = userNodeRepository.findByMongoId(currentUserId).orElse(null);
             if (userNode != null) {
-                userNode.setUsername("ANONYMOUS");
+                userNode.setUsername("");
                 userNodeRepository.save(userNode);
                 logger.info("Anonymized UserNode in Neo4j: {}", currentUserId);
             }

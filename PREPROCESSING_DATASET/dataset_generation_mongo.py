@@ -222,6 +222,7 @@ else:
             "description": str(row.get('description', ''))[:500],
             "author": {"id": to_mongo_oid(auth_id), "name": final_auth_name}, 
             "genres": clean_genres,
+            "availability": "ACTIVE",
             "external_ids": {"isbns": []}, 
             "recent_reviews_snapshot": [], 
             "popular_reviews_snapshot": [], 
@@ -361,7 +362,7 @@ for _, row in bc_valid.iterrows():
         "text": "",
         "summary": "",
         "created_at": to_mongo_date(rdate), 
-        "likes_count": 0, "is_banned": False,
+        "likes_count": 0,
         "book_snapshot": {
             "title": book_title, 
             "book_id": to_mongo_oid(mongo_bid)
@@ -420,7 +421,6 @@ for _, row in amz_valid.iterrows():
         "summary": summary,
         "created_at": to_mongo_date(rdate), 
         "likes_count": int(random.expovariate(0.2)), 
-        "is_banned": False,
         "book_snapshot": {
             "title": book_title, 
             "book_id": to_mongo_oid(mongo_bid)
@@ -615,6 +615,7 @@ save([
         "published_books": v.get("published_books", v.get("books", [])), 
         "ratings_count": v.get("ratings_count", 0),
         "sum_ratings": v.get("sum_ratings", 0),
+        "status": "ACTIVE"
     } 
     for v in authors_map.values()
 ], 'authors.jsonl')

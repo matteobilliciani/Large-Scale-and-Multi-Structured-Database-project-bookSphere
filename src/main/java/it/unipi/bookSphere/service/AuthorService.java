@@ -1,6 +1,7 @@
 package it.unipi.bookSphere.service;
 
 import it.unipi.bookSphere.dto.AuthorDTO;
+import it.unipi.bookSphere.exceptions.AuthorArchivedException;
 import it.unipi.bookSphere.exceptions.AuthorNotFoundException;
 import it.unipi.bookSphere.mapper.AuthorMapper;
 import it.unipi.bookSphere.model.mongodb.AuthorDocument;
@@ -47,6 +48,11 @@ public class AuthorService {
                     logger.warn("Author not found with id: {}", id);
                     return new AuthorNotFoundException("Author not found with id: " + id);
                 });
+
+        if(author.getStatus().equals("ARCHIVED")){
+            logger.warn("Author ARCHIVED with id: {}", id);
+            throw new AuthorArchivedException("Author ARCHIVED " + id);
+        }
         
         AuthorDTO authorDTO = authorMapper.toDTO(author);
         logger.info("Author found: {}", author.getName());
@@ -68,6 +74,8 @@ public class AuthorService {
         logger.info("Searching authors by name: {}", name);
         
         List<AuthorDocument> authors = authorRepository.findByNameContainingIgnoreCase(name);
+
+        authors.removeIf(author->author.getStatus().equals("ARCHIVED"));
         
         logger.info("Found {} authors matching '{}'", authors.size(), name);
         return authors.stream()

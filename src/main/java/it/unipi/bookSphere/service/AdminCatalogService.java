@@ -2,6 +2,7 @@ package it.unipi.bookSphere.service;
 
 import it.unipi.bookSphere.dto.AuthorDTO;
 import it.unipi.bookSphere.dto.GenreDTO;
+import it.unipi.bookSphere.exceptions.AuthorArchivedException;
 import it.unipi.bookSphere.exceptions.AuthorNotFoundException;
 import it.unipi.bookSphere.mapper.AuthorMapper;
 import it.unipi.bookSphere.model.mongodb.AuthorDocument;
@@ -66,7 +67,7 @@ public class AdminCatalogService {
         
         // 1. Create author in MongoDB
         AuthorDocument authorDocument = authorMapper.toDocument(authorDTO);
-        authorDocument.setStatus("ACTIVE");
+        //authorDocument.setStatus("ACTIVE");
         
         // Initialize statistics
         if (authorDocument.getRatingsCount() == null) {
@@ -132,6 +133,10 @@ public class AdminCatalogService {
         // 1. Find existing author in MongoDB
         AuthorDocument existingAuthor = authorRepository.findById(id)
                 .orElseThrow(() -> new AuthorNotFoundException("Author not found with ID: " + id));
+
+        // If author is ARCHIVED cannot be updated
+        if(existingAuthor.getStatus().equals("ARCHIVED"))
+            throw new AuthorArchivedException("Author is archived cannot be updated with ID: " + id);   
         
         // 2. Update MongoDB document
         if (authorDTO.getName() != null) {
@@ -185,6 +190,10 @@ public class AdminCatalogService {
         // 1. Soft delete in MongoDB (set status to ARCHIVED)
         AuthorDocument author = authorRepository.findById(id)
                 .orElseThrow(() -> new AuthorNotFoundException("Author not found with ID: " + id));
+
+        // If author already ARCHIVED
+        if(author.getStatus().equals("ARCHIVED"))
+            throw new AuthorArchivedException("Author is already ARCHIVED with ID: " + id);  
         
         author.setStatus("ARCHIVED");
         authorRepository.save(author);

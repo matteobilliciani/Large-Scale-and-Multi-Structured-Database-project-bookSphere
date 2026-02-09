@@ -407,7 +407,7 @@ public class AnalyticsIntegrationTest {
         book.setAuthor(new BookDocument.Author(testAuthorId, TEST_AUTHOR_NAME));
         book.setGenres(List.of(TEST_GENRE));
         book.setDescription("Test book for analytics");
-        book.setStatus("ACTIVE");
+        book.setAvailability("ACTIVE");
         book = bookRepository.save(book);
         String bookId = book.getId();
         bookNodeRepository.getOrCreate(bookId, title, year);

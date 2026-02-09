@@ -177,7 +177,7 @@ public class MongoDbAnalyticsAdHocTest {
         book.setTitle(title);
         book.setAuthor(new BookDocument.Author(authId, authName));
         book.setGenres(List.of(genre));
-        book.setStatus("ACTIVE");
+        book.setAvailability("ACTIVE");
         book.setPublicationYear(y1);
 
         // Stats
@@ -382,7 +382,7 @@ public class MongoDbAnalyticsAdHocTest {
         // Quindi il peggiore è Extra (85).
         assertNotNull(wrapped.getWorstBook(), "Worst book should not be null");
         assertEquals(BOOK_EXTRA, wrapped.getWorstBook().getTitle(), "Worst book should be " + BOOK_EXTRA);
-        assertEquals(80, wrapped.getWorstBook().getRating(), "Worst book rating should be 85");
+        assertEquals(85, wrapped.getWorstBook().getRating(), "Worst book rating should be 85");
 
         System.out.println("✓ PASSED: Yearly Wrapped works (including Best/Worst books)");
     }

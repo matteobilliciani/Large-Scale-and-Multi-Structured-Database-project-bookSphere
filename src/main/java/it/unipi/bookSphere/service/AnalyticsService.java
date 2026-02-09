@@ -81,6 +81,7 @@ public class AnalyticsService {
         
         List<? extends it.unipi.bookSphere.repository.neo4j.projections.InternationalityProjection> results;
         
+        //If a BOOK/AUTHOR is archived it should not appear in Neo4j so an exception will be thrown
         if ("BOOK".equalsIgnoreCase(entityType)) {
             logger.debug("Entity {} is a Book", entityId);
             // Verify book exists in MongoDB
@@ -123,6 +124,7 @@ public class AnalyticsService {
     /**
      * Find influencers for a specific genre or across all genres
      * Identifies users whose reviews consistently receive high engagement
+     * Should not consider banned user and their reviews (They should be removed from Neo4j when banend)
      * 
      * @param genre Optional genre name to filter influencers. If null, returns top influencers across all genres
      * @param limit Maximum number of influencers to return (default 10)
@@ -177,7 +179,7 @@ public class AnalyticsService {
         Query query = new Query();
         
         // 2. Aggiungi il controllo sul campo 'month_score.Current_Month'
-        query.addCriteria(Criteria.where("status").is("ACTIVE")
+        query.addCriteria(Criteria.where("availability").is("ACTIVE")
                 .and("month_score.rating_count").gte(5)
                 .and("month_score.Current_Month").is(currentMonthStr)); // Filtra per mese corrente
 
@@ -203,7 +205,7 @@ public class AnalyticsService {
         List<AggregationOperation> pipeline = new ArrayList<>();
         List<Criteria> filters = new ArrayList<>();
         
-        filters.add(Criteria.where("status").is("ACTIVE"));
+        filters.add(Criteria.where("availability").is("ACTIVE"));
         
         if (author != null) filters.add(Criteria.where("author.name").is(author));
         if (genre != null) filters.add(Criteria.where("genres").is(genre));
@@ -261,8 +263,9 @@ public class AnalyticsService {
 
         List<AggregationOperation> pipeline = new ArrayList<>();
 
-        // 1. MATCH: Filter authors with at least ten rating
-        pipeline.add(match(Criteria.where("ratings_count").gt(10)));
+        // 1. Filter only ACTIVE authors AND at least ten rating
+        pipeline.add(match(Criteria.where("status").is("ACTIVE")
+            .and("ratings_count").gt(10)));
 
         // 2. PROJECT: Map fields and calculate average
         pipeline.add(project()
@@ -298,8 +301,9 @@ public class AnalyticsService {
 
         List<AggregationOperation> pipeline = new ArrayList<>();
 
-        // 1. Match: Only books with at least 2 years of history
-        pipeline.add(match(Criteria.where("stats_per_year.1").exists(true)));
+        // 1. Filter only ACTIVE books & at least two years of data
+        pipeline.add(match(Criteria.where("availability").is("ACTIVE")
+            .and("stats_per_year.1").exists(true)));
 
         // 2. Project: Extract first and last snapshots
         pipeline.add(project()
@@ -356,12 +360,19 @@ public class AnalyticsService {
         // 1. Fetch Author using Repository
         Optional<AuthorDocument> authorOpt = authorRepository.findByName(authorName);
 
+
         if (authorOpt.isEmpty()) {
             logger.info("Author '{}' not found in database.", authorName);
             return Collections.emptyList();
         }
 
         AuthorDocument authorDoc = authorOpt.get();
+
+        //CHECK IF AUTHOR IS ARCHIVED
+        if(authorDoc.getStatus().equals("ARCHIVED")){
+            logger.info("Author '{}' is archived.", authorName);
+            return Collections.emptyList();
+        }
 
         // Check if the list of published books is empty or null
         if (authorDoc.getPublishedBooks() == null || authorDoc.getPublishedBooks().isEmpty()) {
@@ -379,8 +390,8 @@ public class AnalyticsService {
         // 3. Setup Pipeline on BOOKS collection using IDs
         List<AggregationOperation> pipeline = new ArrayList<>();
 
-        // MATCH by IDs (Primary Key) AND ensure status is ACTIVE
-        pipeline.add(Aggregation.match(Criteria.where("_id").in(bookIds).and("status").is("ACTIVE")));
+        // MATCH by IDs (Primary Key) AND ensure availability is ACTIVE
+        pipeline.add(Aggregation.match(Criteria.where("_id").in(bookIds).and("availability").is("ACTIVE")));
 
         if (year != null) {
             // Year context: Filter the array first to isolate the target year

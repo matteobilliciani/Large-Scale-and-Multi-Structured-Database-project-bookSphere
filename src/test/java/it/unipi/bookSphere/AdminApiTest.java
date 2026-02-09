@@ -341,7 +341,7 @@ public class AdminApiTest {
         // Verify in MongoDB
         Optional<BookDocument> mongoBook = bookRepository.findById(testBookId1);
         assertTrue(mongoBook.isPresent(), "Book should exist in MongoDB");
-        assertEquals("ACTIVE", mongoBook.get().getStatus(), "Book status should be ACTIVE");
+        assertEquals("ACTIVE", mongoBook.get().getAvailability(), "Book status should be ACTIVE");
         assertEquals(testAuthorId1, mongoBook.get().getAuthor().getId(), "Author ID should match");
 
         // Verify in Neo4j
@@ -458,7 +458,7 @@ public class AdminApiTest {
         // Verify soft delete in MongoDB (status = ARCHIVED)
         Optional<BookDocument> mongoBook = bookRepository.findById(testBookId2);
         assertTrue(mongoBook.isPresent(), "Book should still exist in MongoDB");
-        assertEquals("ARCHIVED", mongoBook.get().getStatus(), "Book status should be ARCHIVED");
+        assertEquals("ARCHIVED", mongoBook.get().getAvailability(), "Book status should be ARCHIVED");
 
         // Verify DETACH DELETE in Neo4j (node should be deleted)
         Optional<BookNode> neoBook = bookNodeRepository.findByMongoId(testBookId2);

@@ -146,6 +146,7 @@ public class FollowService {
         }
         
         // Query Neo4j for followed users using repository method
+        // Should not return user that are not ACTIVE
         List<Map<String, Object>> results = userNodeRepository.getFollowedUsers(currentUserId);
         
         // Convert to DTOs

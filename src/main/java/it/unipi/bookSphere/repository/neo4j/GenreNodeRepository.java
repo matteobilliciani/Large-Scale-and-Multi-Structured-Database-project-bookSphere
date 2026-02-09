@@ -110,7 +110,7 @@ public interface GenreNodeRepository extends Neo4jRepository<GenreNode, String> 
         WITH influencer,
              count(DISTINCT r) AS numReviews,
              count(fan) AS totalLikes
-        WHERE numReviews > 3
+        WHERE numReviews > 3 AND influencer.username <> ""
         RETURN influencer.username AS username,
                totalLikes AS totalEngagement,
                numReviews AS numReviews,
@@ -129,7 +129,7 @@ public interface GenreNodeRepository extends Neo4jRepository<GenreNode, String> 
         WITH influencer,
              count(DISTINCT r) AS numReviews,
              count(fan) AS totalLikes
-        WHERE numReviews > 5
+        WHERE numReviews > 5 AND influencer.username <> ""
         RETURN influencer.username AS username,
                totalLikes AS totalEngagement,
                numReviews AS numReviews,

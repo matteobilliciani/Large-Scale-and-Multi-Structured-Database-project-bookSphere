@@ -38,9 +38,6 @@ public class Review {
     @Field("likes_count")
     private Integer likesCount;
 
-    @Field("is_banned")
-    private Boolean isBanned;
-
     // PATTERN: Subset (Minimum book data to display review in user feed)
     @Field("book_snapshot")
     private BookSnapshot bookSnapshot;

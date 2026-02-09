@@ -51,7 +51,4 @@ public class ReviewDTO {
 
     @Schema(description = "Review source", example = "amazon", allowableValues = {"amazon", "bookcrossing"})
     private String source;
-
-    @Schema(description = "Whether the review has been banned")
-    private Boolean isBanned;
 }

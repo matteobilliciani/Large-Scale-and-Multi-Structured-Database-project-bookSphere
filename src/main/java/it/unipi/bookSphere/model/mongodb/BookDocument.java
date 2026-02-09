@@ -52,8 +52,8 @@ public class BookDocument {
 
     private String source;
     
-    // Status for soft delete: "ACTIVE" or "ARCHIVED"
-    private String status;
+    // Status for soft delete: "ARCHIVED" or "ACTIVE"
+    private String availability;
 
     // Privates Classes related to Book
 

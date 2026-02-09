@@ -213,7 +213,7 @@ public class Neo4jAnalyticsPersistentTest {
         book1.setAuthor(new BookDocument.Author(testAuthorId, TEST_AUTHOR_NAME));
         book1.setGenres(List.of(TEST_GENRE));
         book1.setDescription("Test book for internationality V4");
-        book1.setStatus("ACTIVE");
+        book1.setAvailability("ACTIVE");
         book1 = bookRepository.save(book1);
         testBookId1 = book1.getId();
         bookNodeRepository.getOrCreate(testBookId1, book1.getTitle(), 2020);
@@ -229,7 +229,7 @@ public class Neo4jAnalyticsPersistentTest {
         book2.setAuthor(new BookDocument.Author(testAuthorId, TEST_AUTHOR_NAME));
         book2.setGenres(List.of(TEST_GENRE));
         book2.setDescription("Test book for reviews V4");
-        book2.setStatus("ACTIVE");
+        book2.setAvailability("ACTIVE");
         book2 = bookRepository.save(book2);
         testBookId2 = book2.getId();
         bookNodeRepository.getOrCreate(testBookId2, book2.getTitle(), 2021);
@@ -243,7 +243,7 @@ public class Neo4jAnalyticsPersistentTest {
         book3.setAuthor(new BookDocument.Author(testAuthorId, TEST_AUTHOR_NAME));
         book3.setGenres(List.of(TEST_GENRE));
         book3.setDescription("Test book for recommendations V4");
-        book3.setStatus("ACTIVE");
+        book3.setAvailability("ACTIVE");
         book3 = bookRepository.save(book3);
         testBookId3 = book3.getId();
         bookNodeRepository.getOrCreate(testBookId3, book3.getTitle(), 2022);

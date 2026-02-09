@@ -123,7 +123,7 @@ public class ReviewService {
         // 4. Create Review in MongoDB
         // Note: We create the Review manually instead of using reviewMapper.toDocument() 
         // because we need to set several fields that are not in the DTO (userId, createdAt, 
-        // likesCount, isBanned, source). The mapper is used for DTO conversion at the end.
+        // likesCount, source). The mapper is used for DTO conversion at the end.
         Review review = new Review();
         review.setUserId(currentUserId);
         review.setUsername(currentUsername);
@@ -132,7 +132,6 @@ public class ReviewService {
         review.setSummary(reviewDTO.getSummary());
         review.setCreatedAt(Instant.now());
         review.setLikesCount(0);
-        review.setIsBanned(false);
         review.setSource("app");
         
         // Set book snapshot

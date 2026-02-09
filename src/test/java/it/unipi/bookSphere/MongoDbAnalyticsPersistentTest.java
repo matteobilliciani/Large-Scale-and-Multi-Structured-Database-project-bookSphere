@@ -178,7 +178,7 @@ public class MongoDbAnalyticsPersistentTest {
         book1.setAuthor(new BookDocument.Author(testAuthorId1, TEST_AUTHOR_1));
         book1.setGenres(List.of(TEST_GENRE_1, TEST_GENRE_2));
         book1.setDescription("Test book for trending analytics");
-        book1.setStatus("ACTIVE");
+        book1.setAvailability("ACTIVE");
 
         BookDocument.MonthScore monthScore1 = new BookDocument.MonthScore();
         monthScore1.setSumRating(4000);
@@ -214,7 +214,7 @@ public class MongoDbAnalyticsPersistentTest {
         book2.setAuthor(new BookDocument.Author(testAuthorId1, TEST_AUTHOR_1));
         book2.setGenres(List.of(TEST_GENRE_1));
         book2.setDescription("Test book for rankings");
-        book2.setStatus("ACTIVE");
+        book2.setAvailability("ACTIVE");
 
         BookDocument.MonthScore monthScore2 = new BookDocument.MonthScore();
         monthScore2.setSumRating(1700);
@@ -250,7 +250,7 @@ public class MongoDbAnalyticsPersistentTest {
         book3.setAuthor(new BookDocument.Author(testAuthorId2, TEST_AUTHOR_2));
         book3.setGenres(List.of(TEST_GENRE_2));
         book3.setDescription("Test book for author rankings");
-        book3.setStatus("ACTIVE");
+        book3.setAvailability("ACTIVE");
 
         BookDocument.MonthScore monthScore3 = new BookDocument.MonthScore();
         monthScore3.setSumRating(900);
@@ -285,7 +285,7 @@ public class MongoDbAnalyticsPersistentTest {
         book4.setAuthor(new BookDocument.Author(testAuthorId2, TEST_AUTHOR_2));
         book4.setGenres(List.of(TEST_GENRE_1, TEST_GENRE_2));
         book4.setDescription("Test book for TPI with low activity");
-        book4.setStatus("ACTIVE");
+        book4.setAvailability("ACTIVE");
 
         List<BookDocument.YearStat> yearStats4 = new ArrayList<>();
         BookDocument.YearStat stat4_2024 = new BookDocument.YearStat();

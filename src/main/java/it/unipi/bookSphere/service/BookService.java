@@ -48,6 +48,11 @@ public class BookService {
                     return new BookNotFoundException("Book not found with id: " + id);
                 });
         
+        if(book.getAvailability().equals("ARCHIVED")){
+            logger.warn("Book ARCHIVED with id: {}", id);
+            throw new BookNotFoundException("Book not found with id: " + id);
+        }
+        
         BookDTO bookDTO = bookMapper.toDTO(book);
         logger.info("Book found: {}", book.getTitle());
         return bookDTO;
@@ -68,6 +73,8 @@ public class BookService {
         logger.info("Searching books by title: {}", title);
         
         List<BookDocument> books = bookRepository.findByTitleContainingIgnoreCase(title);
+
+        books.removeIf(book->book.getAvailability().equals("ARCHIVED"));
         
         logger.info("Found {} books matching '{}'", books.size(), title);
         return books.stream()
