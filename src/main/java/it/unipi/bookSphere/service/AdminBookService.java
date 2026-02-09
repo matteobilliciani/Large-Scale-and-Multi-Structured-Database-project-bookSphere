@@ -148,7 +148,8 @@ public class AdminBookService {
      */
     @Transactional
     @Retryable(
-        retryFor = {RuntimeException.class},
+        retryFor = {RuntimeException.class},        
+        noRetryFor = {BookNotFoundException.class, BookArchivedException.class},        
         maxAttempts = 3,
         backoff = @Backoff(delay = 1000, multiplier = 2)
     )
@@ -285,6 +286,7 @@ public class AdminBookService {
     @Transactional
     @Retryable(
         retryFor = {RuntimeException.class},
+        noRetryFor = {BookNotFoundException.class, BookArchivedException.class},
         maxAttempts = 3,
         backoff = @Backoff(delay = 1000, multiplier = 2)
     )

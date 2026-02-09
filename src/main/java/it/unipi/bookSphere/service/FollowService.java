@@ -41,7 +41,8 @@ public class FollowService {
      */
     @Transactional
     @Retryable(
-        retryFor = {RuntimeException.class},
+        retryFor = {RuntimeException.class},        
+        noRetryFor = {UnauthorizedOperationException.class, UserNotFoundException.class, AlreadyExistsException.class},
         maxAttempts = 3,
         backoff = @Backoff(delay = 1000, multiplier = 2)
     )
@@ -101,6 +102,7 @@ public class FollowService {
     @Transactional
     @Retryable(
         retryFor = {RuntimeException.class},
+        noRetryFor = {UnauthorizedOperationException.class, UserNotFoundException.class},
         maxAttempts = 3,
         backoff = @Backoff(delay = 1000, multiplier = 2)
     )
@@ -112,12 +114,8 @@ public class FollowService {
         }
         
         // 1. Check target user exists and is ACTIVE
-        RegisteredUser targetUser = userRepository.findById(targetUserId)
+        userRepository.findById(targetUserId)
                 .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + targetUserId));
-        
-        if (!"active".equals(targetUser.getStatus())) {
-            throw new UnauthorizedOperationException("Cannot unfollow this user: user is not active");
-        }
         
         // 2. Remove FOLLOWS relationship using repository method
         Long deleted = userNodeRepository.deleteFollowsRelationship(currentUserId, targetUserId);

@@ -77,6 +77,7 @@ public class AdminModerationService {
     @Transactional
     @Retryable(
         retryFor = {RuntimeException.class},
+        noRetryFor = {ReviewNotFoundException.class},
         maxAttempts = 3,
         backoff = @Backoff(delay = 1000, multiplier = 2)
     )
@@ -138,7 +139,7 @@ public class AdminModerationService {
     @Transactional
     @Retryable(
         retryFor = {RuntimeException.class},
-        noRetryFor = {UserAlreadyBannedException.class},  // Already banned = business logic, not transient error
+        noRetryFor = {UserNotFoundException.class, UserAlreadyBannedException.class},
         maxAttempts = 3,
         backoff = @Backoff(delay = 1000, multiplier = 2)
     )

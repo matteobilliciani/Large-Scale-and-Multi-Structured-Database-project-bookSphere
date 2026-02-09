@@ -44,6 +44,7 @@ public class BookshelfService {
     @Transactional
     @Retryable(
         retryFor = {RuntimeException.class},
+        noRetryFor = {UnauthorizedOperationException.class, BookNotFoundException.class, BookArchivedException.class, UserNotFoundException.class, AlreadyExistsException.class},
         maxAttempts = 3,
         backoff = @Backoff(delay = 1000, multiplier = 2)
     )
@@ -106,7 +107,8 @@ public class BookshelfService {
      */
     @Transactional
     @Retryable(
-        retryFor = {RuntimeException.class},
+        retryFor = {RuntimeException.class},        
+        noRetryFor = {UnauthorizedOperationException.class, BookNotFoundException.class, UserNotFoundException.class},        
         maxAttempts = 3,
         backoff = @Backoff(delay = 1000, multiplier = 2)
     )
@@ -141,7 +143,8 @@ public class BookshelfService {
      */
     @Transactional
     @Retryable(
-        retryFor = {RuntimeException.class},
+        retryFor = {RuntimeException.class},       
+        noRetryFor = {UnauthorizedOperationException.class},        
         maxAttempts = 3,
         backoff = @Backoff(delay = 1000, multiplier = 2)
     )

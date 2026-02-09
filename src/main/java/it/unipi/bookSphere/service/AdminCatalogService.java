@@ -119,7 +119,8 @@ public class AdminCatalogService {
      */
     @Transactional
     @Retryable(
-        retryFor = {RuntimeException.class},
+        retryFor = {RuntimeException.class},        
+        noRetryFor = {AuthorNotFoundException.class, AuthorArchivedException.class},        
         maxAttempts = 3,
         backoff = @Backoff(delay = 1000, multiplier = 2)
     )
@@ -183,6 +184,7 @@ public class AdminCatalogService {
     @Transactional
     @Retryable(
         retryFor = {RuntimeException.class},
+        noRetryFor = {AuthorNotFoundException.class, AuthorArchivedException.class},
         maxAttempts = 3,
         backoff = @Backoff(delay = 1000, multiplier = 2)
     )

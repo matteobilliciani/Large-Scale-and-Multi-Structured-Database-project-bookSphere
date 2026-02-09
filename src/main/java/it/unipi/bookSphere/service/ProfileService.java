@@ -44,7 +44,8 @@ public class ProfileService {
      */
     @Transactional
     @Retryable(
-        retryFor = {RuntimeException.class},
+        retryFor = {RuntimeException.class},        
+        noRetryFor = {UnauthorizedOperationException.class, AlreadyExistsException.class},        
         maxAttempts = 3,
         backoff = @Backoff(delay = 1000, multiplier = 2)
     )
@@ -111,6 +112,7 @@ public class ProfileService {
     @Transactional
     @Retryable(
         retryFor = {RuntimeException.class},
+        noRetryFor = {UnauthorizedOperationException.class},
         maxAttempts = 3,
         backoff = @Backoff(delay = 1000, multiplier = 2)
     )

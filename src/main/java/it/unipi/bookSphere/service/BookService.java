@@ -1,6 +1,7 @@
 package it.unipi.bookSphere.service;
 
 import it.unipi.bookSphere.dto.BookDTO;
+import it.unipi.bookSphere.exceptions.BookArchivedException;
 import it.unipi.bookSphere.exceptions.BookNotFoundException;
 import it.unipi.bookSphere.mapper.BookMapper;
 import it.unipi.bookSphere.model.mongodb.BookDocument;
@@ -35,7 +36,8 @@ public class BookService {
      * @throws BookNotFoundException if book is not found
      */
     @Retryable(
-        retryFor = {RuntimeException.class},
+        retryFor = {RuntimeException.class},        
+        noRetryFor = {BookNotFoundException.class, BookArchivedException.class},        
         maxAttempts = 3,
         backoff = @Backoff(delay = 1000, multiplier = 2)
     )
@@ -50,7 +52,7 @@ public class BookService {
         
         if(book.getAvailability().equals("ARCHIVED")){
             logger.warn("Book ARCHIVED with id: {}", id);
-            throw new BookNotFoundException("Book not found with id: " + id);
+            throw new BookArchivedException("Book is archived with id: " + id);
         }
         
         BookDTO bookDTO = bookMapper.toDTO(book);

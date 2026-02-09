@@ -54,7 +54,12 @@ public class LikeService {
      * Like a book - creates LIKES relationship in Neo4j
      */
     @Transactional
-    @Retryable(retryFor = {RuntimeException.class}, maxAttempts = 3, backoff = @Backoff(delay = 1000, multiplier = 2))
+    @Retryable(
+        retryFor = {RuntimeException.class},
+        noRetryFor = {UnauthorizedOperationException.class, BookNotFoundException.class, BookArchivedException.class, AlreadyExistsException.class},
+        maxAttempts = 3,
+        backoff = @Backoff(delay = 1000, multiplier = 2)
+    )
     public void likeBook(String bookId) {
         String currentUserId = SecurityUtils.getCurrentUserId();
         if (currentUserId == null) {
@@ -93,7 +98,12 @@ public class LikeService {
      * Unlike a book - removes LIKES relationship from Neo4j
      */
     @Transactional
-    @Retryable(retryFor = {RuntimeException.class}, maxAttempts = 3, backoff = @Backoff(delay = 1000, multiplier = 2))
+    @Retryable(
+        retryFor = {RuntimeException.class},
+        noRetryFor = {UnauthorizedOperationException.class},
+        maxAttempts = 3,
+        backoff = @Backoff(delay = 1000, multiplier = 2)
+    )
     public void unlikeBook(String bookId) {
         String currentUserId = SecurityUtils.getCurrentUserId();
         if (currentUserId == null) {
@@ -116,7 +126,12 @@ public class LikeService {
      * Like a review - creates LIKES relationship in Neo4j and updates likes_count in MongoDB
      */
     @Transactional
-    @Retryable(retryFor = {RuntimeException.class}, maxAttempts = 3, backoff = @Backoff(delay = 1000, multiplier = 2))
+    @Retryable(
+        retryFor = {RuntimeException.class},
+        noRetryFor = {UnauthorizedOperationException.class, ReviewNotFoundException.class, AlreadyExistsException.class},
+        maxAttempts = 3,
+        backoff = @Backoff(delay = 1000, multiplier = 2)
+    )
     public void likeReview(String reviewId) {
         String currentUserId = SecurityUtils.getCurrentUserId();
         if (currentUserId == null) {
@@ -159,7 +174,12 @@ public class LikeService {
      * Unlike a review - removes LIKES relationship from Neo4j and updates MongoDB
      */
     @Transactional
-    @Retryable(retryFor = {RuntimeException.class}, maxAttempts = 3, backoff = @Backoff(delay = 1000, multiplier = 2))
+    @Retryable(
+        retryFor = {RuntimeException.class},
+        noRetryFor = {UnauthorizedOperationException.class},
+        maxAttempts = 3,
+        backoff = @Backoff(delay = 1000, multiplier = 2)
+    )
     public void unlikeReview(String reviewId) {
         String currentUserId = SecurityUtils.getCurrentUserId();
         if (currentUserId == null) {
@@ -193,7 +213,12 @@ public class LikeService {
      * Like a genre - creates LIKES relationship in Neo4j
      */
     @Transactional
-    @Retryable(retryFor = {RuntimeException.class}, maxAttempts = 3, backoff = @Backoff(delay = 1000, multiplier = 2))
+    @Retryable(
+        retryFor = {RuntimeException.class},
+        noRetryFor = {UnauthorizedOperationException.class, AlreadyExistsException.class},
+        maxAttempts = 3,
+        backoff = @Backoff(delay = 1000, multiplier = 2)
+    )
     public void likeGenre(String genreName) {
         String currentUserId = SecurityUtils.getCurrentUserId();
         if (currentUserId == null) {
@@ -226,7 +251,12 @@ public class LikeService {
      * Unlike a genre
      */
     @Transactional
-    @Retryable(retryFor = {RuntimeException.class}, maxAttempts = 3, backoff = @Backoff(delay = 1000, multiplier = 2))
+    @Retryable(
+        retryFor = {RuntimeException.class},
+        noRetryFor = {UnauthorizedOperationException.class},
+        maxAttempts = 3,
+        backoff = @Backoff(delay = 1000, multiplier = 2)
+    )
     public void unlikeGenre(String genreName) {
         String currentUserId = SecurityUtils.getCurrentUserId();
         if (currentUserId == null) {
@@ -252,7 +282,12 @@ public class LikeService {
      * Like an author - creates LIKES relationship in Neo4j
      */
     @Transactional
-    @Retryable(retryFor = {RuntimeException.class}, maxAttempts = 3, backoff = @Backoff(delay = 1000, multiplier = 2))
+    @Retryable(
+        retryFor = {RuntimeException.class},
+        noRetryFor = {UnauthorizedOperationException.class, AuthorArchivedException.class, AlreadyExistsException.class},
+        maxAttempts = 3,
+        backoff = @Backoff(delay = 1000, multiplier = 2)
+    )
     public void likeAuthor(String authorId) {
         String currentUserId = SecurityUtils.getCurrentUserId();
         if (currentUserId == null) {
@@ -291,7 +326,12 @@ public class LikeService {
      * Unlike an author
      */
     @Transactional
-    @Retryable(retryFor = {RuntimeException.class}, maxAttempts = 3, backoff = @Backoff(delay = 1000, multiplier = 2))
+    @Retryable(
+        retryFor = {RuntimeException.class},
+        noRetryFor = {UnauthorizedOperationException.class},
+        maxAttempts = 3,
+        backoff = @Backoff(delay = 1000, multiplier = 2)
+    )
     public void unlikeAuthor(String authorId) {
         String currentUserId = SecurityUtils.getCurrentUserId();
         if (currentUserId == null) {

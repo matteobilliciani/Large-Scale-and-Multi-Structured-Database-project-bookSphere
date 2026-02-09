@@ -21,7 +21,9 @@ import org.springframework.stereotype.Service;
 import static org.springframework.data.mongodb.core.aggregation.Aggregation.*;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Sort; 
+import org.springframework.data.domain.Sort;
+import org.springframework.retry.annotation.Retryable;
+import org.springframework.retry.annotation.Backoff; 
 import java.time.ZoneId; // <--- Utile per conversione date
 import java.util.Date;   // <--- Utile per conversione date
 
@@ -55,10 +57,17 @@ public class UserFeaturesService {
      * - Books by liked authors
      * - Books in liked genres
      * Excludes books already reviewed by the user
+     * Reads from both Neo4j and MongoDB for validation, so retry valuable for transient failures
      * 
      * @param limit Maximum number of recommendations (default 10)
      * @return List of RecommendationDTO with scores
      */
+    @Retryable(
+        retryFor = {RuntimeException.class},
+        noRetryFor = {UserNotFoundException.class},
+        maxAttempts = 3,
+        backoff = @Backoff(delay = 1000, multiplier = 2)
+    )
     public List<RecommendationDTO> getRecommendations(Integer limit) {
         String currentUserId = SecurityUtils.getCurrentUserId();
         
@@ -97,7 +106,14 @@ public class UserFeaturesService {
     /**
      * Generate yearly wrapped for the current user
      * Simplified version using current user data
+     * Performs complex MongoDB aggregation pipeline with multiple stages
      */
+    @Retryable(
+        retryFor = {RuntimeException.class},
+        noRetryFor = {UserNotFoundException.class},
+        maxAttempts = 3,
+        backoff = @Backoff(delay = 1000, multiplier = 2)
+    )
     public WrappedDTO getYearlyWrapped() {
         String currentUserId = SecurityUtils.getCurrentUserId();
         if (currentUserId == null) {

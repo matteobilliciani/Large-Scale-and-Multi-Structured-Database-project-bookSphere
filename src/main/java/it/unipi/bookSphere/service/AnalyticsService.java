@@ -26,6 +26,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.retry.annotation.Retryable;
+import org.springframework.retry.annotation.Backoff;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
@@ -71,11 +73,18 @@ public class AnalyticsService {
     /**
      * Calculate Internationality Index for a book or author
      * Analyzes geographical distribution of likes and reviews
+     * Reads from both Mongo and Neo4j, so retry is valuable for transient failures
      * 
      * @param entityId MongoDB ObjectId of the book or author
      * @param entityType Type of entity: "BOOK" or "AUTHOR"
      * @return List of InternationalityDTO with country distribution
      */
+    @Retryable(
+        retryFor = {RuntimeException.class},
+        noRetryFor = {BookNotFoundException.class, AuthorNotFoundException.class},
+        maxAttempts = 3,
+        backoff = @Backoff(delay = 1000, multiplier = 2)
+    )
     public List<InternationalityDTO> calculateInternationality(String entityId, String entityType) {
         logger.info("Calculating internationality for entity: {} of type: {}", entityId, entityType);
         
@@ -125,11 +134,18 @@ public class AnalyticsService {
      * Find influencers for a specific genre or across all genres
      * Identifies users whose reviews consistently receive high engagement
      * Should not consider banned user and their reviews (They should be removed from Neo4j when banend)
+     * Reads from Neo4j which may have transient failures, so retry is useful
      * 
      * @param genre Optional genre name to filter influencers. If null, returns top influencers across all genres
      * @param limit Maximum number of influencers to return (default 10)
      * @return List of InfluencerDTO with engagement metrics
      */
+    @Retryable(
+        retryFor = {RuntimeException.class},
+        noRetryFor = {GenreNotFoundException.class},
+        maxAttempts = 3,
+        backoff = @Backoff(delay = 1000, multiplier = 2)
+    )
     public List<InfluencerDTO> getInfluencers(String genre, Integer limit) {
         int resultLimit = (limit != null && limit > 0) ? limit : DEFAULT_INFLUENCER_LIMIT;
         
@@ -169,7 +185,14 @@ public class AnalyticsService {
     
     /**
      * Get trending books based on current month activity
+     * Performs a relatively simple MongoDB query with no dual-DB read.
+     * Retry is still useful for transient MongoDB connection issues.
      */
+    @Retryable(
+        retryFor = {RuntimeException.class},
+        maxAttempts = 3,
+        backoff = @Backoff(delay = 1000, multiplier = 2)
+    )
     public List<BookDTO> getTrendingBooks() {
         // 1. Calcola il mese corrente nel formato "yyyy-MM"
         String currentMonthStr = YearMonth.now().format(DateTimeFormatter.ofPattern("yyyy-MM"));
@@ -198,7 +221,13 @@ public class AnalyticsService {
 
     /**
      * Get book rankings for a specific year or all-time
+     * Performs complex MongoDB aggregation pipeline that may timeout transiently
      */
+    @Retryable(
+        retryFor = {RuntimeException.class},
+        maxAttempts = 3,
+        backoff = @Backoff(delay = 1000, multiplier = 2)
+    )
     public List<RankingDTO> getBookRankings(Integer year, String author, String genre) {
     
         // 1. Setup Pipeline & Match Criteria
@@ -257,7 +286,13 @@ public class AnalyticsService {
 
     /**
      * Get author rankings using in-memory processing
+     * Performs complex MongoDB aggregation pipeline on authors collection
      */
+    @Retryable(
+        retryFor = {RuntimeException.class},
+        maxAttempts = 3,
+        backoff = @Backoff(delay = 1000, multiplier = 2)
+    )
     public List<RankingDTO> getAuthorRankings() {
         logger.info("Getting author rankings (Calculated from Sum/Count) via Projection");
 
@@ -296,6 +331,15 @@ public class AnalyticsService {
     }
     
 
+    /**
+     * Get book revaluation trends
+     * Performs complex MongoDB aggregation pipeline with multiple stages
+     */
+    @Retryable(
+        retryFor = {RuntimeException.class},
+        maxAttempts = 3,
+        backoff = @Backoff(delay = 1000, multiplier = 2)
+    )
     public List<BookTrendDTO> getBookRevaluation() {
         logger.info("Calculating book rating trends using dynamic averages (Sum/Count)");
 
@@ -352,8 +396,14 @@ public class AnalyticsService {
     /**
      * Get book rankings FOR A SPECIFIC AUTHOR utilizing the Author's published_books array.
      * App-Side Join approach: Fetch IDs from Author -> Query Books by IDs.
+     * Performs complex aggregation with validation, so retry is valuable for transient failures
      */
-    
+    @Retryable(
+        retryFor = {RuntimeException.class},
+        noRetryFor = {AuthorNotFoundException.class},
+        maxAttempts = 3,
+        backoff = @Backoff(delay = 1000, multiplier = 2)
+    )
     public List<RankingDTO> getBookRankingsAuthorV2(Integer year, String authorName) {
         logger.info("Starting ranking calculation for author: '{}', year: {}", authorName, year);
 
