@@ -164,7 +164,7 @@ else:
     
     bc_books = pd.read_csv(BOOKCROSSING_BOOKS, sep=';', encoding='latin-1', on_bad_lines='skip', dtype=str)
     bc_books.rename(columns={'ISBN': 'isbn', 'Book-Title': 'title'}, inplace=True)
-    bc_books['clean_title'] = bc_books['title'].apply(clean_key_fast)
+    bc_books['clean_title'] = bc_books['Title'].apply(clean_key_fast)
     
     title_scores = {}
     isbn_count_map = bc_isbn_counts.to_dict()
