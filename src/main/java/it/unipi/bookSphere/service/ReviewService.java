@@ -178,7 +178,7 @@ public class ReviewService {
     @Transactional
     @Retryable(
         retryFor = {RuntimeException.class},
-        noRetryFor = {UnauthorizedOperationException.class, ReviewNotFoundException.class},
+        noRetryFor = {UnauthorizedOperationException.class, ReviewNotFoundException.class, BookNotFoundException.class, UserNotFoundException.class},
         maxAttempts = 3,
         backoff = @Backoff(delay = 1000, multiplier = 2)
     )
