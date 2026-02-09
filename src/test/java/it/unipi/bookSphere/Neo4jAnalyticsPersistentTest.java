@@ -31,7 +31,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * - User Recommendations
  */
 @SpringBootTest
-@ActiveProfiles("local")
+@ActiveProfiles("clusterWSL")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class Neo4jAnalyticsPersistentTest {
 

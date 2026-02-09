@@ -54,7 +54,7 @@ import static org.junit.jupiter.api.Assertions.*;
  *    - Proper relationship creation/deletion
  */
 @SpringBootTest
-@ActiveProfiles("local")
+@ActiveProfiles("clusterWSL")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class AdminApiTest {
 

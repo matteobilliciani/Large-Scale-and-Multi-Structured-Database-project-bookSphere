@@ -49,7 +49,7 @@ import static org.junit.jupiter.api.Assertions.*;
  *    - Authorization checks
  */
 @SpringBootTest
-@ActiveProfiles("local")
+@ActiveProfiles("clusterWSL")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class ComprehensiveApiTest {
 
