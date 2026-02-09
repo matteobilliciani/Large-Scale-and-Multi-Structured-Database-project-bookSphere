@@ -138,6 +138,7 @@ public class AdminModerationService {
     @Transactional
     @Retryable(
         retryFor = {RuntimeException.class},
+        noRetryFor = {UserAlreadyBannedException.class},  // Already banned = business logic, not transient error
         maxAttempts = 3,
         backoff = @Backoff(delay = 1000, multiplier = 2)
     )
@@ -148,8 +149,9 @@ public class AdminModerationService {
         RegisteredUser user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + userId));
 
-        //User already banned
+        // User already banned - this is not a transient error, skip gracefully
         if(user.getStatus().equals("BANNED")){
+            logger.warn("User {} is already banned, skipping redundant ban operation", userId);
             throw new UserAlreadyBannedException("User already banned with ID: " + userId);
         }
         
