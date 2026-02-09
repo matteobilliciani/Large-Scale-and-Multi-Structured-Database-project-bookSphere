@@ -92,6 +92,21 @@ public interface BookMapper {
     TrendScoreDTO toTrendScoreDTO(BookDocument.MonthScore monthScore);
 
     /**
+     * AFTER MAPPING: Calculate Month Average Rating
+     */
+    @AfterMapping
+    default void calculateMonthAverage(@MappingTarget TrendScoreDTO dto, BookDocument.MonthScore monthScore) {
+        if (monthScore != null && monthScore.getRatingCount() != null && monthScore.getRatingCount() > 0 && monthScore.getSumRating() != null) {
+            double avg = (double) monthScore.getSumRating() / monthScore.getRatingCount();
+            dto.setRating((double) Math.round(avg * 100) / 100);
+        } else {
+            dto.setRating(0.0);
+        }
+        // Imposta timestamp aggiornamento se serve per UI
+        dto.setUpdatedAt(LocalDateTime.now());
+    }
+
+    /**
      * Convert BookDTO to BookDocument (for create/update operations)
      */
     @Mapping(target = "externalIds.isbns", source = "isbns")

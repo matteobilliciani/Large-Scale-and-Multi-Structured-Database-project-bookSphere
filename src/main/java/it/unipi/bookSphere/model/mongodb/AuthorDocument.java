@@ -30,8 +30,7 @@ public class AuthorDocument {
     @Field("ratings_count")
     private Integer ratingsCount; // Total votes received (Counter
     
-    
-    
+
     // Status for soft delete: "ACTIVE" or "ARCHIVED"
     @Field("status")
     private String status;

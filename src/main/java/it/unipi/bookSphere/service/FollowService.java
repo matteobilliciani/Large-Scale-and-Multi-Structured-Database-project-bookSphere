@@ -5,7 +5,6 @@ import it.unipi.bookSphere.exceptions.AlreadyExistsException;
 import it.unipi.bookSphere.exceptions.UnauthorizedOperationException;
 import it.unipi.bookSphere.exceptions.UserNotFoundException;
 import it.unipi.bookSphere.model.mongodb.RegisteredUser;
-import it.unipi.bookSphere.model.neo4j.UserNode;
 import it.unipi.bookSphere.repository.mongo.RegisteredUserRepository;
 import it.unipi.bookSphere.repository.neo4j.UserNodeRepository;
 import it.unipi.bookSphere.utils.SecurityUtils;
@@ -69,14 +68,14 @@ public class FollowService {
         
         // 4. Get or create current UserNode using repository method
         RegisteredUser currentUser = userRepository.findById(currentUserId).orElse(null);
-        UserNode currentUserNode = userNodeRepository.getOrCreate(
+        userNodeRepository.getOrCreate(
             currentUserId,
             SecurityUtils.getCurrentUsername(),
             currentUser != null ? currentUser.getCountry() : null
         );
         
         // 5. Get or create target UserNode using repository method
-        UserNode targetUserNode = userNodeRepository.getOrCreate(
+        userNodeRepository.getOrCreate(
             targetUserId,
             targetUser.getUsername(),
             targetUser.getCountry()
@@ -147,6 +146,7 @@ public class FollowService {
         }
         
         // Query Neo4j for followed users using repository method
+        // Should not return user that are not ACTIVE
         List<Map<String, Object>> results = userNodeRepository.getFollowedUsers(currentUserId);
         
         // Convert to DTOs

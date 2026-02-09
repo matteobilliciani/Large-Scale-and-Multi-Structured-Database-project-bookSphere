@@ -2,15 +2,14 @@ package it.unipi.bookSphere.service;
 
 import it.unipi.bookSphere.dto.AuthorDTO;
 import it.unipi.bookSphere.dto.BookDTO;
-import it.unipi.bookSphere.dto.GenreDTO;
 import it.unipi.bookSphere.dto.InfluencerDTO;
 import it.unipi.bookSphere.dto.InternationalityDTO;
 import it.unipi.bookSphere.dto.RankingDTO;
-import it.unipi.bookSphere.dto.TpiPredictionDTO;
 import it.unipi.bookSphere.exceptions.BookNotFoundException;
 import it.unipi.bookSphere.exceptions.AuthorNotFoundException;
 import it.unipi.bookSphere.exceptions.GenreNotFoundException;
 import it.unipi.bookSphere.mapper.RankingMapper;
+import it.unipi.bookSphere.model.mongodb.AuthorDocument;
 import it.unipi.bookSphere.model.mongodb.BookDocument;
 import it.unipi.bookSphere.repository.mongo.AuthorRepository;
 import it.unipi.bookSphere.repository.mongo.BookRepository;
@@ -19,6 +18,9 @@ import it.unipi.bookSphere.repository.neo4j.AuthorNodeRepository;
 import it.unipi.bookSphere.repository.neo4j.BookNodeRepository;
 import it.unipi.bookSphere.repository.neo4j.GenreNodeRepository;
 import lombok.RequiredArgsConstructor;
+import java.util.Optional;
+
+import org.bson.types.ObjectId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,12 +41,9 @@ import java.util.stream.Collectors;
 
 import static org.springframework.data.mongodb.core.aggregation.Aggregation.*;
 
+
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Collectors;
+import java.util.Collections;
 
 /**
  * Service for analytics operations using MongoDB and Neo4j
@@ -82,6 +81,7 @@ public class AnalyticsService {
         
         List<? extends it.unipi.bookSphere.repository.neo4j.projections.InternationalityProjection> results;
         
+        //If a BOOK/AUTHOR is archived it should not appear in Neo4j so an exception will be thrown
         if ("BOOK".equalsIgnoreCase(entityType)) {
             logger.debug("Entity {} is a Book", entityId);
             // Verify book exists in MongoDB
@@ -124,6 +124,7 @@ public class AnalyticsService {
     /**
      * Find influencers for a specific genre or across all genres
      * Identifies users whose reviews consistently receive high engagement
+     * Should not consider banned user and their reviews (They should be removed from Neo4j when banend)
      * 
      * @param genre Optional genre name to filter influencers. If null, returns top influencers across all genres
      * @param limit Maximum number of influencers to return (default 10)
@@ -178,7 +179,7 @@ public class AnalyticsService {
         Query query = new Query();
         
         // 2. Aggiungi il controllo sul campo 'month_score.Current_Month'
-        query.addCriteria(Criteria.where("status").is("ACTIVE")
+        query.addCriteria(Criteria.where("availability").is("ACTIVE")
                 .and("month_score.rating_count").gte(5)
                 .and("month_score.Current_Month").is(currentMonthStr)); // Filtra per mese corrente
 
@@ -204,7 +205,7 @@ public class AnalyticsService {
         List<AggregationOperation> pipeline = new ArrayList<>();
         List<Criteria> filters = new ArrayList<>();
         
-        filters.add(Criteria.where("status").is("ACTIVE"));
+        filters.add(Criteria.where("availability").is("ACTIVE"));
         
         if (author != null) filters.add(Criteria.where("author.name").is(author));
         if (genre != null) filters.add(Criteria.where("genres").is(genre));
@@ -262,8 +263,9 @@ public class AnalyticsService {
 
         List<AggregationOperation> pipeline = new ArrayList<>();
 
-        // 1. MATCH: Filter authors with at least ten rating
-        pipeline.add(match(Criteria.where("ratings_count").gt(10)));
+        // 1. Filter only ACTIVE authors AND at least ten rating
+        pipeline.add(match(Criteria.where("status").is("ACTIVE")
+            .and("ratings_count").gt(10)));
 
         // 2. PROJECT: Map fields and calculate average
         pipeline.add(project()
@@ -294,182 +296,14 @@ public class AnalyticsService {
     }
     
 
-    /**
-     * Get genre rankings
-     */
-    /* 
-    public List<RankingDTO> getGenreRankings(Integer year) {
-        logger.info("Getting genre rankings for year: {}", year != null ? year : "all-time");
-        
-        List<BookDocument> books = bookRepository.findByStatus("ACTIVE");
-        
-        Map<String, List<Double>> genreRatings = new HashMap<>();
-        Map<String, Integer> genreCounts = new HashMap<>();
-        
-        for (BookDocument book : books) {
-            if (book.getGenres() != null && book.getStatsPerYear() != null && !book.getStatsPerYear().isEmpty()) {
-                Double bookAvg = null;
-                
-                if (year != null) {
-                    Optional<BookDocument.YearStat> yearStat = book.getStatsPerYear().stream()
-                        .filter(stat -> year.equals(stat.getYear()))
-                        .findFirst();
-                    if (yearStat.isPresent() && yearStat.get().getRatingsCount() > 0) {
-                        bookAvg = (double) yearStat.get().getSumRating() / yearStat.get().getRatingsCount();
-                    }
-                } else {
-                    int totalSum = book.getStatsPerYear().stream()
-                        .mapToInt(stat -> stat.getSumRating() != null ? stat.getSumRating() : 0)
-                        .sum();
-                    int totalCount = book.getStatsPerYear().stream()
-                        .mapToInt(stat -> stat.getRatingsCount() != null ? stat.getRatingsCount() : 0)
-                        .sum();
-                    if (totalCount > 0) {
-                        bookAvg = (double) totalSum / totalCount;
-                    }
-                }
-                
-                if (bookAvg != null) {
-                    for (String genre : book.getGenres()) {
-                        genreRatings.computeIfAbsent(genre, k -> new ArrayList<>()).add(bookAvg);
-                        genreCounts.put(genre, genreCounts.getOrDefault(genre, 0) + 1);
-                    }
-                }
-            }
-        }
-        
-        List<RankingDTO> rankings = genreRatings.entrySet().stream()
-            .filter(entry -> genreCounts.getOrDefault(entry.getKey(), 0) >= 3)
-            .map(entry -> {
-                String genreName = entry.getKey();
-                List<Double> ratings = entry.getValue();
-                double avgRating = ratings.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
-                
-                return new RankingDTO(
-                    null,
-                    genreName,
-                    avgRating,
-                    genreCounts.get(genreName).longValue(),
-                    year,
-                    null
-                );
-            })
-            .sorted((a, b) -> Double.compare(b.getAverageRating(), a.getAverageRating()))
-            .limit(20)
-            .collect(Collectors.toList());
-        
-        logger.info("Found {} genre rankings", rankings.size());
-        return rankings;
-    }
-     */
-
-    /**
-     * Calculate Trending Probability Index (TPI) for a book
-     */
-    /*
-    public TpiPredictionDTO calculateTPI(String bookId) {
-        logger.info("Calculating TPI for book: {}", bookId);
-        
-        Optional<BookDocument> bookOpt = bookRepository.findById(bookId);
-        if (bookOpt.isEmpty()) {
-            throw new BookNotFoundException("Book not found: " + bookId);
-        }
-        
-        BookDocument book = bookOpt.get();
-        String authorName = book.getAuthor().getName();
-        
-        // Calculate author's historical benchmark
-        Query query = new Query();
-        query.addCriteria(Criteria.where("author.name").is(authorName).and("status").is("ACTIVE"));
-        List<BookDocument> authorBooks = mongoTemplate.find(query, BookDocument.class, "books");
-        
-        double authorBenchmark = 0.0;
-        int totalBooks = 0;
-        
-        for (BookDocument authorBook : authorBooks) {
-            if (authorBook.getStatsPerYear() != null && !authorBook.getStatsPerYear().isEmpty()) {
-                int totalSum = authorBook.getStatsPerYear().stream()
-                    .mapToInt(stat -> stat.getSumRating() != null ? stat.getSumRating() : 0)
-                    .sum();
-                int totalCount = authorBook.getStatsPerYear().stream()
-                    .mapToInt(stat -> stat.getRatingsCount() != null ? stat.getRatingsCount() : 0)
-                    .sum();
-                if (totalCount > 0) {
-                    authorBenchmark += (double) totalSum / totalCount;
-                    totalBooks++;
-                }
-            }
-        }
-        
-        if (totalBooks > 0) {
-            authorBenchmark = authorBenchmark / totalBooks;
-        }
-        
-        // Get book's current momentum
-        double bookMomentum = 0.0;
-        long currentActivity = 0L;
-        
-        if (book.getMonthScore() != null) {
-            bookMomentum = book.getMonthScore().getRating() != null ? book.getMonthScore().getRating() : 0.0;
-            currentActivity = book.getMonthScore().getRatingCount() != null ? book.getMonthScore().getRatingCount().longValue() : 0L;
-        }
-        
-        // Generate prediction
-        String prediction;
-        if (currentActivity == 0) {
-            prediction = "⏸️ STABLE (No recent data)";
-        } else if (bookMomentum > authorBenchmark * 1.05) {
-            prediction = "🚀 RISING STAR";
-        } else if (bookMomentum < authorBenchmark * 0.95) {
-            prediction = "📉 UNDERPERFORMING";
-        } else {
-            prediction = "➡️ STABLE";
-        }
-        
-        TpiPredictionDTO result = new TpiPredictionDTO(
-            bookId,
-            book.getTitle(),
-            Math.round(authorBenchmark * 100.0) / 100.0,
-            Math.round(bookMomentum * 100.0) / 100.0,
-            prediction,
-            currentActivity
-        );
-        
-        logger.info("Calculated TPI for book {}: {}", bookId, prediction);
-        return result;
-    }
-    */
-
-    // Helper method to map BookDocument to BookDTO
-    private BookDTO mapBookDocumentToDTO(BookDocument doc) {
-        BookDTO bookDTO = new BookDTO();
-        bookDTO.setId(doc.getId());
-        bookDTO.setTitle(doc.getTitle());
-        bookDTO.setPublicationYear(doc.getPublicationYear());
-        bookDTO.setDescription(doc.getDescription());
-        
-        if (doc.getAuthor() != null) {
-            AuthorDTO authorDTO = new AuthorDTO();
-            authorDTO.setId(doc.getAuthor().getId());
-            authorDTO.setName(doc.getAuthor().getName());
-            bookDTO.setAuthor(authorDTO);
-        }
-        
-        if (doc.getGenres() != null) {
-            bookDTO.setGenres(doc.getGenres()); // BookDTO expects List<String>, not List<GenreDTO>
-        }
-        
-        return bookDTO;
-    }
-    
-
-    public List<BookTrendDTO> getBookTrends() {
+    public List<BookTrendDTO> getBookRevaluation() {
         logger.info("Calculating book rating trends using dynamic averages (Sum/Count)");
 
         List<AggregationOperation> pipeline = new ArrayList<>();
 
-        // 1. Match: Only books with at least 2 years of history
-        pipeline.add(match(Criteria.where("stats_per_year.1").exists(true)));
+        // 1. Filter only ACTIVE books & at least two years of data
+        pipeline.add(match(Criteria.where("availability").is("ACTIVE")
+            .and("stats_per_year.1").exists(true)));
 
         // 2. Project: Extract first and last snapshots
         pipeline.add(project()
@@ -513,5 +347,115 @@ public class AnalyticsService {
         );
 
         return bookTrendMapper.toDtoList(results.getMappedResults());
+    }
+
+    /**
+     * Get book rankings FOR A SPECIFIC AUTHOR utilizing the Author's published_books array.
+     * App-Side Join approach: Fetch IDs from Author -> Query Books by IDs.
+     */
+    
+    public List<RankingDTO> getBookRankingsAuthorV2(Integer year, String authorName) {
+        logger.info("Starting ranking calculation for author: '{}', year: {}", authorName, year);
+
+        // 1. Fetch Author using Repository
+        Optional<AuthorDocument> authorOpt = authorRepository.findByName(authorName);
+
+
+        if (authorOpt.isEmpty()) {
+            logger.info("Author '{}' not found in database.", authorName);
+            return Collections.emptyList();
+        }
+
+        AuthorDocument authorDoc = authorOpt.get();
+
+        //CHECK IF AUTHOR IS ARCHIVED
+        if(authorDoc.getStatus().equals("ARCHIVED")){
+            logger.info("Author '{}' is archived.", authorName);
+            return Collections.emptyList();
+        }
+
+        // Check if the list of published books is empty or null
+        if (authorDoc.getPublishedBooks() == null || authorDoc.getPublishedBooks().isEmpty()) {
+            logger.info("Author '{}' found, but has no published books associated.", authorName);
+            return Collections.emptyList();
+        }
+
+        // 2. Extract IDs and CONVERT String -> ObjectId
+        List<ObjectId> bookIds = authorDoc.getPublishedBooks().stream()
+                .map(book -> new ObjectId(book.getId()))
+                .collect(Collectors.toList());
+
+        logger.info("Found {} book IDs for author '{}'. Proceeding with aggregation.", bookIds.size(), authorName);
+
+        // 3. Setup Pipeline on BOOKS collection using IDs
+        List<AggregationOperation> pipeline = new ArrayList<>();
+
+        // MATCH by IDs (Primary Key) AND ensure availability is ACTIVE
+        pipeline.add(Aggregation.match(Criteria.where("_id").in(bookIds).and("availability").is("ACTIVE")));
+
+        if (year != null) {
+            // Year context: Filter the array first to isolate the target year
+            pipeline.add(Aggregation.project("title", "author")
+                    .and(ArrayOperators.Filter.filter("stats_per_year")
+                            .as("stat")
+                            .by(ComparisonOperators.Eq.valueOf("stat.year").equalToValue(year)))
+                    .as("targetStat"));
+
+            // Sum the filtered array
+            pipeline.add(Aggregation.project("title", "author")
+                    .and(AccumulatorOperators.Sum.sumOf("targetStat.ratings_count")).as("totalRatings")
+                    .and(AccumulatorOperators.Sum.sumOf("targetStat.sum_rating")).as("sumRating"));
+
+        } else {
+            // All-time context: Sum over the entire array
+            pipeline.add(Aggregation.project("title", "author")
+                    .and(AccumulatorOperators.Sum.sumOf("stats_per_year.ratings_count")).as("totalRatings")
+                    .and(AccumulatorOperators.Sum.sumOf("stats_per_year.sum_rating")).as("sumRating"));
+        }
+
+        // 3. Threshold Filter
+        pipeline.add(Aggregation.match(Criteria.where("totalRatings").gt(5)));
+
+        // 4. Calculate Average & Format Output
+        pipeline.add(Aggregation.project("totalRatings")
+                .and("title").as("name")
+                .and("author.name").as("additionalInfo")
+                .and(ArithmeticOperators.Divide.valueOf("sumRating").divideBy("totalRatings")).as("averageRating"));
+
+        // 5. Sort & Limit
+        pipeline.add(Aggregation.sort(Sort.Direction.DESC, "averageRating"));
+        pipeline.add(Aggregation.limit(25));
+
+        // Execute Aggregation
+        AggregationResults<RankingProjection> results = mongoTemplate.aggregate(
+                Aggregation.newAggregation(pipeline), "books", RankingProjection.class
+        );
+
+        List<RankingProjection> mappedResults = results.getMappedResults();
+        logger.info("Aggregation finished. Found {} ranked books matching criteria.", mappedResults.size());
+
+        return rankingMapper.toRankingDTOList(mappedResults, year);
+    }
+
+    // Helper method to map BookDocument to BookDTO
+    private BookDTO mapBookDocumentToDTO(BookDocument doc) {
+        BookDTO bookDTO = new BookDTO();
+        bookDTO.setId(doc.getId());
+        bookDTO.setTitle(doc.getTitle());
+        bookDTO.setPublicationYear(doc.getPublicationYear());
+        bookDTO.setDescription(doc.getDescription());
+        
+        if (doc.getAuthor() != null) {
+            AuthorDTO authorDTO = new AuthorDTO();
+            authorDTO.setId(doc.getAuthor().getId());
+            authorDTO.setName(doc.getAuthor().getName());
+            bookDTO.setAuthor(authorDTO);
+        }
+        
+        if (doc.getGenres() != null) {
+            bookDTO.setGenres(doc.getGenres()); // BookDTO expects List<String>, not List<GenreDTO>
+        }
+        
+        return bookDTO;
     }
 }

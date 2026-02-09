@@ -14,6 +14,14 @@ import java.util.Optional;
 public interface BookRepository extends MongoRepository<BookDocument, String> {
     
     /**
+     * Find book by id
+     * 
+     * @param id IDs
+     * @return Book if found
+     */
+    Optional<BookDocument> findById(String id);
+
+    /**
      * Find book by title (exact match)
      * 
      * @param title Book title
@@ -28,12 +36,4 @@ public interface BookRepository extends MongoRepository<BookDocument, String> {
      * @return List of matching books
      */
     List<BookDocument> findByTitleContainingIgnoreCase(String title);
-    
-    /**
-     * Find books by status (e.g., "ACTIVE", "ARCHIVED")
-     * 
-     * @param status Book status
-     * @return List of books with the specified status
-     */
-    List<BookDocument> findByStatus(String status);
 }

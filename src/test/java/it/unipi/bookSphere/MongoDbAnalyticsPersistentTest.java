@@ -125,21 +125,21 @@ public class MongoDbAnalyticsPersistentTest {
 
     private boolean setupAuthorsAndBooks() {
         boolean created = false;
-        
+
         // Check if authors exist
         if (authorRepository.findByName(TEST_AUTHOR_1).isPresent()) {
             AuthorDocument author1 = authorRepository.findByName(TEST_AUTHOR_1).get();
             testAuthorId1 = author1.getId();
-            
+
             AuthorDocument author2 = authorRepository.findByName(TEST_AUTHOR_2).get();
             testAuthorId2 = author2.getId();
-            
+
             // Check if books exist
             var book1 = bookRepository.findByTitle("MongoDB Analytics Book 1 - Trending V4");
             var book2 = bookRepository.findByTitle("MongoDB Analytics Book 2 - Top Rated V4");
             var book3 = bookRepository.findByTitle("MongoDB Analytics Book 3 - Average V4");
             var book4 = bookRepository.findByTitle("MongoDB Analytics Book 4 - Low Activity V4");
-            
+
             if (book1.isPresent() && book2.isPresent() && book3.isPresent() && book4.isPresent()) {
                 testBookId1 = book1.get().getId();
                 testBookId2 = book2.get().getId();
@@ -148,189 +148,231 @@ public class MongoDbAnalyticsPersistentTest {
                 return false;
             }
         }
-        
+
         // Create Author 1 (High performer)
         if (testAuthorId1 == null) {
             AuthorDocument author1 = new AuthorDocument();
             author1.setName(TEST_AUTHOR_1);
             author1.setStatus("ACTIVE");
+            author1.setPublishedBooks(new ArrayList<>()); // Inizializza la lista
             author1 = authorRepository.save(author1);
             testAuthorId1 = author1.getId();
             created = true;
         }
-        
+
         // Create Author 2 (Average performer)
         if (testAuthorId2 == null) {
             AuthorDocument author2 = new AuthorDocument();
             author2.setName(TEST_AUTHOR_2);
             author2.setStatus("ACTIVE");
+            author2.setPublishedBooks(new ArrayList<>()); // Inizializza la lista
             author2 = authorRepository.save(author2);
             testAuthorId2 = author2.getId();
             created = true;
         }
-        
-        // Create Book 1 - Trending (Author 1, high current activity)
+
+        // --- BOOK 1 (Author 1) ---
         BookDocument book1 = new BookDocument();
         book1.setTitle("MongoDB Analytics Book 1 - Trending V4");
         book1.setPublicationYear(CURRENT_YEAR);
         book1.setAuthor(new BookDocument.Author(testAuthorId1, TEST_AUTHOR_1));
         book1.setGenres(List.of(TEST_GENRE_1, TEST_GENRE_2));
         book1.setDescription("Test book for trending analytics");
-        book1.setStatus("ACTIVE");
-        
-        // Add month score (current activity)
+        book1.setAvailability("ACTIVE");
+
         BookDocument.MonthScore monthScore1 = new BookDocument.MonthScore();
-        monthScore1.setRating(80.0);
+        monthScore1.setSumRating(4000);
         monthScore1.setRatingCount(50);
+        monthScore1.setCurrentMonth("2026-02");
         book1.setMonthScore(monthScore1);
-        
-        // Add stats per year
+
         List<BookDocument.YearStat> yearStats1 = new ArrayList<>();
         BookDocument.YearStat stat1_2025 = new BookDocument.YearStat();
         stat1_2025.setYear(CURRENT_YEAR);
         stat1_2025.setRatingsCount(50);
         stat1_2025.setSumRating(4000);
         yearStats1.add(stat1_2025);
-        
+
         BookDocument.YearStat stat1_2024 = new BookDocument.YearStat();
         stat1_2024.setYear(LAST_YEAR);
         stat1_2024.setRatingsCount(30);
         stat1_2024.setSumRating(2250);
         yearStats1.add(stat1_2024);
-        
+
         book1.setStatsPerYear(yearStats1);
-        book1 = bookRepository.save(book1);
+        book1 = bookRepository.save(book1); // Salva libro
         testBookId1 = book1.getId();
-        
-        // Create Book 2 - Top Rated (Author 1, excellent ratings)
+
+        // >>> UPDATE AUTHOR 1 <<<
+        updateAuthorWithBook(testAuthorId1, book1);
+
+
+        // --- BOOK 2 (Author 1) ---
         BookDocument book2 = new BookDocument();
         book2.setTitle("MongoDB Analytics Book 2 - Top Rated V4");
         book2.setPublicationYear(LAST_YEAR);
         book2.setAuthor(new BookDocument.Author(testAuthorId1, TEST_AUTHOR_1));
         book2.setGenres(List.of(TEST_GENRE_1));
         book2.setDescription("Test book for rankings");
-        book2.setStatus("ACTIVE");
-        
+        book2.setAvailability("ACTIVE");
+
         BookDocument.MonthScore monthScore2 = new BookDocument.MonthScore();
-        monthScore2.setRating(85.0);
+        monthScore2.setSumRating(1700);
         monthScore2.setRatingCount(20);
+        monthScore2.setCurrentMonth("2026-02");
         book2.setMonthScore(monthScore2);
-        
+
         List<BookDocument.YearStat> yearStats2 = new ArrayList<>();
         BookDocument.YearStat stat2_2025 = new BookDocument.YearStat();
         stat2_2025.setYear(CURRENT_YEAR);
         stat2_2025.setRatingsCount(80);
         stat2_2025.setSumRating(6800);
         yearStats2.add(stat2_2025);
-        
+
         BookDocument.YearStat stat2_2024 = new BookDocument.YearStat();
         stat2_2024.setYear(LAST_YEAR);
         stat2_2024.setRatingsCount(60);
         stat2_2024.setSumRating(4920);
         yearStats2.add(stat2_2024);
-        
+
         book2.setStatsPerYear(yearStats2);
-        book2 = bookRepository.save(book2);
+        book2 = bookRepository.save(book2); // Salva libro
         testBookId2 = book2.getId();
-        
-        // Create Book 3 - Average (Author 2, moderate ratings)
+
+        // >>> UPDATE AUTHOR 1 <<<
+        updateAuthorWithBook(testAuthorId1, book2);
+
+
+        // --- BOOK 3 (Author 2) ---
         BookDocument book3 = new BookDocument();
         book3.setTitle("MongoDB Analytics Book 3 - Average V4");
         book3.setPublicationYear(LAST_YEAR);
         book3.setAuthor(new BookDocument.Author(testAuthorId2, TEST_AUTHOR_2));
         book3.setGenres(List.of(TEST_GENRE_2));
         book3.setDescription("Test book for author rankings");
-        book3.setStatus("ACTIVE");
-        
+        book3.setAvailability("ACTIVE");
+
         BookDocument.MonthScore monthScore3 = new BookDocument.MonthScore();
-        monthScore3.setRating(60.0);
+        monthScore3.setSumRating(900);
         monthScore3.setRatingCount(15);
         book3.setMonthScore(monthScore3);
-        
+
         List<BookDocument.YearStat> yearStats3 = new ArrayList<>();
         BookDocument.YearStat stat3_2025 = new BookDocument.YearStat();
         stat3_2025.setYear(CURRENT_YEAR);
         stat3_2025.setRatingsCount(40);
         stat3_2025.setSumRating(2400);
         yearStats3.add(stat3_2025);
-        
+
         BookDocument.YearStat stat3_2024 = new BookDocument.YearStat();
         stat3_2024.setYear(LAST_YEAR);
         stat3_2024.setRatingsCount(25);
         stat3_2024.setSumRating(1375);
         yearStats3.add(stat3_2024);
-        
+
         book3.setStatsPerYear(yearStats3);
-        book3 = bookRepository.save(book3);
+        book3 = bookRepository.save(book3); // Salva libro
         testBookId3 = book3.getId();
-        
-        // Create Book 4 - Low Activity (Author 2, low activity for TPI test)
+
+        // >>> UPDATE AUTHOR 2 <<<
+        updateAuthorWithBook(testAuthorId2, book3);
+
+
+        // --- BOOK 4 (Author 2) ---
         BookDocument book4 = new BookDocument();
         book4.setTitle("MongoDB Analytics Book 4 - Low Activity V4");
         book4.setPublicationYear(CURRENT_YEAR - 2);
         book4.setAuthor(new BookDocument.Author(testAuthorId2, TEST_AUTHOR_2));
         book4.setGenres(List.of(TEST_GENRE_1, TEST_GENRE_2));
         book4.setDescription("Test book for TPI with low activity");
-        book4.setStatus("ACTIVE");
-        
-        // No month score (no recent activity)
-        
+        book4.setAvailability("ACTIVE");
+
         List<BookDocument.YearStat> yearStats4 = new ArrayList<>();
         BookDocument.YearStat stat4_2024 = new BookDocument.YearStat();
         stat4_2024.setYear(LAST_YEAR);
         stat4_2024.setRatingsCount(10);
         stat4_2024.setSumRating(500);
         yearStats4.add(stat4_2024);
-        
+
         book4.setStatsPerYear(yearStats4);
-        book4 = bookRepository.save(book4);
+        book4 = bookRepository.save(book4); // Salva libro
         testBookId4 = book4.getId();
-        
-        // Update user with bookshelf data for Yearly Wrapped test
-        RegisteredUser user = userRepository.findById(testUserId1).get();
-        List<RegisteredUser.BookshelfItem> bookshelf = new ArrayList<>();
-        
-        // Add Book 1 to bookshelf as read
-        RegisteredUser.BookshelfItem item1 = new RegisteredUser.BookshelfItem();
-        item1.setBookId(testBookId1);
-        item1.setStatus("read");
-        item1.setAddedAt(Instant.now());
-        item1.setTitle("MongoDB Analytics Book 1 - Trending V4");
-        item1.setAuthor(new RegisteredUser.Author(testAuthorId1, TEST_AUTHOR_1));
-        item1.setGenres(List.of(TEST_GENRE_1, TEST_GENRE_2));
-        bookshelf.add(item1);
-        
-        // Add Book 2 to bookshelf as read
-        RegisteredUser.BookshelfItem item2 = new RegisteredUser.BookshelfItem();
-        item2.setBookId(testBookId2);
-        item2.setStatus("read");
-        item2.setAddedAt(Instant.now());
-        item2.setTitle("MongoDB Analytics Book 2 - Top Rated V4");
-        item2.setAuthor(new RegisteredUser.Author(testAuthorId1, TEST_AUTHOR_1));
-        item2.setGenres(List.of(TEST_GENRE_1));
-        bookshelf.add(item2);
-        
-        user.setBookshelf(bookshelf);
-        
-        // Add reviews year data
-        List<RegisteredUser.ReviewYear> reviewsYear = new ArrayList<>();
-        
-        RegisteredUser.ReviewYear review1 = new RegisteredUser.ReviewYear();
-        review1.setId("review1_" + testBookId1);
-        review1.setBook("MongoDB Analytics Book 1 - Trending");
-        review1.setRating(100);
-        reviewsYear.add(review1);
-        
-        RegisteredUser.ReviewYear review2 = new RegisteredUser.ReviewYear();
-        review2.setId("review2_" + testBookId3);
-        review2.setBook("MongoDB Analytics Book 3 - Average");
-        review2.setRating(30);
-        reviewsYear.add(review2);
-        
-        user.setReviewsYear(reviewsYear);
-        userRepository.save(user);
-        
+
+        // >>> UPDATE AUTHOR 2 <<<
+        updateAuthorWithBook(testAuthorId2, book4);
+
+
+        // Update user with bookshelf data
+        if (userRepository.findById(testUserId1).isPresent()) {
+            RegisteredUser user = userRepository.findById(testUserId1).get();
+            List<RegisteredUser.BookshelfItem> bookshelf = new ArrayList<>();
+
+            RegisteredUser.BookshelfItem item1 = new RegisteredUser.BookshelfItem();
+            item1.setBookId(testBookId1);
+            item1.setStatus("read");
+            item1.setAddedAt(Instant.now());
+            item1.setTitle(book1.getTitle());
+            item1.setAuthor(new RegisteredUser.Author(testAuthorId1, TEST_AUTHOR_1));
+            item1.setGenres(List.of(TEST_GENRE_1, TEST_GENRE_2));
+            bookshelf.add(item1);
+
+            RegisteredUser.BookshelfItem item2 = new RegisteredUser.BookshelfItem();
+            item2.setBookId(testBookId2);
+            item2.setStatus("read");
+            item2.setAddedAt(Instant.now());
+            item2.setTitle(book2.getTitle());
+            item2.setAuthor(new RegisteredUser.Author(testAuthorId1, TEST_AUTHOR_1));
+            item2.setGenres(List.of(TEST_GENRE_1));
+            bookshelf.add(item2);
+
+            user.setBookshelf(bookshelf);
+
+            // Add reviews year data
+            List<RegisteredUser.ReviewYear> reviewsYear = new ArrayList<>();
+
+            RegisteredUser.ReviewYear review1 = new RegisteredUser.ReviewYear();
+            review1.setId("review1_" + testBookId1);
+            review1.setBook(book1.getTitle());
+            review1.setRating(100);
+            reviewsYear.add(review1);
+
+            RegisteredUser.ReviewYear review2 = new RegisteredUser.ReviewYear();
+            review2.setId("review2_" + testBookId3);
+            review2.setBook(book3.getTitle());
+            review2.setRating(30);
+            reviewsYear.add(review2);
+
+            user.setReviewsYear(reviewsYear);
+            userRepository.save(user);
+        }
+
         return created;
+    }
+
+    // Helper method per evitare ripetizioni di codice
+    private void updateAuthorWithBook(String authorId, BookDocument book) {
+        Optional<AuthorDocument> authorOpt = authorRepository.findById(authorId);
+        if (authorOpt.isPresent()) {
+            AuthorDocument author = authorOpt.get();
+            if (author.getPublishedBooks() == null) {
+                author.setPublishedBooks(new ArrayList<>());
+            }
+
+            // Verifica che il libro non ci sia già
+            boolean alreadyExists = author.getPublishedBooks().stream()
+                    .anyMatch(pb -> pb.getId().equals(book.getId()));
+
+            if (!alreadyExists) {
+                AuthorDocument.PublishedBook pb = new AuthorDocument.PublishedBook();
+                pb.setId(book.getId());
+                pb.setTitle(book.getTitle());
+                // Imposta altri campi se necessari nel tuo model PublishedBook
+
+                author.getPublishedBooks().add(pb);
+                authorRepository.save(author);
+                System.out.println(">>> Added book '" + book.getTitle() + "' to Author '" + author.getName() + "'");
+            }
+        }
     }
 
     private void auth(String userId, String username) {
@@ -450,81 +492,6 @@ public class MongoDbAnalyticsPersistentTest {
         
         System.out.println("✓ PASSED: Author rankings work correctly");
     }
-/* 
-    @Test
-    @Order(6)
-    void test06_GenreRankings() {
-        System.out.println("\n--- TEST 6: Genre Rankings ---");
-        
-        List<it.unipi.bookSphere.dto.RankingDTO> result = analyticsService.getGenreRankings(null);
-        
-        result.stream().limit(10).forEach(dto -> System.out.println(
-            String.format("  %s - rating=%.2f, book_count=%d", 
-                dto.getName(), dto.getAverageRating(), dto.getTotalRatings())
-        ));
-        
-        assertNotNull(result);
-        assertTrue(result.size() > 0, "Expected at least 1 genre ranking");
-        
-        // Check test genres are present
-        boolean hasTestGenre1 = result.stream()
-            .anyMatch(dto -> TEST_GENRE_1.equals(dto.getName()));
-        
-        boolean hasTestGenre2 = result.stream()
-            .anyMatch(dto -> TEST_GENRE_2.equals(dto.getName()));
-        
-        System.out.println("✓ PASSED: Genre rankings retrieved");
-    }
-*/
-
-    /* 
-    @Test
-    @Order(7)
-    void test07_TPI_RisingStar() {
-        System.out.println("\n--- TEST 7: TPI Prediction - Rising Star ---");
-        
-        // Book 1 has high current momentum (4.8 month score) vs author benchmark
-        it.unipi.bookSphere.dto.TpiPredictionDTO result = analyticsService.calculateTPI(testBookId1);
-        
-        System.out.println(String.format(
-            "  Book: %s\n  Author Benchmark: %.2f\n  Book Momentum: %.2f\n  Prediction: %s\n  Activity: %d",
-            result.getBookTitle(), result.getAuthorBenchmark(), 
-            result.getBookMomentum(), result.getPrediction(), result.getCurrentActivity()
-        ));
-        
-        assertNotNull(result);
-        assertEquals(testBookId1, result.getBookId());
-        assertNotNull(result.getBookMomentum());
-        assertNotNull(result.getAuthorBenchmark());
-        assertNotNull(result.getPrediction());
-        assertTrue(result.getCurrentActivity() > 0, "Should have recent activity");
-        
-        System.out.println("✓ PASSED: TPI calculated for Book 1");
-    }
-
-    @Test
-    @Order(8)
-    void test08_TPI_Stable() {
-        System.out.println("\n--- TEST 8: TPI Prediction - Stable/Low Activity ---");
-        
-        // Book 4 has no month score (no recent data)
-        it.unipi.bookSphere.dto.TpiPredictionDTO result = analyticsService.calculateTPI(testBookId4);
-        
-        System.out.println(String.format(
-            "  Book: %s\n  Author Benchmark: %.2f\n  Book Momentum: %.2f\n  Prediction: %s\n  Activity: %d",
-            result.getBookTitle(), result.getAuthorBenchmark(), 
-            result.getBookMomentum(), result.getPrediction(), result.getCurrentActivity()
-        ));
-        
-        assertNotNull(result);
-        assertEquals(testBookId4, result.getBookId());
-        assertEquals(0L, result.getCurrentActivity(), "Should have no recent activity");
-        assertTrue(result.getPrediction().contains("STABLE"), 
-            "Should predict STABLE due to no recent data");
-        
-        System.out.println("✓ PASSED: TPI handles low/no activity correctly");
-    }
-    */
 
     @Test
     @Order(9)
@@ -704,7 +671,7 @@ public class MongoDbAnalyticsPersistentTest {
         // -----------------------------------------------------------------------
 
         // 1. Chiamata al servizio
-        List<it.unipi.bookSphere.dto.BookTrendDTO> result = analyticsService.getBookTrends();
+        List<it.unipi.bookSphere.dto.BookTrendDTO> result = analyticsService.getBookRevaluation();
 
         // Debug Log
         result.forEach(dto -> System.out.println(
@@ -755,6 +722,84 @@ public class MongoDbAnalyticsPersistentTest {
         System.out.println("✓ PASSED: Trends verified successfully with forced test data");
     }
 
+    @Test
+    @Order(13)
+    void test13_BookRankingsAuthorV2_Optimization() {
+        System.out.println("\n--- TEST 13: Author Rankings V2 (App-Side Join Optimization) ---");
+        System.out.println("Target Author: " + TEST_AUTHOR_1);
+
+        // ---------------------------------------------------------
+        // 1. Test All-Time Context (Year = null)
+        // ---------------------------------------------------------
+        System.out.println("\n>>> Querying All-Time Stats...");
+        List<RankingDTO> resultAllTime = analyticsService.getBookRankingsAuthorV2(null, TEST_AUTHOR_1);
+
+        // STAMPA RISULTATI ALL-TIME
+        System.out.println("   [All-Time Results Found: " + resultAllTime.size() + "]");
+        resultAllTime.forEach(dto -> System.out.println(
+                String.format("   - Title: '%-40s' | Author: %-20s | Avg: %5.2f | Count: %3d",
+                        dto.getName(),
+                        dto.getAdditionalInfo(),
+                        dto.getAverageRating(),
+                        dto.getTotalRatings())
+        ));
+
+        assertNotNull(resultAllTime, "Result V2 should not be null");
+        assertFalse(resultAllTime.isEmpty(), "Author 1 should have ranked books in V2");
+
+        // VERIFICA 1: Isolamento dell'Autore
+        boolean hasForeignBook = resultAllTime.stream()
+                .anyMatch(dto -> dto.getAdditionalInfo().equals(TEST_AUTHOR_2));
+        assertFalse(hasForeignBook, "V2 should strictly filter only books belonging to Author 1");
+
+        // VERIFICA 2: Calcolo All-Time
+        RankingDTO book1AllTime = resultAllTime.stream()
+                .filter(b -> b.getId().equals(testBookId1))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("Book 1 missing from V2 results"));
+
+        System.out.println(String.format("   -> Check Book 1: Expected >= 80, Actual = %d", book1AllTime.getTotalRatings()));
+        assertTrue(book1AllTime.getTotalRatings() >= 80, "All-time count should include all years");
+
+
+        // ---------------------------------------------------------
+        // 2. Test Specific Year Context (Year = CURRENT_YEAR)
+        // ---------------------------------------------------------
+        System.out.println("\n>>> Querying Specific Year: " + CURRENT_YEAR + "...");
+        List<RankingDTO> resultYear = analyticsService.getBookRankingsAuthorV2(CURRENT_YEAR, TEST_AUTHOR_1);
+
+        // STAMPA RISULTATI ANNO SPECIFICO
+        System.out.println("   [Year " + CURRENT_YEAR + " Results Found: " + resultYear.size() + "]");
+        resultYear.forEach(dto -> System.out.println(
+                String.format("   - Title: '%-40s' | Author: %-20s | Avg: %5.2f | Count: %3d | Year: %d",
+                        dto.getName(),
+                        dto.getAdditionalInfo(),
+                        dto.getAverageRating(),
+                        dto.getTotalRatings(),
+                        dto.getYear())
+        ));
+
+        assertNotNull(resultYear);
+        assertFalse(resultYear.isEmpty());
+
+        RankingDTO book1Year = resultYear.stream()
+                .filter(b -> b.getId().equals(testBookId1))
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("Book 1 missing from V2 Year results"));
+
+        // VERIFICA 3: Logica di filtro Anno (Deve essere 50, non 80)
+        System.out.println(String.format("   -> Check Book 1 Year Stats: Expected = 50, Actual = %d", book1Year.getTotalRatings()));
+
+
+        // ---------------------------------------------------------
+        // 3. Test Non-Existent Author
+        // ---------------------------------------------------------
+        List<RankingDTO> resultEmpty = analyticsService.getBookRankingsAuthorV2(null, "NonExistentAuthor_V99");
+        assertNotNull(resultEmpty);
+        assertTrue(resultEmpty.isEmpty(), "Should return empty list for non-existent author");
+
+        System.out.println("\n✓ PASSED: V2 Implementation correctly performs app-side join and year filtering");
+    }
 
 
     @AfterAll

@@ -1,8 +1,7 @@
 package it.unipi.bookSphere.service;
 
-import it.unipi.bookSphere.dto.BookshelfItemDTO;
-import it.unipi.bookSphere.dto.BookshelfRequestDTO;
 import it.unipi.bookSphere.exceptions.AlreadyExistsException;
+import it.unipi.bookSphere.exceptions.BookArchivedException;
 import it.unipi.bookSphere.exceptions.BookNotFoundException;
 import it.unipi.bookSphere.exceptions.UnauthorizedOperationException;
 import it.unipi.bookSphere.exceptions.UserNotFoundException;
@@ -24,7 +23,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.List;
 
 /**
  * Service for managing user bookshelf
@@ -59,6 +57,10 @@ public class BookshelfService {
         // 1. Validate book exists
         BookDocument book = bookRepository.findById(bookId)
                 .orElseThrow(() -> new BookNotFoundException("Book not found with ID: " + bookId));
+
+        if(book.getAvailability().equals("ARCHIVED")){
+            throw new BookArchivedException("Book is archived: " + bookId);
+        }
         
         // 2. Validate user exists
         RegisteredUser user = userRepository.findById(currentUserId)

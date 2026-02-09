@@ -52,8 +52,8 @@ public class BookDocument {
 
     private String source;
     
-    // Status for soft delete: "ACTIVE" or "ARCHIVED"
-    private String status;
+    // Status for soft delete: "ARCHIVED" or "ACTIVE"
+    private String availability;
 
     // Privates Classes related to Book
 
@@ -88,7 +88,7 @@ public class BookDocument {
 
         private String username;
         private Integer rating;
-        private String snippet;
+        private String summary;
 
         // Using Integer object (not int primitive) allows it to be null safely.
         @Field("num_of_like")
@@ -115,16 +115,14 @@ public class BookDocument {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class MonthScore {
-        private Double rating;
-
         @Field("rating_count")
         private Integer ratingCount;
 
         @Field("sum_rating")
         private Integer sumRating;
 
-        @Field("current_month")
-        private Integer currentMonth; // Month number (1-12)
+        @Field("Current_Month")
+        private String currentMonth; // Year+Month number (2022-12)
     }
 
 }

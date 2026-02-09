@@ -100,18 +100,6 @@ public interface UserNodeRepository extends Neo4jRepository<UserNode, String> {
     @Query("MATCH (a:User {mongoId: $userAId})-[r:FOLLOWS]->(b:User {mongoId: $userBId}) RETURN COUNT(r) > 0")
     boolean userFollowsUser(@Param("userAId") String userAId, @Param("userBId") String userBId);
     
-    // ========== BAN METHODS ==========
-    
-    /**
-     * Add BannedUser label to a user node
-     */
-    @Query("""
-        MATCH (u:User {mongoId: $userId})
-        SET u:BannedUser
-        RETURN u
-        """)
-    void addBannedLabel(@Param("userId") String userId);
-    
     // ========== GET OR CREATE METHODS ==========
     
     /**

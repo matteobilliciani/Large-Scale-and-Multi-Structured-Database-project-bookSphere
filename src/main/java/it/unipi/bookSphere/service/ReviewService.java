@@ -11,9 +11,7 @@ import it.unipi.bookSphere.model.neo4j.ReviewNode;
 import it.unipi.bookSphere.repository.mongo.BookRepository;
 import it.unipi.bookSphere.repository.mongo.RegisteredUserRepository;
 import it.unipi.bookSphere.repository.mongo.ReviewRepository;
-import it.unipi.bookSphere.repository.neo4j.BookNodeRepository;
 import it.unipi.bookSphere.repository.neo4j.ReviewNodeRepository;
-import it.unipi.bookSphere.repository.neo4j.UserNodeRepository;
 import it.unipi.bookSphere.utils.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -43,7 +41,6 @@ public class ReviewService {
 
     private static final Logger logger = LoggerFactory.getLogger(ReviewService.class);
     private static final int MAX_RECENT_REVIEWS = 3;
-    private static final int MAX_POPULAR_REVIEWS = 3;
     
     private final ReviewRepository reviewRepository;
     private final ReviewMapper reviewMapper;
@@ -53,8 +50,7 @@ public class ReviewService {
     
     // Neo4j repositories
     private final ReviewNodeRepository reviewNodeRepository;
-    private final UserNodeRepository userNodeRepository;
-    private final BookNodeRepository bookNodeRepository;
+
 
     /**
      * Get reviews by list of IDs
@@ -127,7 +123,7 @@ public class ReviewService {
         // 4. Create Review in MongoDB
         // Note: We create the Review manually instead of using reviewMapper.toDocument() 
         // because we need to set several fields that are not in the DTO (userId, createdAt, 
-        // likesCount, isBanned, source). The mapper is used for DTO conversion at the end.
+        // likesCount, source). The mapper is used for DTO conversion at the end.
         Review review = new Review();
         review.setUserId(currentUserId);
         review.setUsername(currentUsername);
@@ -136,7 +132,6 @@ public class ReviewService {
         review.setSummary(reviewDTO.getSummary());
         review.setCreatedAt(Instant.now());
         review.setLikesCount(0);
-        review.setIsBanned(false);
         review.setSource("app");
         
         // Set book snapshot
@@ -389,9 +384,7 @@ public class ReviewService {
         snapshot.setUserId(review.getUserId());
         snapshot.setUsername(review.getUsername());
         snapshot.setRating(review.getRating());
-        snapshot.setSnippet(review.getText() != null && review.getText().length() > 100 
-            ? review.getText().substring(0, 100) + "..." 
-            : review.getText());
+        snapshot.setSummary(review.getSummary());
         snapshot.setNumOfLike(0);
         snapshot.setDate(review.getCreatedAt());
         
@@ -581,47 +574,40 @@ public class ReviewService {
      */
     @Async
     private void updateMonthScore(String bookId, Integer ratingDelta, Integer countDelta) {
-        int currentMonth = LocalDateTime.now().getMonthValue();
-        
+        String currentMonth = java.time.YearMonth.now().toString();
+
         Query query = new Query(Criteria.where("_id").is(bookId));
         
-        // Fetch current book to check if month_score needs reset
+        // Fetch to determine if a monthly reset is needed
         BookDocument book = mongoTemplate.findOne(query, BookDocument.class);
-        
+
         if (book != null) {
             Update update = new Update();
-            
-            // Check if we need to reset for new month
-            if (book.getMonthScore() == null || book.getMonthScore().getCurrentMonth() == null || 
-                !book.getMonthScore().getCurrentMonth().equals(currentMonth)) {
-                // New month - reset the score
+            BookDocument.MonthScore currentScore = book.getMonthScore();
+
+            // Check for month transition or missing data
+            boolean isNewMonth = currentScore == null || 
+                                currentScore.getCurrentMonth() == null || 
+                                !currentScore.getCurrentMonth().equals(currentMonth);
+
+            if (isNewMonth) {
+                // New Month: Full reset
                 BookDocument.MonthScore newScore = new BookDocument.MonthScore();
                 newScore.setCurrentMonth(currentMonth);
-                newScore.setRatingCount(countDelta > 0 ? countDelta : 0);
-                newScore.setSumRating(ratingDelta > 0 ? ratingDelta : 0);
-                newScore.setRating(ratingDelta > 0 ? (double) ratingDelta : 0.0);
+                
+                // Initialize values (prevent negatives on reset)
+                newScore.setRatingCount(Math.max(countDelta, 0));
+                newScore.setSumRating(Math.max(ratingDelta, 0));
                 
                 update.set("month_score", newScore);
             } else {
-                // Same month - increment
+                // Same Month: Atomic increment
                 update.inc("month_score.rating_count", countDelta);
                 update.inc("month_score.sum_rating", ratingDelta);
-                
-                // Recalculate average
-                int newCount = book.getMonthScore().getRatingCount() + countDelta;
-                int newSum = book.getMonthScore().getSumRating() + ratingDelta;
-                
-                if (newCount > 0) {
-                    double newAvg = (double) newSum / newCount;
-                    update.set("month_score.rating", newAvg);
-                } else {
-                    // Reset if no reviews this month
-                    update.set("month_score.rating", 0.0);
-                }
             }
             
             mongoTemplate.updateFirst(query, update, BookDocument.class);
-            logger.info("Updated month score for book: {}", bookId);
+            logger.info("Updated month score stats for book: {}", bookId);
         }
     }
 

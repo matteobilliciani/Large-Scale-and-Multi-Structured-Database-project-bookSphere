@@ -1,6 +1,7 @@
 package it.unipi.bookSphere.service;
 
 import it.unipi.bookSphere.dto.BookDTO;
+import it.unipi.bookSphere.exceptions.BookArchivedException;
 import it.unipi.bookSphere.exceptions.BookNotFoundException;
 import it.unipi.bookSphere.mapper.BookMapper;
 import it.unipi.bookSphere.model.mongodb.BookDocument;
@@ -21,7 +22,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
-import java.util.Optional;
 
 /**
  * Admin service for managing books in the catalog.
@@ -71,7 +71,7 @@ public class AdminBookService {
         
         // 1. Create book in MongoDB
         BookDocument bookDocument = bookMapper.toDocument(bookDTO);
-        bookDocument.setStatus("ACTIVE");
+        //bookDocument.setStatus("ACTIVE");
         bookDocument.setSource("admin");
         
         // Initialize empty lists if not present
@@ -81,6 +81,8 @@ public class AdminBookService {
         if (bookDocument.getStatsPerYear() == null) {
             bookDocument.setStatsPerYear(new ArrayList<>());
         }
+
+        bookDocument.setAvailability("ACTIVE");
         
         BookDocument savedBook = bookRepository.save(bookDocument);
         logger.info("Book created in MongoDB with ID: {}", savedBook.getId());
@@ -164,7 +166,12 @@ public class AdminBookService {
         // 1. Find existing book in MongoDB
         BookDocument existingBook = bookRepository.findById(id)
                 .orElseThrow(() -> new BookNotFoundException("Book not found with ID: " + id));
-        
+
+        //IF book is archived can t be updated
+        if(existingBook.getAvailability().equals("ARCHIVED")){
+            throw new BookArchivedException("Book is archived with ID: " + id);
+        }
+
         // Track if author or genres have changed to update relationships
         boolean authorChanged = false;
         boolean genresChanged = false;
@@ -287,8 +294,13 @@ public class AdminBookService {
         // 1. Soft delete in MongoDB (set status to ARCHIVED)
         BookDocument book = bookRepository.findById(id)
                 .orElseThrow(() -> new BookNotFoundException("Book not found with ID: " + id));
+
+        //Book already archived
+        if(book.getAvailability().equals("ARCHIVED")){
+            throw new BookArchivedException("Book is archived with ID: " + id);
+        }
         
-        book.setStatus("ARCHIVED");
+        book.setAvailability("ARCHIVED");
         bookRepository.save(book);
         logger.info("Book archived in MongoDB: {}", book.getTitle());
         

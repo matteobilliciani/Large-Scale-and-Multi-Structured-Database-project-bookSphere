@@ -136,7 +136,7 @@ public interface BookNodeRepository extends Neo4jRepository<BookNode, String> {
         WITH reviewer, liker
         WITH collect(DISTINCT reviewer) + collect(DISTINCT liker) AS users
         UNWIND users AS u
-        WITH u WHERE u IS NOT NULL AND u.country IS NOT NULL
+        WITH u WHERE u IS NOT NULL AND u.country IS NOT NULL AND u.username <> ""
         RETURN u.country AS country, count(DISTINCT u.mongoId) AS uniqueUsers, count(*) AS totalInteractions
         ORDER BY uniqueUsers DESC
         """)

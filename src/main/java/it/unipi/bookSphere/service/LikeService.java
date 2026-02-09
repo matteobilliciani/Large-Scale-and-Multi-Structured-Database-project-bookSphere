@@ -5,11 +5,6 @@ import it.unipi.bookSphere.exceptions.*;
 import it.unipi.bookSphere.model.mongodb.AuthorDocument;
 import it.unipi.bookSphere.model.mongodb.BookDocument;
 import it.unipi.bookSphere.model.mongodb.Review;
-import it.unipi.bookSphere.model.neo4j.AuthorNode;
-import it.unipi.bookSphere.model.neo4j.BookNode;
-import it.unipi.bookSphere.model.neo4j.GenreNode;
-import it.unipi.bookSphere.model.neo4j.ReviewNode;
-import it.unipi.bookSphere.model.neo4j.UserNode;
 import it.unipi.bookSphere.repository.mongo.*;
 import it.unipi.bookSphere.repository.neo4j.*;
 import it.unipi.bookSphere.utils.NormalizationUtils;
@@ -69,6 +64,11 @@ public class LikeService {
         // Validate book exists
         BookDocument book = bookRepository.findById(bookId)
                 .orElseThrow(() -> new BookNotFoundException("Book not found with ID: " + bookId));
+
+        //Book is ARCHIVED SHOULD NOT be appear on neo4j but we check to not create a new one
+        if(book.getAvailability().equals("ARCHIVED")){
+            throw new BookArchivedException("Book is archived: " + bookId);
+        }
         
         // Get or create UserNode using repository method
         userNodeRepository.getOrCreate(currentUserId, SecurityUtils.getCurrentUsername(), null);
@@ -131,7 +131,7 @@ public class LikeService {
         userNodeRepository.getOrCreate(currentUserId, SecurityUtils.getCurrentUsername(), null);
         
         // Get ReviewNode
-        ReviewNode reviewNode = reviewNodeRepository.findByMongoId(reviewId)
+        reviewNodeRepository.findByMongoId(reviewId)
                 .orElseThrow(() -> new ReviewNotFoundException("ReviewNode not found in Neo4j"));
         
         // Check if already liked using repository method
@@ -262,6 +262,11 @@ public class LikeService {
         // Validate author exists in MongoDB
         AuthorDocument author = authorRepository.findById(authorId)
                 .orElseThrow(() -> new AuthorNotFoundException("Author not found with ID: " + authorId));
+
+        //Author is ARCHIVED SHOULD NOT appear in neo4j and we dont want to create a new one
+        if(author.getStatus().equals("ARCHIVED")){
+            throw new AuthorArchivedException("Author archived with ID: " + authorId);
+        }
         
         // Get or create UserNode using repository method
         userNodeRepository.getOrCreate(currentUserId, SecurityUtils.getCurrentUsername(), null);
@@ -316,6 +321,7 @@ public class LikeService {
         }
         
         // Query Neo4j using repository method
+        // Should not return ARCHIVED book
         List<Map<String, Object>> results = bookNodeRepository.getLikedBooksByUser(currentUserId);
         
         List<BookDTO> likedBooks = new ArrayList<>();
@@ -340,6 +346,7 @@ public class LikeService {
         }
         
         // Query Neo4j using repository method
+        // Should not return ARCHIVED author
         List<Map<String, Object>> results = authorNodeRepository.getLikedAuthorsByUser(currentUserId);
         
         List<AuthorDTO> likedAuthors = new ArrayList<>();
@@ -438,9 +445,7 @@ public class LikeService {
             snapshot.setUserId(review.getUserId());
             snapshot.setUsername(review.getUsername());
             snapshot.setRating(review.getRating());
-            snapshot.setSnippet(review.getText() != null && review.getText().length() > 100 
-                ? review.getText().substring(0, 100) + "..." 
-                : review.getText());
+            snapshot.setSummary(review.getSummary());
             snapshot.setNumOfLike(review.getLikesCount());
             snapshot.setDate(review.getCreatedAt());
             snapshots.add(snapshot);

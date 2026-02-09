@@ -1,6 +1,7 @@
 package it.unipi.bookSphere.repository.mongo;
 
 import it.unipi.bookSphere.model.mongodb.AuthorDocument;
+
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
@@ -13,6 +14,14 @@ import java.util.Optional;
 @Repository
 public interface AuthorRepository extends MongoRepository<AuthorDocument, String> {
     
+    /**
+     * Find author by id
+     * 
+     * @param id IDs
+     * @return Author if found
+     */
+    Optional<AuthorDocument> findById(String id);
+
     /**
      * Find author by name (exact match)
      * 

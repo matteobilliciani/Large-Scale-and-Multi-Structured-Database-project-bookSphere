@@ -1057,13 +1057,13 @@ public class ComprehensiveApiTest {
         assertNull(user.getEmail(), "Email should be removed from MongoDB");
         System.out.println("✓ User anonymized in MongoDB (status=deleted, username=null)");
 
-        // Verify Neo4j - UserNode should REMAIN but with username set to ANONYMOUS
+        // Verify Neo4j - UserNode should REMAIN but with username set to ""
         // According to documentation: interactions must remain accessible, node stays
         Optional<UserNode> userNodeOpt = userNodeRepository.findByMongoId(testUserId3);
         assertTrue(userNodeOpt.isPresent(), "UserNode should still exist in Neo4j (interactions must remain)");
         UserNode userNode = userNodeOpt.get();
-        assertEquals("ANONYMOUS", userNode.getUsername(), "Username should be set to ANONYMOUS in Neo4j");
-        System.out.println("✓ UserNode anonymized in Neo4j (username=ANONYMOUS, node preserved)");
+        assertEquals("", userNode.getUsername(), "Username should be set to \"\" in Neo4j");
+        System.out.println("✓ UserNode anonymized in Neo4j (username=\"\", node preserved)");
 
         System.out.println("========== DELETE ACCOUNT TEST PASSED ==========\n");
     }

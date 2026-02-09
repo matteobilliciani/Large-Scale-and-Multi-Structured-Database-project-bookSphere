@@ -3,6 +3,7 @@ package it.unipi.bookSphere.service;
 import it.unipi.bookSphere.dto.ReviewDTO;
 import it.unipi.bookSphere.dto.UserDTO;
 import it.unipi.bookSphere.exceptions.ReviewNotFoundException;
+import it.unipi.bookSphere.exceptions.UserAlreadyBannedException;
 import it.unipi.bookSphere.exceptions.UserNotFoundException;
 import it.unipi.bookSphere.mapper.ReviewMapper;
 import it.unipi.bookSphere.mapper.UserMapper;
@@ -34,9 +35,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.util.Date;
 import java.util.List;
-import java.util.Optional;
+
 
 /**
  * Admin service for content moderation and user management.
@@ -147,18 +147,23 @@ public class AdminModerationService {
         // 1. STRICT: Update user status in MongoDB
         RegisteredUser user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + userId));
+
+        //User already banned
+        if(user.getStatus().equals("BANNED")){
+            throw new UserAlreadyBannedException("User already banned with ID: " + userId);
+        }
         
         user.setStatus("BANNED");
+        user.setUsername(null);
         userRepository.save(user);
         logger.info("User status set to BANNED in MongoDB");
         
         try {
-            // 2. STRICT: Add BannedUser label in Neo4j
-            userNodeRepository.addBannedLabel(userId);
-            logger.info("BannedUser label added in Neo4j");
+            // 2. STRICT: Dedlete User Node
+            deleteUserNode(userId);
             
             // 3. EVENTUAL: Mark all user's reviews as banned (asynchronous)
-            markUserReviewsAsBanned(userId);
+            removeUserReviews(user);
             
             // 4. EVENTUAL: Remove user's reviews from book snapshots (asynchronous)
             removeUserReviewsFromBookSnapshots(userId);
@@ -342,18 +347,28 @@ public class AdminModerationService {
      * Mark all user's reviews as banned (EVENTUAL - ASYNC)
      */
     @Async
-    private void markUserReviewsAsBanned(String userId) {
-        try {
-            logger.info("ASYNC: Marking all reviews from user {} as banned", userId);
+    private void removeUserReviews(RegisteredUser user) {
+        // 2. REUSE LOGIC: Delete all reviews associated with the user
+        // We create a copy of the list to avoid concurrent modification issues during iteration
+        List<String> userReviews = user.getReviews();
+        
+        if (userReviews != null && !userReviews.isEmpty()) {
+            logger.info("Deleting {} reviews for banned user {}", userReviews.size(), user.getId());
             
-            Query query = new Query(Criteria.where("user_id").is(userId));
-            Update update = new Update().set("is_banned", true);
+            // Create a safe copy of the IDs to iterate over
+            List<String> reviewsToDelete = List.copyOf(userReviews);
             
-            mongoTemplate.updateMulti(query, update, Review.class);
-            logger.info("ASYNC: User reviews marked as banned successfully");
-            
-        } catch (Exception e) {
-            logger.error("ASYNC: Failed to mark user reviews as banned", e);
+            for (String reviewId : reviewsToDelete) {
+                try {
+                    // Reuse existing strict consistency logic
+                    deleteReview(reviewId);
+                } catch (ReviewNotFoundException e) {
+                    logger.warn("Review {} already deleted or not found during ban process", reviewId);
+                } catch (Exception e) {
+                    logger.error("Error deleting review {} during user ban. Continuing...", reviewId, e);
+                    // We continue the loop to ensure we delete as much as possible
+                }
+            }
         }
     }
 
@@ -391,5 +406,14 @@ public class AdminModerationService {
         } catch (Exception e) {
             logger.error("ASYNC: Failed to remove user reviews from book snapshots", e);
         }
+    }
+
+    /**
+     * Delete user node form Neo4j (ASYNC)
+     */
+    @Async
+    private void deleteUserNode(String userId){
+        userNodeRepository.deleteByMongoId(userId);
+            logger.info("Deleted user Node");
     }
 }

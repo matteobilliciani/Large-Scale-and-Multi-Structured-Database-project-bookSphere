@@ -126,6 +126,7 @@ public class RegisteredUserIntegrationTest {
         author.setName("Test Author " + System.currentTimeMillis());
         author.setRatingsCount(0);
         author.setSumRatings(0);
+        author.setStatus("ACTIVE");
         author = authorRepository.save(author);
         testAuthorId = author.getId();
         System.out.println("✓ Created test author: " + testAuthorId);
@@ -142,6 +143,7 @@ public class RegisteredUserIntegrationTest {
         book.setAuthor(bookAuthor);
         
         book.setGenres(List.of(TEST_GENRE, "Fiction"));
+        book.setAvailability("ACTIVE");
         book = bookRepository.save(book);
         testBookId = book.getId();
         System.out.println("✓ Created test book: " + testBookId);
@@ -242,7 +244,7 @@ public class RegisteredUserIntegrationTest {
         assertTrue(book.getReviews().contains(testReviewId), "Book should contain review ID");
         assertNotNull(book.getMonthScore(), "Month score should be initialized");
         assertTrue(book.getMonthScore().getRatingCount() >= 1, "Month score count should be updated");
-        System.out.println("✓ Book statistics updated (month_score: " + book.getMonthScore().getRating() + ")");
+        System.out.println("✓ Book statistics updated (month_score: " + book.getMonthScore().getSumRating()/book.getMonthScore().getRatingCount() + ")");
 
         // Verify author statistics updated
         Optional<AuthorDocument> authorOpt = authorRepository.findById(testAuthorId);
