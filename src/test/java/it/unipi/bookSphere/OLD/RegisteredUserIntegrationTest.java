@@ -1,4 +1,4 @@
-package it.unipi.bookSphere;
+package it.unipi.bookSphere.OLD;
 
 import it.unipi.bookSphere.dto.*;
 import it.unipi.bookSphere.model.mongodb.*;
@@ -7,13 +7,13 @@ import it.unipi.bookSphere.repository.mongo.*;
 import it.unipi.bookSphere.repository.neo4j.*;
 import it.unipi.bookSphere.service.*;
 import it.unipi.bookSphere.utils.UserPrincipal;
+import it.unipi.bookSphere.TestProfile;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.test.context.ActiveProfiles;
 
 import java.time.Instant;
 import java.util.List;
@@ -35,7 +35,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * - Edge cases and boundary conditions
  */
 @SpringBootTest
-@ActiveProfiles("clusterWSL")
+@TestProfile
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class RegisteredUserIntegrationTest {
 
@@ -388,8 +388,8 @@ public class RegisteredUserIntegrationTest {
     void testAddToBookshelf() {
         System.out.println("\n=== TEST 8: Adding book to bookshelf ===");
 
-        bookshelfService.addBookToBookshelf(testBookId, "want_to_read");
-        System.out.println("✓ Added book to bookshelf with status: want_to_read");
+        bookshelfService.addBookToBookshelf(testBookId, "to_read");
+        System.out.println("✓ Added book to bookshelf with status: to_read");
 
         // Verify MongoDB
         Optional<RegisteredUser> userOpt = userRepository.findById(testUserId);

@@ -1,6 +1,7 @@
 package it.unipi.bookSphere.repository.neo4j;
 
 import it.unipi.bookSphere.model.neo4j.UserNode;
+import it.unipi.bookSphere.repository.neo4j.projections.UserFollowProjection;
 import it.unipi.bookSphere.repository.neo4j.projections.RecommendationProjection;
 import org.springframework.data.neo4j.repository.Neo4jRepository;
 import org.springframework.data.neo4j.repository.query.Query;
@@ -92,7 +93,7 @@ public interface UserNodeRepository extends Neo4jRepository<UserNode, String> {
                followed.country AS country, r.since AS since
         ORDER BY r.since DESC
         """)
-    List<Map<String, Object>> getFollowedUsers(@Param("userId") String userId);
+    List<UserFollowProjection> getFollowedUsers(@Param("userId") String userId);
     
     /**
      * Get all users followed by a user with pagination
@@ -104,7 +105,7 @@ public interface UserNodeRepository extends Neo4jRepository<UserNode, String> {
         ORDER BY r.since DESC
         SKIP $skip LIMIT $limit
         """)
-    List<Map<String, Object>> getFollowedUsers(
+    List<UserFollowProjection> getFollowedUsers(
         @Param("userId") String userId, 
         @Param("skip") long skip, 
         @Param("limit") int limit

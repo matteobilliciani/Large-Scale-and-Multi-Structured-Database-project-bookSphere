@@ -1,7 +1,9 @@
 package it.unipi.bookSphere.repository.neo4j;
 
 import it.unipi.bookSphere.model.neo4j.GenreNode;
+import it.unipi.bookSphere.repository.neo4j.projections.GenreLikeProjection;
 import it.unipi.bookSphere.repository.neo4j.projections.InfluencerProjection;
+import it.unipi.bookSphere.repository.neo4j.projections.AuthorLikeProjection;
 import it.unipi.bookSphere.utils.NormalizationUtils;
 import org.springframework.data.neo4j.repository.Neo4jRepository;
 import org.springframework.data.neo4j.repository.query.Query;
@@ -79,7 +81,7 @@ public interface GenreNodeRepository extends Neo4jRepository<GenreNode, String> 
         RETURN g.name AS name, r.timestamp AS timestamp
         ORDER BY r.timestamp DESC
         """)
-    List<Map<String, Object>> getLikedGenresByUser(@Param("userId") String userId);
+    List<GenreLikeProjection> getLikedGenresByUser(@Param("userId") String userId);
     
     /**
      * Get all genres liked by a user with pagination
@@ -90,7 +92,7 @@ public interface GenreNodeRepository extends Neo4jRepository<GenreNode, String> 
         ORDER BY r.timestamp DESC
         SKIP $skip LIMIT $limit
         """)
-    List<Map<String, Object>> getLikedGenresByUser(
+    List<GenreLikeProjection> getLikedGenresByUser(
         @Param("userId") String userId, 
         @Param("skip") long skip, 
         @Param("limit") int limit

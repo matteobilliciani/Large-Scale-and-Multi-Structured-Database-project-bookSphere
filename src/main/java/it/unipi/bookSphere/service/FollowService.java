@@ -7,6 +7,7 @@ import it.unipi.bookSphere.exceptions.UserNotFoundException;
 import it.unipi.bookSphere.model.mongodb.RegisteredUser;
 import it.unipi.bookSphere.repository.mongo.RegisteredUserRepository;
 import it.unipi.bookSphere.repository.neo4j.UserNodeRepository;
+import it.unipi.bookSphere.repository.neo4j.projections.UserFollowProjection;
 import it.unipi.bookSphere.utils.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -121,7 +122,14 @@ public class FollowService {
         userRepository.findById(targetUserId)
                 .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + targetUserId));
         
-        // 2. Remove FOLLOWS relationship using repository method
+        // 2. Check if currently following
+        boolean isFollowing = userNodeRepository.isFollowing(currentUserId, targetUserId);
+        
+        if (!isFollowing) {
+            throw new UserNotFoundException("You are not following this user");
+        }
+        
+        // 3. Remove FOLLOWS relationship using repository method
         Long deleted = userNodeRepository.deleteFollowsRelationship(currentUserId, targetUserId);
         
         if (deleted == 0) {
@@ -149,15 +157,15 @@ public class FollowService {
         
         // Query Neo4j for followed users using repository method
         // Should not return user that are not ACTIVE
-        List<Map<String, Object>> results = userNodeRepository.getFollowedUsers(currentUserId);
+        List<UserFollowProjection> results = userNodeRepository.getFollowedUsers(currentUserId);
         
         // Convert to DTOs
         List<UserDTO> followedUsers = new ArrayList<>();
-        for (Map<String, Object> result : results) {
+        for (UserFollowProjection result : results) {
             UserDTO dto = new UserDTO();
-            dto.setId((String) result.get("userId"));
-            dto.setUsername((String) result.get("username"));
-            dto.setCountry((String) result.get("country"));
+            dto.setId(result.userId());
+            dto.setUsername(result.username());
+            dto.setCountry(result.country());
             followedUsers.add(dto);
         }
         
@@ -188,18 +196,18 @@ public class FollowService {
         long skip = (long) page * size;
         
         // Query Neo4j for followed users with pagination
-        List<Map<String, Object>> results = userNodeRepository.getFollowedUsers(currentUserId, skip, size);
+        List<UserFollowProjection> results = userNodeRepository.getFollowedUsers(currentUserId, skip, size);
         
         // Get total count for pagination
         long total = userNodeRepository.countFollowedUsers(currentUserId);
         
         // Convert to DTOs
         List<UserDTO> followedUsers = new ArrayList<>();
-        for (Map<String, Object> result : results) {
+        for (UserFollowProjection result : results) {
             UserDTO dto = new UserDTO();
-            dto.setId((String) result.get("userId"));
-            dto.setUsername((String) result.get("username"));
-            dto.setCountry((String) result.get("country"));
+            dto.setId(result.userId());
+            dto.setUsername(result.username());
+            dto.setCountry(result.country());
             followedUsers.add(dto);
         }
         

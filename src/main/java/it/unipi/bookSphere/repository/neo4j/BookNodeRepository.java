@@ -1,6 +1,7 @@
 package it.unipi.bookSphere.repository.neo4j;
 
 import it.unipi.bookSphere.model.neo4j.BookNode;
+import it.unipi.bookSphere.repository.neo4j.projections.BookLikeProjection;
 import it.unipi.bookSphere.repository.neo4j.projections.InternationalityProjection;
 import org.springframework.data.neo4j.repository.Neo4jRepository;
 import org.springframework.data.neo4j.repository.query.Query;
@@ -78,7 +79,7 @@ public interface BookNodeRepository extends Neo4jRepository<BookNode, String> {
         RETURN b.mongoId AS bookId, b.title AS title, r.timestamp AS timestamp
         ORDER BY r.timestamp DESC
         """)
-    List<Map<String, Object>> getLikedBooksByUser(@Param("userId") String userId);
+    List<BookLikeProjection> getLikedBooksByUser(@Param("userId") String userId);
     
     /**
      * Get all books liked by a user with pagination
@@ -89,7 +90,7 @@ public interface BookNodeRepository extends Neo4jRepository<BookNode, String> {
         ORDER BY r.timestamp DESC
         SKIP $skip LIMIT $limit
         """)
-    List<Map<String, Object>> getLikedBooksByUser(
+    List<BookLikeProjection> getLikedBooksByUser(
         @Param("userId") String userId, 
         @Param("skip") long skip, 
         @Param("limit") int limit

@@ -1,4 +1,4 @@
-package it.unipi.bookSphere;
+package it.unipi.bookSphere.OLD;
 
 import it.unipi.bookSphere.dto.ReviewDTO;
 import it.unipi.bookSphere.exceptions.*;
@@ -9,13 +9,13 @@ import it.unipi.bookSphere.repository.neo4j.UserNodeRepository;
 import it.unipi.bookSphere.service.AdminModerationService;
 import it.unipi.bookSphere.service.ReviewService;
 import it.unipi.bookSphere.utils.UserPrincipal;
+import it.unipi.bookSphere.TestProfile;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.test.context.ActiveProfiles;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -25,7 +25,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
-@ActiveProfiles("clusterWSL")
+@TestProfile
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class AdminModerationServiceTest {
 

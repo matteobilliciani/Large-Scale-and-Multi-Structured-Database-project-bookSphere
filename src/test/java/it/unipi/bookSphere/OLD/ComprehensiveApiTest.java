@@ -1,4 +1,4 @@
-package it.unipi.bookSphere;
+package it.unipi.bookSphere.OLD;
 
 import it.unipi.bookSphere.dto.*;
 import it.unipi.bookSphere.model.mongodb.*;
@@ -7,13 +7,13 @@ import it.unipi.bookSphere.repository.mongo.*;
 import it.unipi.bookSphere.repository.neo4j.*;
 import it.unipi.bookSphere.service.*;
 import it.unipi.bookSphere.utils.UserPrincipal;
+import it.unipi.bookSphere.TestProfile;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.test.context.ActiveProfiles;
 
 
 import java.util.List;
@@ -49,7 +49,7 @@ import static org.junit.jupiter.api.Assertions.*;
  *    - Authorization checks
  */
 @SpringBootTest
-@ActiveProfiles("clusterWSL")
+@TestProfile
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class ComprehensiveApiTest {
 
@@ -855,8 +855,8 @@ public class ComprehensiveApiTest {
 
         setupSecurityContext(testUserId1, TEST_USERNAME_1);
 
-        bookshelfService.addBookToBookshelf(testBookId1, "want_to_read");
-        System.out.println("✓ Book added to bookshelf with status: want_to_read");
+        bookshelfService.addBookToBookshelf(testBookId1, "to_read");
+        System.out.println("✓ Book added to bookshelf with status: to_read");
 
         // Verify MongoDB
         Optional<RegisteredUser> userOpt = userRepository.findById(testUserId1);
@@ -879,8 +879,8 @@ public class ComprehensiveApiTest {
 
         setupSecurityContext(testUserId1, TEST_USERNAME_1);
 
-        bookshelfService.updateBookStatus(testBookId1, "currently_reading");
-        System.out.println("✓ Bookshelf status updated to: currently_reading");
+        bookshelfService.updateBookStatus(testBookId1, "reading");
+        System.out.println("✓ Bookshelf status updated to: reading");
 
         // Verify update
         Optional<RegisteredUser> userOpt = userRepository.findById(testUserId1);
@@ -890,7 +890,7 @@ public class ComprehensiveApiTest {
                 .filter(item -> item.getBookId().equals(testBookId1))
                 .findFirst();
         assertTrue(bookItem.isPresent());
-        assertEquals("currently_reading", bookItem.get().getStatus());
+        assertEquals("reading", bookItem.get().getStatus());
         System.out.println("✓ Bookshelf status updated verified");
 
         System.out.println("========== UPDATE BOOKSHELF STATUS TEST PASSED ==========\n");
@@ -908,8 +908,8 @@ public class ComprehensiveApiTest {
         System.out.println("✓ Second book added with status: read");
 
         setupSecurityContext(testUserId2, TEST_USERNAME_2);
-        bookshelfService.addBookToBookshelf(testBookId1, "want_to_read");
-        bookshelfService.addBookToBookshelf(testBookId2, "currently_reading");
+        bookshelfService.addBookToBookshelf(testBookId1, "to_read");
+        bookshelfService.addBookToBookshelf(testBookId2, "reading");
         System.out.println("✓ User2 added books to bookshelf");
 
         // Verify User1 has 2 books

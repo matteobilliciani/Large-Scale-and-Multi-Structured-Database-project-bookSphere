@@ -23,6 +23,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * Service for managing user bookshelf
@@ -55,7 +57,13 @@ public class BookshelfService {
             throw new UnauthorizedOperationException("User not authenticated");
         }
         
-        // 1. Validate book exists
+        // 1. Validate status
+        List<String> validStatuses = Arrays.asList("to_read", "reading", "read");
+        if (!validStatuses.contains(status)) {
+            throw new IllegalArgumentException("Invalid status. Must be one of: to_read, reading, read");
+        }
+        
+        // 2. Validate book exists
         BookDocument book = bookRepository.findById(bookId)
                 .orElseThrow(() -> new BookNotFoundException("Book not found with ID: " + bookId));
 
@@ -63,11 +71,11 @@ public class BookshelfService {
             throw new BookArchivedException("Book is archived: " + bookId);
         }
         
-        // 2. Validate user exists
+        // 3. Validate user exists
         RegisteredUser user = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + currentUserId));
         
-        // 3. Check if book already in bookshelf
+        // 4. Check if book already in bookshelf
         if (user.getBookshelf() != null) {
             boolean alreadyExists = user.getBookshelf().stream()
                     .anyMatch(item -> item.getBookId().equals(bookId));
@@ -76,7 +84,7 @@ public class BookshelfService {
             }
         }
         
-        // 4. Create BookshelfItem with extended reference pattern (denormalization)
+        // 5. Create BookshelfItem with extended reference pattern (denormalization)
         RegisteredUser.BookshelfItem item = new RegisteredUser.BookshelfItem();
         item.setBookId(bookId);
         item.setStatus(status);
@@ -94,7 +102,7 @@ public class BookshelfService {
         // Set genres
         item.setGenres(book.getGenres());
         
-        // 5. Add to bookshelf
+        // 6. Add to bookshelf
         Query query = new Query(Criteria.where("_id").is(currentUserId));
         Update update = new Update().addToSet("bookshelf", item);
         
@@ -119,17 +127,23 @@ public class BookshelfService {
             throw new UnauthorizedOperationException("User not authenticated");
         }
         
-        // 1. Validate user exists
+        // 1. Validate status
+        List<String> validStatuses = Arrays.asList("to_read", "reading", "read");
+        if (!validStatuses.contains(newStatus)) {
+            throw new IllegalArgumentException("Invalid status. Must be one of: to_read, reading, read");
+        }
+        
+        // 2. Validate user exists
         RegisteredUser user = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + currentUserId));
         
-        // 2. Check if book exists in bookshelf
+        // 3. Check if book exists in bookshelf
         if (user.getBookshelf() == null || user.getBookshelf().stream()
                 .noneMatch(item -> item.getBookId().equals(bookId))) {
             throw new BookNotFoundException("Book not found in bookshelf");
         }
         
-        // 3. Update status
+        // 4. Update status
         Query query = new Query(Criteria.where("_id").is(currentUserId)
                 .and("bookshelf.book_id").is(bookId));
         Update update = new Update().set("bookshelf.$.status", newStatus);
@@ -155,7 +169,17 @@ public class BookshelfService {
             throw new UnauthorizedOperationException("User not authenticated");
         }
         
-        // 1. Remove book from bookshelf
+        // 1. Validate user exists and book is in bookshelf
+        RegisteredUser user = userRepository.findById(currentUserId)
+                .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + currentUserId));
+        
+        // 2. Check if book exists in bookshelf
+        if (user.getBookshelf() == null || user.getBookshelf().stream()
+                .noneMatch(item -> item.getBookId().equals(bookId))) {
+            throw new BookNotFoundException("Book not found in bookshelf");
+        }
+        
+        // 3. Remove book from bookshelf
         Query query = new Query(Criteria.where("_id").is(currentUserId));
         Update update = new Update().pull("bookshelf", 
                 Query.query(Criteria.where("book_id").is(bookId)));

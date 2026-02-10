@@ -1,6 +1,7 @@
 package it.unipi.bookSphere.repository.neo4j;
 
 import it.unipi.bookSphere.model.neo4j.ReviewNode;
+import it.unipi.bookSphere.repository.neo4j.projections.ReviewLikeProjection;
 import org.springframework.data.neo4j.repository.Neo4jRepository;
 import org.springframework.data.neo4j.repository.query.Query;
 import org.springframework.data.repository.query.Param;
@@ -77,7 +78,7 @@ public interface ReviewNodeRepository extends Neo4jRepository<ReviewNode, String
         RETURN r.mongoId AS reviewId, r.rating AS rating, l.timestamp AS timestamp
         ORDER BY l.timestamp DESC
         """)
-    List<Map<String, Object>> getLikedReviewsByUser(@Param("userId") String userId);
+    List<ReviewLikeProjection> getLikedReviewsByUser(@Param("userId") String userId);
     
     /**
      * Get all reviews liked by a user with pagination
@@ -88,7 +89,7 @@ public interface ReviewNodeRepository extends Neo4jRepository<ReviewNode, String
         ORDER BY l.timestamp DESC
         SKIP $skip LIMIT $limit
         """)
-    List<Map<String, Object>> getLikedReviewsByUser(
+    List<ReviewLikeProjection> getLikedReviewsByUser(
         @Param("userId") String userId, 
         @Param("skip") long skip, 
         @Param("limit") int limit

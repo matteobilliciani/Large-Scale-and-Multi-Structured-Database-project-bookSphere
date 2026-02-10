@@ -49,9 +49,17 @@ public class ProfileService {
             throw new UnauthorizedOperationException("User not authenticated");
         }
         
-        // 1. Validate new username is not empty
+        // 1. Validate new username
         if (newUsername == null || newUsername.trim().isEmpty()) {
             throw new IllegalArgumentException("Username cannot be empty");
+        }
+        
+        if (newUsername.contains(" ")) {
+            throw new IllegalArgumentException("Username cannot contain spaces");
+        }
+        
+        if (newUsername.length() < 3) {
+            throw new IllegalArgumentException("Username must be at least 3 characters long");
         }
         
         // 2. Check if username is already taken

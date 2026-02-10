@@ -7,6 +7,7 @@ import it.unipi.bookSphere.model.mongodb.BookDocument;
 import it.unipi.bookSphere.model.mongodb.Review;
 import it.unipi.bookSphere.repository.mongo.*;
 import it.unipi.bookSphere.repository.neo4j.*;
+import it.unipi.bookSphere.repository.neo4j.projections.*;
 import it.unipi.bookSphere.service.async.AsyncLikeTasks;
 import it.unipi.bookSphere.utils.NormalizationUtils;
 import it.unipi.bookSphere.utils.SecurityUtils;
@@ -369,13 +370,13 @@ public class LikeService {
         
         // Query Neo4j using repository method
         // Should not return ARCHIVED book
-        List<Map<String, Object>> results = bookNodeRepository.getLikedBooksByUser(currentUserId);
+        List<BookLikeProjection> results = bookNodeRepository.getLikedBooksByUser(currentUserId);
         
         List<BookDTO> likedBooks = new ArrayList<>();
-        for (Map<String, Object> result : results) {
+        for (BookLikeProjection result : results) {
             BookDTO dto = new BookDTO();
-            dto.setId((String) result.get("bookId"));
-            dto.setTitle((String) result.get("title"));
+            dto.setId(result.bookId());
+            dto.setTitle(result.title());
             likedBooks.add(dto);
         }
         
@@ -399,16 +400,16 @@ public class LikeService {
         long skip = (long) page * size;
         
         // Query Neo4j with pagination
-        List<Map<String, Object>> results = bookNodeRepository.getLikedBooksByUser(currentUserId, skip, size);
+        List<BookLikeProjection> results = bookNodeRepository.getLikedBooksByUser(currentUserId, skip, size);
         
         // Get total count
         long total = bookNodeRepository.countLikedBooksByUser(currentUserId);
         
         List<BookDTO> likedBooks = new ArrayList<>();
-        for (Map<String, Object> result : results) {
+        for (BookLikeProjection result : results) {
             BookDTO dto = new BookDTO();
-            dto.setId((String) result.get("bookId"));
-            dto.setTitle((String) result.get("title"));
+            dto.setId(result.bookId());
+            dto.setTitle(result.title());
             likedBooks.add(dto);
         }
         
@@ -428,13 +429,13 @@ public class LikeService {
         
         // Query Neo4j using repository method
         // Should not return ARCHIVED author
-        List<Map<String, Object>> results = authorNodeRepository.getLikedAuthorsByUser(currentUserId);
+        List<AuthorLikeProjection> results = authorNodeRepository.getLikedAuthorsByUser(currentUserId);
         
         List<AuthorDTO> likedAuthors = new ArrayList<>();
-        for (Map<String, Object> result : results) {
+        for (AuthorLikeProjection result : results) {
             AuthorDTO dto = new AuthorDTO();
-            dto.setId((String) result.get("authorId"));
-            dto.setName((String) result.get("name"));
+            dto.setId(result.authorId());
+            dto.setName(result.name());
             likedAuthors.add(dto);
         }
         
@@ -458,16 +459,16 @@ public class LikeService {
         long skip = (long) page * size;
         
         // Query Neo4j with pagination
-        List<Map<String, Object>> results = authorNodeRepository.getLikedAuthorsByUser(currentUserId, skip, size);
+        List<AuthorLikeProjection> results = authorNodeRepository.getLikedAuthorsByUser(currentUserId, skip, size);
         
         // Get total count
         long total = authorNodeRepository.countLikedAuthorsByUser(currentUserId);
         
         List<AuthorDTO> likedAuthors = new ArrayList<>();
-        for (Map<String, Object> result : results) {
+        for (AuthorLikeProjection result : results) {
             AuthorDTO dto = new AuthorDTO();
-            dto.setId((String) result.get("authorId"));
-            dto.setName((String) result.get("name"));
+            dto.setId(result.authorId());
+            dto.setName(result.name());
             likedAuthors.add(dto);
         }
         
@@ -486,11 +487,11 @@ public class LikeService {
         }
         
         // Query Neo4j using repository method
-        List<Map<String, Object>> results = reviewNodeRepository.getLikedReviewsByUser(currentUserId);
+        List<ReviewLikeProjection> results = reviewNodeRepository.getLikedReviewsByUser(currentUserId);
         
         // Fetch full review details from MongoDB
         List<String> reviewIds = results.stream()
-                .map(r -> (String) r.get("reviewId"))
+                .map(ReviewLikeProjection::reviewId)
                 .toList();
         
         if (reviewIds.isEmpty()) {
@@ -531,14 +532,14 @@ public class LikeService {
         long skip = (long) page * size;
         
         // Query Neo4j with pagination
-        List<Map<String, Object>> results = reviewNodeRepository.getLikedReviewsByUser(currentUserId, skip, size);
+        List<ReviewLikeProjection> results = reviewNodeRepository.getLikedReviewsByUser(currentUserId, skip, size);
         
         // Get total count
         long total = reviewNodeRepository.countLikedReviewsByUser(currentUserId);
         
         // Fetch full review details from MongoDB
         List<String> reviewIds = results.stream()
-                .map(r -> (String) r.get("reviewId"))
+                .map(ReviewLikeProjection::reviewId)
                 .toList();
         
         List<ReviewDTO> likedReviews = new ArrayList<>();
@@ -572,12 +573,12 @@ public class LikeService {
         }
         
         // Query Neo4j using repository method
-        List<Map<String, Object>> results = genreNodeRepository.getLikedGenresByUser(currentUserId);
+        List<GenreLikeProjection> results = genreNodeRepository.getLikedGenresByUser(currentUserId);
         
         List<GenreDTO> likedGenres = new ArrayList<>();
-        for (Map<String, Object> result : results) {
+        for (GenreLikeProjection result : results) {
             GenreDTO dto = new GenreDTO();
-            dto.setName((String) result.get("name"));
+            dto.setName(result.name());
             likedGenres.add(dto);
         }
         
@@ -601,15 +602,15 @@ public class LikeService {
         long skip = (long) page * size;
         
         // Query Neo4j with pagination
-        List<Map<String, Object>> results = genreNodeRepository.getLikedGenresByUser(currentUserId, skip, size);
+        List<GenreLikeProjection> results = genreNodeRepository.getLikedGenresByUser(currentUserId, skip, size);
         
         // Get total count
         long total = genreNodeRepository.countLikedGenresByUser(currentUserId);
         
         List<GenreDTO> likedGenres = new ArrayList<>();
-        for (Map<String, Object> result : results) {
+        for (GenreLikeProjection result : results) {
             GenreDTO dto = new GenreDTO();
-            dto.setName((String) result.get("name"));
+            dto.setName(result.name());
             likedGenres.add(dto);
         }
         

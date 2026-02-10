@@ -1,4 +1,4 @@
-package it.unipi.bookSphere;
+package it.unipi.bookSphere.OLD;
 
 import it.unipi.bookSphere.dto.LoginDTO;
 import it.unipi.bookSphere.dto.RegisterDTO;
@@ -18,6 +18,10 @@ import org.springframework.test.context.ActiveProfiles;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * NOTE: This test uses @ActiveProfiles directly instead of @TestProfile
+ * because it requires multiple profiles: {"clusterWSL", "test-connection"}
+ */
 @SpringBootTest
 @ActiveProfiles({"clusterWSL", "test-connection"})
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
