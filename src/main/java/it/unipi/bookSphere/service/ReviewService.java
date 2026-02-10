@@ -28,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
 import java.time.ZoneOffset;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -105,7 +106,12 @@ public class ReviewService {
         BookDocument book = bookRepository.findById(reviewDTO.getBookId())
                 .orElseThrow(() -> new BookNotFoundException("Book not found with ID: " + reviewDTO.getBookId()));
         
-        // 2. Validate user exists
+        // 2. Validate book is not archived
+        if ("ARCHIVED".equals(book.getAvailability())) {
+            throw new BookArchivedException("Cannot review an archived book");
+        }
+
+        // 3. Validate user exists
         RegisteredUser user = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new UserNotFoundException("User not found with ID: " + currentUserId));
         
@@ -158,7 +164,7 @@ public class ReviewService {
             updateAuthorStatistics(book.getAuthor().getId(), savedReview.getRating());
             
             // 8. Update month score for trending (eventual consistency - ASYNC)
-            updateMonthScore(book.getId(), savedReview.getRating(), 1);
+            updateMonthScore(savedReview, savedReview.getRating(), 1);
             
         } catch (Exception e) {
             // Rollback MongoDB if Neo4j or updates fail
@@ -198,11 +204,20 @@ public class ReviewService {
             throw new UnauthorizedOperationException("You can only update your own reviews");
         }
         
+        // 3. Check if book is archived (if rating changes)
+        String bookId = existingReview.getBookSnapshot().getBookId();
+        if (reviewDTO.getRating() != null && !existingReview.getRating().equals(reviewDTO.getRating())) {
+            BookDocument book = bookRepository.findById(bookId)
+                    .orElseThrow(() -> new BookNotFoundException("Book not found"));
+            if ("ARCHIVED".equals(book.getAvailability())) {
+                throw new BookArchivedException("The book is now archived");
+            }
+        }
+
         // Store old values for stats update
         Integer oldRating = existingReview.getRating();
-        String bookId = existingReview.getBookSnapshot().getBookId();
         
-        // 3. Update fields
+        // 4. Update fields
         if (reviewDTO.getRating() != null) {
             existingReview.setRating(reviewDTO.getRating());
         }
@@ -219,37 +234,38 @@ public class ReviewService {
         try {
             // 4. Update ReviewNode in Neo4j
             updateReviewNode(reviewId, updatedReview.getRating());
-            
+        } catch (Exception e) {
+            logger.error("Failed to update review in Neo4j", e);
+        }
+        
+        try {
             // 5. Update book stats if rating changed (eventual consistency)
             if (reviewDTO.getRating() != null && !oldRating.equals(reviewDTO.getRating())) {
                 BookDocument book = bookRepository.findById(bookId)
                         .orElseThrow(() -> new BookNotFoundException("Book not found"));
                 
-                if(book.getAvailability().equals("ARCHIVED"))
-                    throw new BookArchivedException("The book is now archived");
-                
-                updateBookStatisticsAfterRatingChange(book, oldRating, updatedReview.getRating());
+                updateBookStatisticsAfterRatingChange(book, updatedReview, oldRating);
             }
-            
+        
             // 6. Update user reviews_year if rating changed
             if (reviewDTO.getRating() != null && !oldRating.equals(reviewDTO.getRating())) {
                 updateUserReviewRating(currentUserId, reviewId, updatedReview.getRating());
             }
-            
+        
             // 7. Update author statistics if rating changed (eventual consistency)
             if (reviewDTO.getRating() != null && !oldRating.equals(reviewDTO.getRating())) {
                 BookDocument book = bookRepository.findById(bookId)
                         .orElseThrow(() -> new BookNotFoundException("Book not found"));
                 updateAuthorStatisticsAfterRatingChange(book.getAuthor().getId(), oldRating, updatedReview.getRating());
             }
-            
+        
             // 8. Update month score if rating changed (eventual consistency - ASYNC)
             if (reviewDTO.getRating() != null && !oldRating.equals(reviewDTO.getRating())) {
-                updateMonthScoreAfterRatingChange(bookId, oldRating, updatedReview.getRating());
+                updateMonthScoreAfterRatingChange(updatedReview, oldRating);
             }
             
         } catch (Exception e) {
-            logger.error("Failed to update review in Neo4j or statistics", e);
+            logger.error("Failed to update statistics after review change", e);
             // Don't rollback MongoDB, log error and continue (eventual consistency will fix)
         }
         
@@ -299,7 +315,7 @@ public class ReviewService {
             // 5. Remove from book stats and snapshots (eventual consistency)
             BookDocument book = bookRepository.findById(bookId).orElse(null);
             if (book != null) {
-                removeReviewFromBookStatistics(book, rating, reviewId);
+                removeReviewFromBookStatistics(book, existingReview);
             }
             
             // 6. Remove from user reviews and reviews_year
@@ -312,7 +328,7 @@ public class ReviewService {
             
             // 8. Update month score after removal (eventual consistency - ASYNC)
             if (book != null) {
-                updateMonthScore(bookId, -rating, -1);
+                updateMonthScore(existingReview, -rating, -1);
             }
             
         } catch (Exception e) {
@@ -360,25 +376,25 @@ public class ReviewService {
      * - Adds review ID to reviews array
      */
     @Async
-    private void updateBookStatistics(BookDocument book, Review review) {
-        int currentYear = LocalDateTime.now().getYear();
+    protected void updateBookStatistics(BookDocument book, Review review) {
+        int reviewYear = review.getCreatedAt().atZone(ZoneOffset.UTC).getYear();
         
         Query query = new Query(Criteria.where("_id").is(book.getId()));
         Update update = new Update();
         
-        // 1. Update or create stats_per_year for current year
+        // 1. Update or create stats_per_year for review year
         boolean yearExists = book.getStatsPerYear() != null && 
-            book.getStatsPerYear().stream().anyMatch(s -> s.getYear().equals(currentYear));
+            book.getStatsPerYear().stream().anyMatch(s -> s.getYear().equals(reviewYear));
         
         if (yearExists) {
             // Increment existing year
             update.inc("stats_per_year.$[elem].ratings_count", 1);
             update.inc("stats_per_year.$[elem].sum_rating", review.getRating());
-            update.filterArray(Criteria.where("elem.year").is(currentYear));
+            update.filterArray(Criteria.where("elem.year").is(reviewYear));
         } else {
             // Add new year stat
             BookDocument.YearStat newStat = new BookDocument.YearStat();
-            newStat.setYear(currentYear);
+            newStat.setYear(reviewYear);
             newStat.setRatingsCount(1);
             newStat.setSumRating(review.getRating());
             
@@ -410,23 +426,23 @@ public class ReviewService {
      * Update book statistics after rating change (ASYNC)
      */
     @Async
-    private void updateBookStatisticsAfterRatingChange(BookDocument book, Integer oldRating, Integer newRating) {
-        int currentYear = LocalDateTime.now().getYear();
+    protected void updateBookStatisticsAfterRatingChange(BookDocument book, Review review, Integer oldRating) {
+        int reviewYear = review.getCreatedAt().atZone(ZoneOffset.UTC).getYear();
         
         Query query = new Query(Criteria.where("_id").is(book.getId()));
         Update update = new Update();
         
         // Update stats_per_year
         BookDocument.YearStat stat = book.getStatsPerYear().stream()
-            .filter(s -> s.getYear().equals(currentYear))
+            .filter(s -> s.getYear().equals(reviewYear))
             .findFirst()
             .orElse(null);
         
         if (stat != null) {
-            int newSum = stat.getSumRating() - oldRating + newRating;
+            int newSum = stat.getSumRating() - oldRating + review.getRating();
             
             update.set("stats_per_year.$[elem].sum_rating", newSum);
-            update.filterArray(Criteria.where("elem.year").is(currentYear));
+            update.filterArray(Criteria.where("elem.year").is(reviewYear));
             
             mongoTemplate.updateFirst(query, update, BookDocument.class);
             logger.info("Updated book statistics after rating change for book: {}", book.getId());
@@ -437,16 +453,18 @@ public class ReviewService {
      * Remove review from book statistics after deletion (ASYNC)
      */
     @Async
-    private void removeReviewFromBookStatistics(BookDocument book, Integer rating, String reviewId) {
-        int currentYear = LocalDateTime.now().getYear();
-        
+    protected void removeReviewFromBookStatistics(BookDocument book, Review review) {
+        int reviewYear = review.getCreatedAt().atZone(ZoneOffset.UTC).getYear();
+        Integer rating = review.getRating();
+        String reviewId = review.getId();
+
         Query query = new Query(Criteria.where("_id").is(book.getId()));
         Update update = new Update();
         
         // 1. Update stats_per_year
         BookDocument.YearStat stat = book.getStatsPerYear() != null 
             ? book.getStatsPerYear().stream()
-                .filter(s -> s.getYear().equals(currentYear))
+                .filter(s -> s.getYear().equals(reviewYear))
                 .findFirst()
                 .orElse(null)
             : null;
@@ -456,10 +474,10 @@ public class ReviewService {
             
             update.inc("stats_per_year.$[elem].ratings_count", -1);
             update.set("stats_per_year.$[elem].sum_rating", newSum);
-            update.filterArray(Criteria.where("elem.year").is(currentYear));
+            update.filterArray(Criteria.where("elem.year").is(reviewYear));
         } else if (stat != null && stat.getRatingsCount() == 1) {
             // Remove the year stat entirely
-            update.pull("stats_per_year", Query.query(Criteria.where("year").is(currentYear)));
+            update.pull("stats_per_year", Query.query(Criteria.where("year").is(reviewYear)));
         }
         
         // 2. Remove from snapshots  
@@ -527,7 +545,7 @@ public class ReviewService {
      * Update author statistics after new review (eventual consistency - ASYNC)
      */
     @Async
-    private void updateAuthorStatistics(String authorId, Integer rating) {
+    protected void updateAuthorStatistics(String authorId, Integer rating) {
         Query query = new Query(Criteria.where("_id").is(authorId));
         Update update = new Update();
         
@@ -543,7 +561,7 @@ public class ReviewService {
      * Update author statistics after rating change (eventual consistency - ASYNC)
      */
     @Async
-    private void updateAuthorStatisticsAfterRatingChange(String authorId, Integer oldRating, Integer newRating) {
+    protected void updateAuthorStatisticsAfterRatingChange(String authorId, Integer oldRating, Integer newRating) {
         Query query = new Query(Criteria.where("_id").is(authorId));
         Update update = new Update();
         
@@ -559,7 +577,7 @@ public class ReviewService {
      * Remove review from author statistics (eventual consistency - ASYNC)
      */
     @Async
-    private void removeReviewFromAuthorStatistics(String authorId, Integer rating) {
+    protected void removeReviewFromAuthorStatistics(String authorId, Integer rating) {
         Query query = new Query(Criteria.where("_id").is(authorId));
         Update update = new Update();
         
@@ -575,13 +593,21 @@ public class ReviewService {
      * Update month score for trending analysis (eventual consistency - ASYNC)
      * This is called when a new review is added or removed
      * 
-     * @param bookId The book ID
+     * @param review The review object
      * @param ratingDelta The rating change (positive for add, negative for remove)
      * @param countDelta The count change (1 for add, -1 for remove)
      */
     @Async
-    private void updateMonthScore(String bookId, Integer ratingDelta, Integer countDelta) {
-        String currentMonth = java.time.YearMonth.now().toString();
+    protected void updateMonthScore(Review review, Integer ratingDelta, Integer countDelta) {
+        String bookId = review.getBookSnapshot().getBookId();
+        String currentMonth = YearMonth.now().toString();
+        String reviewMonth = YearMonth.from(review.getCreatedAt().atZone(ZoneOffset.UTC)).toString();
+
+        if (!reviewMonth.equals(currentMonth)) {
+            logger.info("Skipping month score update for book {}: review made in {}, current month is {}", 
+                    bookId, reviewMonth, currentMonth);
+            return;
+        }
 
         Query query = new Query(Criteria.where("_id").is(bookId));
         
@@ -622,8 +648,8 @@ public class ReviewService {
      * Update month score after rating change (eventual consistency - ASYNC)
      */
     @Async
-    private void updateMonthScoreAfterRatingChange(String bookId, Integer oldRating, Integer newRating) {
-        int ratingDelta = newRating - oldRating;
-        updateMonthScore(bookId, ratingDelta, 0); // Count stays the same
+    protected void updateMonthScoreAfterRatingChange(Review review, Integer oldRating) {
+        int ratingDelta = review.getRating() - oldRating;
+        updateMonthScore(review, ratingDelta, 0); // Count stays the same
     }
 }
