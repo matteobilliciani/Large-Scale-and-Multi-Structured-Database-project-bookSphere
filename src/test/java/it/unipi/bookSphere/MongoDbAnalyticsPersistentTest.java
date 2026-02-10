@@ -37,7 +37,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * - Yearly Wrapped
  */
 @SpringBootTest
-@ActiveProfiles("local")
+@ActiveProfiles("clusterWSL")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class MongoDbAnalyticsPersistentTest {
 

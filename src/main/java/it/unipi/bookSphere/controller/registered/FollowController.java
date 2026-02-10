@@ -8,6 +8,7 @@ import it.unipi.bookSphere.dto.UserDTO;
 import it.unipi.bookSphere.service.FollowService;
 import it.unipi.bookSphere.utils.ValidationUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -54,11 +55,16 @@ public class FollowController {
 
     @Operation(
             summary = "Get followed users",
-            description = "Retrieve all users followed by the current user (friends). Queries Neo4j for FOLLOWS relationships."
+            description = "Retrieve all users followed by the current user (friends). Queries Neo4j for FOLLOWS relationships. Supports pagination."
     )
     @GetMapping("/friends")
-    public ResponseEntity<List<UserDTO>> getFollowedUsers() {
-        List<UserDTO> followedUsers = followService.getFollowedUsers();
+    public ResponseEntity<Page<UserDTO>> getFollowedUsers(
+            @Parameter(description = "Page number (0-indexed)", example = "0")
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @Parameter(description = "Page size", example = "20")
+            @RequestParam(name = "size", defaultValue = "20") int size
+    ) {
+        Page<UserDTO> followedUsers = followService.getFollowedUsers(page, size);
         return ResponseEntity.ok(followedUsers);
     }
 }

@@ -95,6 +95,31 @@ public interface UserNodeRepository extends Neo4jRepository<UserNode, String> {
     List<Map<String, Object>> getFollowedUsers(@Param("userId") String userId);
     
     /**
+     * Get all users followed by a user with pagination
+     */
+    @Query("""
+        MATCH (u:User {mongoId: $userId})-[r:FOLLOWS]->(followed:User)
+        RETURN followed.mongoId AS userId, followed.username AS username, 
+               followed.country AS country, r.since AS since
+        ORDER BY r.since DESC
+        SKIP $skip LIMIT $limit
+        """)
+    List<Map<String, Object>> getFollowedUsers(
+        @Param("userId") String userId, 
+        @Param("skip") long skip, 
+        @Param("limit") int limit
+    );
+    
+    /**
+     * Count followed users for pagination
+     */
+    @Query("""
+        MATCH (u:User {mongoId: $userId})-[:FOLLOWS]->(followed:User)
+        RETURN count(followed)
+        """)
+    long countFollowedUsers(@Param("userId") String userId);
+    
+    /**
      * Check if user A follows user B (alias for isFollowing for backward compatibility)
      */
     @Query("MATCH (a:User {mongoId: $userAId})-[r:FOLLOWS]->(b:User {mongoId: $userBId}) RETURN COUNT(r) > 0")

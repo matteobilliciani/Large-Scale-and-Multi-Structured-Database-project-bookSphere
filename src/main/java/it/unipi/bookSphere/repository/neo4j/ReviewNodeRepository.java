@@ -79,6 +79,30 @@ public interface ReviewNodeRepository extends Neo4jRepository<ReviewNode, String
         """)
     List<Map<String, Object>> getLikedReviewsByUser(@Param("userId") String userId);
     
+    /**
+     * Get all reviews liked by a user with pagination
+     */
+    @Query("""
+        MATCH (u:User {mongoId: $userId})-[l:LIKES]->(r:Review)
+        RETURN r.mongoId AS reviewId, r.rating AS rating, l.timestamp AS timestamp
+        ORDER BY l.timestamp DESC
+        SKIP $skip LIMIT $limit
+        """)
+    List<Map<String, Object>> getLikedReviewsByUser(
+        @Param("userId") String userId, 
+        @Param("skip") long skip, 
+        @Param("limit") int limit
+    );
+    
+    /**
+     * Count liked reviews for pagination
+     */
+    @Query("""
+        MATCH (u:User {mongoId: $userId})-[:LIKES]->(r:Review)
+        RETURN count(r)
+        """)
+    long countLikedReviewsByUser(@Param("userId") String userId);
+    
     // ========== REVIEW RELATIONSHIP METHODS ==========
     
     /**

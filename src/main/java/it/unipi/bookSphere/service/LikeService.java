@@ -13,6 +13,10 @@ import it.unipi.bookSphere.utils.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -377,6 +381,40 @@ public class LikeService {
         
         return likedBooks;
     }
+    
+    /**
+     * Get all books liked by current user with pagination
+     * 
+     * @param page Page number (0-indexed)
+     * @param size Page size
+     * @return Paginated list of liked books
+     */
+    @Retryable(retryFor = {RuntimeException.class}, maxAttempts = 3, backoff = @Backoff(delay = 1000, multiplier = 2))
+    public Page<BookDTO> getLikedBooks(int page, int size) {
+        String currentUserId = SecurityUtils.getCurrentUserId();
+        if (currentUserId == null) {
+            throw new UnauthorizedOperationException("User not authenticated");
+        }
+        
+        long skip = (long) page * size;
+        
+        // Query Neo4j with pagination
+        List<Map<String, Object>> results = bookNodeRepository.getLikedBooksByUser(currentUserId, skip, size);
+        
+        // Get total count
+        long total = bookNodeRepository.countLikedBooksByUser(currentUserId);
+        
+        List<BookDTO> likedBooks = new ArrayList<>();
+        for (Map<String, Object> result : results) {
+            BookDTO dto = new BookDTO();
+            dto.setId((String) result.get("bookId"));
+            dto.setTitle((String) result.get("title"));
+            likedBooks.add(dto);
+        }
+        
+        Pageable pageable = PageRequest.of(page, size);
+        return new PageImpl<>(likedBooks, pageable, total);
+    }
 
     /**
      * Get all authors liked by current user
@@ -401,6 +439,40 @@ public class LikeService {
         }
         
         return likedAuthors;
+    }
+    
+    /**
+     * Get all authors liked by current user with pagination
+     * 
+     * @param page Page number (0-indexed)
+     * @param size Page size
+     * @return Paginated list of liked authors
+     */
+    @Retryable(retryFor = {RuntimeException.class}, maxAttempts = 3, backoff = @Backoff(delay = 1000, multiplier = 2))
+    public Page<AuthorDTO> getLikedAuthors(int page, int size) {
+        String currentUserId = SecurityUtils.getCurrentUserId();
+        if (currentUserId == null) {
+            throw new UnauthorizedOperationException("User not authenticated");
+        }
+        
+        long skip = (long) page * size;
+        
+        // Query Neo4j with pagination
+        List<Map<String, Object>> results = authorNodeRepository.getLikedAuthorsByUser(currentUserId, skip, size);
+        
+        // Get total count
+        long total = authorNodeRepository.countLikedAuthorsByUser(currentUserId);
+        
+        List<AuthorDTO> likedAuthors = new ArrayList<>();
+        for (Map<String, Object> result : results) {
+            AuthorDTO dto = new AuthorDTO();
+            dto.setId((String) result.get("authorId"));
+            dto.setName((String) result.get("name"));
+            likedAuthors.add(dto);
+        }
+        
+        Pageable pageable = PageRequest.of(page, size);
+        return new PageImpl<>(likedAuthors, pageable, total);
     }
 
     /**
@@ -441,6 +513,53 @@ public class LikeService {
         
         return likedReviews;
     }
+    
+    /**
+     * Get all reviews liked by current user with pagination
+     * 
+     * @param page Page number (0-indexed)
+     * @param size Page size
+     * @return Paginated list of liked reviews
+     */
+    @Retryable(retryFor = {RuntimeException.class}, maxAttempts = 3, backoff = @Backoff(delay = 1000, multiplier = 2))
+    public Page<ReviewDTO> getLikedReviews(int page, int size) {
+        String currentUserId = SecurityUtils.getCurrentUserId();
+        if (currentUserId == null) {
+            throw new UnauthorizedOperationException("User not authenticated");
+        }
+        
+        long skip = (long) page * size;
+        
+        // Query Neo4j with pagination
+        List<Map<String, Object>> results = reviewNodeRepository.getLikedReviewsByUser(currentUserId, skip, size);
+        
+        // Get total count
+        long total = reviewNodeRepository.countLikedReviewsByUser(currentUserId);
+        
+        // Fetch full review details from MongoDB
+        List<String> reviewIds = results.stream()
+                .map(r -> (String) r.get("reviewId"))
+                .toList();
+        
+        List<ReviewDTO> likedReviews = new ArrayList<>();
+        if (!reviewIds.isEmpty()) {
+            List<Review> reviews = reviewRepository.findByIdIn(reviewIds);
+            
+            for (Review review : reviews) {
+                ReviewDTO dto = new ReviewDTO();
+                dto.setId(review.getId());
+                dto.setUsername(review.getUsername());
+                dto.setRating(review.getRating());
+                dto.setText(review.getText());
+                dto.setBookId(review.getBookSnapshot().getBookId());
+                dto.setBookTitle(review.getBookSnapshot().getTitle());
+                likedReviews.add(dto);
+            }
+        }
+        
+        Pageable pageable = PageRequest.of(page, size);
+        return new PageImpl<>(likedReviews, pageable, total);
+    }
 
     /**
      * Get all genres liked by current user
@@ -463,6 +582,39 @@ public class LikeService {
         }
         
         return likedGenres;
+    }
+    
+    /**
+     * Get all genres liked by current user with pagination
+     * 
+     * @param page Page number (0-indexed)
+     * @param size Page size
+     * @return Paginated list of liked genres
+     */
+    @Retryable(retryFor = {RuntimeException.class}, maxAttempts = 3, backoff = @Backoff(delay = 1000, multiplier = 2))
+    public Page<GenreDTO> getLikedGenres(int page, int size) {
+        String currentUserId = SecurityUtils.getCurrentUserId();
+        if (currentUserId == null) {
+            throw new UnauthorizedOperationException("User not authenticated");
+        }
+        
+        long skip = (long) page * size;
+        
+        // Query Neo4j with pagination
+        List<Map<String, Object>> results = genreNodeRepository.getLikedGenresByUser(currentUserId, skip, size);
+        
+        // Get total count
+        long total = genreNodeRepository.countLikedGenresByUser(currentUserId);
+        
+        List<GenreDTO> likedGenres = new ArrayList<>();
+        for (Map<String, Object> result : results) {
+            GenreDTO dto = new GenreDTO();
+            dto.setName((String) result.get("name"));
+            likedGenres.add(dto);
+        }
+        
+        Pageable pageable = PageRequest.of(page, size);
+        return new PageImpl<>(likedGenres, pageable, total);
     }
 
 }

@@ -9,6 +9,9 @@ import it.unipi.bookSphere.repository.mongo.AuthorRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
@@ -82,5 +85,32 @@ public class AuthorService {
         return authors.stream()
                 .map(authorMapper::toDTO)
                 .collect(Collectors.toList());
+    }
+    
+    /**
+     * Search authors by name with pagination (partial matching)
+     * 
+     * @param name Author name to search
+     * @param page Page number (0-indexed)
+     * @param size Page size
+     * @return Page of matching authors
+     */
+    @Retryable(
+        retryFor = {RuntimeException.class},
+        maxAttempts = 3,
+        backoff = @Backoff(delay = 1000, multiplier = 2)
+    )
+    public Page<AuthorDTO> searchByName(String name, int page, int size) {
+        logger.info("Searching authors by name: {} (page: {}, size: {})", name, page, size);
+        
+        Pageable pageable = PageRequest.of(page, size);
+        // Filter ARCHIVED authors at query level for accurate pagination
+        Page<AuthorDocument> authors = authorRepository.findByNameContainingIgnoreCaseAndStatusNot(name, "ARCHIVED", pageable);
+        
+        // Map to DTO and filter is applied by repository/database level for better performance
+        Page<AuthorDTO> result = authors.map(authorMapper::toDTO);
+        
+        logger.info("Found {} authors matching '{}' on page {}", result.getNumberOfElements(), name, page);
+        return result;
     }
 }

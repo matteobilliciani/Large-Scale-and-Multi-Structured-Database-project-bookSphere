@@ -21,11 +21,11 @@ public class ReviewController {
 
     @Operation(
             summary = "Get reviews by IDs",
-            description = "Retrieve multiple reviews given a list of review IDs. Used to fetch all reviews for a book or user."
+            description = "Retrieve multiple reviews given a list of review IDs. Used to fetch all reviews for a book or user. Maximum 100 IDs per request."
     )
     @GetMapping
     public ResponseEntity<List<ReviewDTO>> getReviewsByIds(
-            @Parameter(description = "List of review IDs", example = "review=99a1...&review=99a2...&review=99a3...")
+            @Parameter(description = "List of review IDs (max 100)", example = "review=99a1...&review=99a2...&review=99a3...")
             @RequestParam(name = "review", required = true) List<String> reviewIds
     ) {
         List<ReviewDTO> reviews = reviewService.getReviewsByIds(reviewIds);

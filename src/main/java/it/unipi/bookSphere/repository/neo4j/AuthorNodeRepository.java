@@ -80,6 +80,30 @@ public interface AuthorNodeRepository extends Neo4jRepository<AuthorNode, String
         """)
     List<Map<String, Object>> getLikedAuthorsByUser(@Param("userId") String userId);
     
+    /**
+     * Get all authors liked by a user with pagination
+     */
+    @Query("""
+        MATCH (u:User {mongoId: $userId})-[r:LIKES]->(a:Author)
+        RETURN a.mongoId AS authorId, a.name AS name, r.timestamp AS timestamp
+        ORDER BY r.timestamp DESC
+        SKIP $skip LIMIT $limit
+        """)
+    List<Map<String, Object>> getLikedAuthorsByUser(
+        @Param("userId") String userId, 
+        @Param("skip") long skip, 
+        @Param("limit") int limit
+    );
+    
+    /**
+     * Count liked authors for pagination
+     */
+    @Query("""
+        MATCH (u:User {mongoId: $userId})-[:LIKES]->(a:Author)
+        RETURN count(a)
+        """)
+    long countLikedAuthorsByUser(@Param("userId") String userId);
+    
     // ========== WROTE RELATIONSHIP METHODS ==========
     
     /**

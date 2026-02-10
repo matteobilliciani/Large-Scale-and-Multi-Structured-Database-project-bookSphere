@@ -1,3 +1,6 @@
+
+
+
 LARGE-SCALE
 
 Colori:
@@ -5,7 +8,7 @@ Colori:
 -	Matteo Team Boxer
 -	Matteo Team Donna
 
-Platform introduction
+1.	Platform introduction[MB1.1][MB1.2]
 Welcome to BookSphere, the ultimate social platform for book lovers designed to help you organize your reading life and connect with a global community. Beyond simply searching for titles and authors, BookSphere allows you to curate your own digital library by marking books as "To-Read," "Reading," or "Read," ensuring you never lose track of your literary journey.
 The experience is deeply social and smart: you can follow friends to instantly see their latest updates and ratings or discover "Real Influencers" - expert reviewers identified by the quality of their engagement rather than just follower count - to get the best recommendations for your favourite genres. The platform goes beyond standard suggestions by offering unique insights, such as a "Trending Probability" that predicts the next viral hit and an "Internationality Index" that shows you how far a book is traveling around the globe. You can share your own voice by leaving one-to-one-hundred ratings and written reviews, and at the end of every year, you’ll receive a personalized "Yearly Wrapped" recap to celebrate your reading highlights, top authors, and most-read genres.
 
@@ -54,14 +57,14 @@ Admin
 4.	The System must allow an Admin to view any Registered User.
 5.	The System must enable an Admin to view any review.
 6.	The System must enable an Admin to delete any review.
-7.	The System must enable an Admin to ban any Registered User.
+7.	The System must enable an Admin to ban any Registered User[DP2.1].
 Non-Functional Requirements
 1.	The System must follow RESTful design principles
 2.	The System must avoid permanent data loss
 3.	The System must encrypt the Registered User’s password
 4.	The System must be highly available and fault tolerant.
 5.	The System must enforce Eventual Consistency between the Databases
-Analytics
+1	Analytics
 Queries
 
 Functional Requirement	Main Database	Secondary	UML Entities involved	Notes
@@ -92,199 +95,6 @@ o	Nella collezione books, usiamo l'array stats_per_year per pre-aggregare i voti
 o	Nella collezione books, manteniamo recent_reviews_snapshot (ultimi 3 voti). Questo permette di calcolare il Trending Score Real-Time e il Momentum direttamente in memoria, senza query storiche.
 ________________________________________
 
-Name	Description	Implementation
-Books and author ranking	AvgRating totale e per anno fatto da: somma delle stelle e contatore delle recensioni. Va tenuto aggiornato per ogni review aggiunta con eventual consistency. 
-a.	Rank books in descending rating order for a specified author/genre.
-b.	Find the highest rated books of a specific year, based on the reviews of that period (book publication year is not relevant).
-	Query 1: Ranking & Historical Analytics
-Obiettivo: Classifiche basate su dati storici aggregati (Bucket Pattern).
-1a. Ranking Libri per Autore (Media Storica Ponderata)
-Calcola la media esatta sommando i totali annuali.
-JavaScript
-db.books.aggregate([
-    { $match: { "author.name": "J.R.R. Tolkien" } },
-    { $addFields: {
-        // Calcolo media ponderata dai bucket annuali (Bucket Pattern)
-        hist_avg: { 
-            $cond: [
-                { $eq: [{ $sum: "$stats_per_year.ratings_count" }, 0] }, 
-                0, 
-                { $divide: [{ $sum: "$stats_per_year.sum_rating" }, { $sum: "$stats_per_year.ratings_count" }] }
-            ] 
-        }
-    }},
-    { $sort: { hist_avg: -1 } },
-    { $project: { title: 1, hist_avg: { $round: ["$hist_avg", 2] } } }
-]);
-1b. Top Libri dell'anno 2025
-Estrae chirurgicamente i dati del 2025 senza $unwind (usando $filter).
-JavaScript
-db.books.aggregate([
-    { $addFields: {
-        // Estrazione dati 2025 senza esplodere l'array
-        stats_25: { 
-            $arrayElemAt: [{ $filter: { input: "$stats_per_year", as: "s", cond: { $eq: ["$$s.year", 2025] } } }, 0] 
-        }
-    }},
-    { $match: { "stats_25.ratings_count": { $gte: 5 } } }, // Filtro significatività
-    { $sort: { "stats_25.average_rating": -1 } },
-    { $project: { title: 1, rating_2025: "$stats_25.average_rating" } },
-    { $limit: 10 }
-]);
-1c. Top Autori dell'anno 2025
-Aggrega i libri per trovare gli autori dominanti nell'anno corrente.
-JavaScript
-db.books.aggregate([
-    { $addFields: {
-        s25: { $arrayElemAt: [{ $filter: { input: "$stats_per_year", as: "s", cond: { $eq: ["$$s.year", 2025] } } }, 0] }
-    }},
-    { $match: { "s25": { $exists: true } } },
-    { $group: {
-        _id: "$author.name",
-        avg_rating: { $avg: "$s25.average_rating" },
-        total_votes: { $sum: "$s25.ratings_count" }
-    }},
-    { $match: { total_votes: { $gte: 10 } } }, 
-    { $sort: { avg_rating: -1 } },
-    { $limit: 5 }
-]);
-1d. Top Generi dell'anno 2025
-Richiede $unwind sui generi per il conteggio statistico corretto.
-JavaScript
-db.books.aggregate([
-    { $addFields: {
-        s25: { $arrayElemAt: [{ $filter: { input: "$stats_per_year", as: "s", cond: { $eq: ["$$s.year", 2025] } } }, 0] }
-    }},
-    { $match: { "s25": { $exists: true } } },
-    { $unwind: "$genres" }, 
-    { $group: {
-        _id: "$genres",
-        avg_rating: { $avg: "$s25.average_rating" },
-        books_count: { $sum: 1 }
-    }},
-    { $sort: { avg_rating: -1 } },
-    { $limit: 5 }
-]);
-________________________________________
-Yearly wrapped	Generate yearly wrapped that includes 
-a.	Highest and lowest rated books
-b.	Most read authors (from list)
-c.	Most read genres (from list)
-	Query 2: User Yearly Wrapped (2025)
-Obiettivo: Statistiche personali (Top Autori, Top Generi, Best Book).
-Ottimizzazione: Nessun JOIN grazie alla bookshelf arricchita. Uso di $facet per calcoli paralleli.
-JavaScript
-db.users.aggregate([
-    { $match: { username: "User_12345" } },
-
-    // 1. Best & Worst Book (da reviews_year embedded)
-    { $addFields: {
-        sorted_revs: { $sortArray: { input: "$reviews_year", sortBy: { rating: -1 } } }
-    }},
-    { $project: {
-        best_book: { $first: "$sorted_revs" },
-        worst_book: { $last: "$sorted_revs" },
-        // 2. Filtro Bookshelf per l'anno 2025 in memoria
-        books_2025: {
-            $filter: {
-                input: "$bookshelf", as: "b",
-                cond: { $and: [
-                    { $eq: ["$$b.status", "read"] },
-                    { $gte: ["$$b.added_at", ISODate("2025-01-01T00:00:00Z")] },
-                    { $lte: ["$$b.added_at", ISODate("2025-12-31T23:59:59Z")] }
-                ]}
-            }
-        }
-    }},
-    
-    // 3. Unwind necessario solo sui libri filtrati per contare le frequenze
-    { $unwind: "$books_2025" },
-    
-    // 4. Calcolo Parallelo Autori e Generi
-    { $facet: {
-        "top_authors": [
-            { $group: { _id: "$books_2025.author.name", count: { $sum: 1 } } },
-            { $sort: { count: -1 } }, { $limit: 3 }
-        ],
-        "top_genres": [
-            { $unwind: "$books_2025.genres" }, 
-            { $group: { _id: "$books_2025.genres", count: { $sum: 1 } } },
-            { $sort: { count: -1 } }, { $limit: 3 }
-        ],
-        "meta": [{ $limit: 1 }, { $project: { best_book: 1, worst_book: 1 } }]
-    }}
-]);
-________________________________________
-Popularity prediction	Popularity prediction of a book
-a.	Rating of the publications of the same author
-	Query 3: Author Popularity Prediction (Hybrid Model)
-Obiettivo: Predire il trend futuro (Rising/Falling).
-Logica: Combina la "Reputazione Storica" (60%) con il "Momentum Recente" (40%).
-JavaScript
-// Query 3: Popularity Prediction (Lightweight)
-// Target: Predire il trend per il libro "The Shining" di "Stephen King"
-
-db.books.aggregate([
-    // 1. Facet: Eseguiamo due calcoli rapidi in parallelo
-    { $facet: {
-        
-        // CALCOLO A: Media Storica dell'Autore (Requisito "a")
-        // Scansiona solo i libri di questo autore (veloce)
-        "author_stats": [
-            { $match: { "author.name": "Stephen King" } },
-            { $group: {
-                _id: null,
-                // Calcola la media pesata di tutti i suoi libri
-                avg_rating: { 
-                    $avg: { 
-                        $cond: [
-                            { $eq: [{ $sum: "$stats_per_year.ratings_count" }, 0] },
-                            0,
-                            { $divide: ["$stats_per_year.sum_rating", "$stats_per_year.ratings_count"] }
-                        ]
-                    }
-                }
-            }}
-        ],
-
-        // CALCOLO B: Momentum del Libro Target (Basato sul mese corrente)
-        "book_stats": [
-            { $match: { title: "The Shining" } },
-            { $project: { 
-                current_rating: "$month_score.rating",
-                current_activity: "$month_score.rating_count"
-            }}
-        ]
-    }},
-
-    // 2. Unione dei risultati
-    { $project: {
-        author_avg: { $arrayElemAt: ["$author_stats.avg_rating", 0] },
-        book_now:   { $arrayElemAt: ["$book_stats", 0] }
-    }},
-
-    // 3. Logica di Predizione (Confronto Diretto)
-    { $project: {
-        author_benchmark: { $round: ["$author_avg", 2] },
-        book_momentum:    { $ifNull: ["$book_now.current_rating", 0] },
-        
-        prediction: {
-            $switch: {
-                branches: [
-                    // Caso 1: Libro nuovo/inattivo questo mese -> Trend Incerto
-                    { case: { $eq: ["$book_now.current_activity", 0] }, then: "⏸️ STABLE (No recent data)" },
-                    
-                    // Caso 2: Il libro performa meglio del solito standard dell'autore (+5%)
-                    { case: { $gt: ["$book_now.current_rating", { $multiply: ["$author_avg", 1.05] }] }, then: "🚀 RISING STAR" },
-                    
-                    // Caso 3: Il libro performa peggio dello standard dell'autore (-5%)
-                    { case: { $lt: ["$book_now.current_rating", { $multiply: ["$author_avg", 0.95] }] }, then: "📉 UNDERPERFORMING" }
-                ],
-                default: "➡️ STABLE"
-            }
-        }
-    }}
-]);________________________________________
 Document Indexes (da definire quando le query sono implementate)
 Per ora GEMINI CONSIGLIA I SEGUENTI INDICI, e controllando hanno senso
 // --- BOOKS COLLECTION ---
@@ -353,24 +163,10 @@ RETURN u.country AS Country,
 ORDER BY UniqueUsers DESC
 ```
 
-**3. Most Popular Review:** Identify the most impactful review for a specific book based on community engagement.
-Find the most popular review for a specified book.
-	Locate `:Review` nodes connected to a specific `:Book` via `:REFER_TO` and find the one with the highest in-degree of `:LIKES` relationships.	#### 3. Most Popular Review for a Book
-```cypher
-MATCH (b:Book {title: "1984"})<-[:REFER_TO]-(r:Review)
-MATCH (r)<-[l:LIKES]-(u:User)
-RETURN r.mongoId AS ReviewID, 
-       r.rating AS Rating, 
-       count(l) AS LikeCount,
-       collect(u.username) AS LikedBy
-ORDER BY LikeCount DESC
-LIMIT 1
-```
-
 | **4. Genre Influencer:** Identify "Real Influencers" in a genre—users whose reviews consistently receive high engagement rather than just high volume.
 
 Identify influencer users for a specific genre
-"The Real Influencer" (Quality over Quantity)
+1.1.1.1	"The Real Influencer" (Quality over Quantity)
 Business Goal: "Chi sono gli utenti che dettano legge in un genere? Non chi ha più follower, ma chi scrive recensioni che ricevono più Like." Perché è Killer: Incrocia 4 entità diverse (Genre -> Book -> Review -> User).
 Cypher
 // Partiamo dal genere Fantasy
@@ -405,8 +201,6 @@ RETURN influencer.username AS Influencer,
 ORDER BY AvgLikesPerReview DESC
 LIMIT 5
 
-Find authors that have written books of different genres (versatility).
-	TO DO	TO DO
 
 GRAPH indexes
 GEMINI GIUSTAMENTE CONSIGLIA:
@@ -493,6 +287,7 @@ Book	User	Review	Author
   "title": "The Fellowship of the Ring",
   "publication_year": 1954,
   "description": "A gripping read...",
+"availability": "ACTIVE",
   "source": "amazon_master", // o "bookcrossing"
 
   // PATTERN: Extended Reference (Autore embeddato per evitare join in lettura)
@@ -515,7 +310,7 @@ Book	User	Review	Author
      “user_id”: ObjectId(“46…”),
       "username": "BookLover",
       "rating": 5,
-      "snippet": "Assolutamente incredibile...",
+      "summary": "Assolutamente incredibile...",
       "date": ISODate("2025-11-10T14:30:00Z")
     }
   ],
@@ -528,7 +323,7 @@ Book	User	Review	Author
       "username": "MarioRossi",
       "rating": 4,
       "num_of_like": 45, // Campo denormalizzato per ordinamento
-      "snippet": "Bello ma lungo...",
+      "summary": "Bello ma lungo...",
       "date": ISODate("2025-05-20T09:00:00Z")
     }
   ],
@@ -539,22 +334,18 @@ Book	User	Review	Author
   "stats_per_year": [
     {
       "year": 2023,
-      "average_rating": 4.2,
       "ratings_count": 150,
       "sum_rating": 630 // Accumulatore
     },
     {
       "year": 2024,
-      "average_rating": 4.5,
       "ratings_count": 200,
       "sum_rating": 900
     }
   ],
 
   // PATTERN: Current Monthly score
-  "month_score": {
-    "rating": 4.35,
-    “rating_count”: ,
+  "month_score": {    “rating_count”: ,
     “sum_rating”: ,
     "Current_Month”: 
   }
@@ -602,6 +393,8 @@ Book	User	Review	Author
 	{
   "_id": ObjectId("99a1..."),
   "user_id": ObjectId("65d1..."),
+//Opzionale
+“isBanned”: “true”
   “username”: “Mario”
   // Nota: book_id è rimosso dalla radice e spostato nello snapshot (scelta V5)
   
@@ -624,7 +417,7 @@ Book	User	Review	Author
 	{
   "_id": ObjectId("65b3a..."),
   "name": "J.R.R. Tolkien",
-  
+  “status”:”ACTIVE”
   // PATTERN: Extended Reference (Lista dei libri pubblicati)
   "published_books": [
     {
@@ -638,7 +431,6 @@ Book	User	Review	Author
   ],
 
   // PATTERN: Computed (Aggregazioni pre-calcolate da tutte le recensioni dei suoi libri)
-  "average_rating": 4.85,
   "ratings_count": 15000, // Totale voti ricevuti (Counter)
   "sum_ratings": 72750    // Somma voti (Accumulatore)
 }
@@ -689,7 +481,7 @@ REFER_TO	Review ➔ Book	(Nessuna)	-	Relazione strutturale pura.
 
 ```
 
-Restful API definition
+2	Restful API definition
 API Endpoint Specification - BookSphere Platform
 Queries + CRUD operations + analytics
 Path variables: identifica una risorsa specifica (es. ricerche per ID)
@@ -705,17 +497,18 @@ X	GET	/api/v1/books/{id}	pathVariable	Visualizza dettagli libro, snapshot recens
 X	GET	/api/v1/books?title = …	Query string	Ricerca il Libro dal titolo	MongoDB
 X	GET	/api/v1/authors/{id}	Author’s Id	Visualizza profilo autore, opere pubblicate e rating	MongoDB
 X	GET	/api/v1/authors?author_name = …	Query string	Ricerca Autore dal nome, opere pubblicate e rating	
-X	GET	/api/v1/users/username/{username}	Path Variable 	Visualizza profilo utente e attività (bookshelf e reviews dell’anno e lista delle reviewID)	Mongo
+X	GET	/api/v1/users/username/{username[DP3.1]}	Path Variable 	Visualizza profilo utente e attività (bookshelf e reviews dell’anno e lista delle reviewID)	Mongo
 X	GET	/api/v1/users/{id}	Path variable 	Ricerca utente per ID	
 X	GET	/api/v1/analytics/rankings/trendingbooks		Lista di Libri di tendenza	MongoDB
 X	GET	/api/v1/analytics/rankings/books?year = …	Query string 	Classifiche dei libri per un anno specifico o di sempre
 	MongoDB
-X	GET	/api/v1/analytics/rankings/authors?year = …	Query string	Classifiche degli autori per un anno specifico o di sempre	
-X	GET	/api/v1/ analytics/rankings/genres?year = …	Query string	Classifiche dei generi per un anno specifico o di sempre	
-X	GET	/api/v1/analytics/tpi/{bookId}	Path variable	Calcola il Trending Probability Index	MongoDB
+X	GET	/api/v1/analytics/rankings/books?year = …&author=…	Query string 	Classifiche dei libri per un anno specifico o di sempre di un certo genere	MongoDB
+X	GET	/api/v1/analytics/rankings?genre=…year = …&genre=…	Query string	Classifiche dei libri per un anno specifico o di sempre di un certo autore	MongoDB
+X	GET	/api/v1/analytics/rankings/authors	Query string	Classifiche degli autori di sempre	
 X	GET	/api/v1/analytics/versatility/{authId}	Path variable	Calcola Author Versatility Index	Neo4j
 X	GET	/api/v1/analytics/internationality/{book|authorID}	Path variable	Calcola Internationality Index (Book/Author)	Neo4j
 X	GET	/api/v1/analytics/influencers?genre=…	Query string	Identifica influencer per genere (Engagement)	Neo4j
+	GET	/api/analytics/[MI4.1][DP4.2]revaluation		Identifica i libri con maggior divario di rating tra primo e ultimo anno	MongoDB
 Registered User					
 X	POST	/api/v1/me/reviews	Auth + bookid + voto + commento (optional)	Scrittura di una recensione (voto + commento)	Mongo+Neo4j
 X	PATCH	/api/v1/me/reviews/{reviewID}	Auth + path variable + voto or commento (optional)	Modifica di una review postata precedentemente	Mongo+Neo4j
@@ -755,7 +548,7 @@ Administrator	POST	/api/v1/admin/books	Auth + corpo Book	Aggiunta di un nuovo li
 X	PUT	/api/v1/admin/books/{id}	Auth + corpo book modificato + path variable	Aggiornamento informazioni libro(Only master update)	MongoDB + Neo4J
 X	DELETE	/api/v1/admin/books/{id}	Auth + path variable	Rimozione di un libro dal sistema(Soft Delete)	MongoDB + Neo4J
 X	DELETE	/api/v1/admin/reviews/{id}	Auth + path variable	Moderazione: elimina recensione offensiva	Mongo + Neo
-X	PATCH	/api/v1/admin/users/{id}/ban	Auth + path variable + status banned	Ban di un utente dalla piattaforma	MongoDB
+X	PATCH	/api/v1/admin/users/{id}/ban	Auth + path variable + status banned	Ban di un utente dalla piattaforma set to “” in neo	MongoDB + NEO
 X	POST	/api/v1/admin/authors	Auth + authors’ information fields	Inserisci autore	Mongo + neo
 X	PUT	/api/v1/admin/authors/{id}	Auth + path variable + update author info	Aggiorna autor(Only Master Update)	Mongo + neo
 X	POST	/api/v1/admin/genres	Auth + corpo genre	Inserisci nuovo genere	Neo 
@@ -763,28 +556,28 @@ X	POST	/api/v1/admin/genres	Auth + corpo genre	Inserisci nuovo genere	Neo
 NEL CODICE CI SONO ANCHE LE API PER RITORNARE TUTTI GLI USER E REVIEW LE TENIAMO?
 
 
-Implementation
-Model
-Mongo
+3	Implementation
+3.1	Model
+3.1.1	Mongo
 For each collection we have modelled in a single java class an entity.
 
 
-Neo4j
+3.1.2	Neo4j
 For each node we have an entity, with their relation modelled inside each class representing the node.
 
 
-JWT
-Utils
+3.2	JWT
+3.2.1	Utils
 -	JWTUtils per validare ed estrarre claims JWT.
 -	UserPrincipal che rappresenta admin o user auntenticati.
 -	SecurityUtils ritorna l’utente corrente , UserPrincipal che rappresenta admin o user auntenticati (Il JWT andrebbe passato tra le funzioni, lo userPrincipal è salvato nel contesto).
-Config
+3.3	Config
 -	securityConfig: configurazione ruolo per ogni endpoint 
 -	jwtAuthFilter: filtro per la validazione dei token;
 -	jwtAuthEntryPoint: gestione errori di auth (401);
-DTO
+3.4	DTO
 -	AuthResponseDTO oggetto traferito in fase di register o login;
-Application.properies
+3.5	Application.properies
 -	Chiave jwt e relativa scadenza (24h) specificata
 Nel codice l’inserimento di uno user in neo4j è effettuato dentro una try ma per l’inserimento in mongo no.
 1. Ruolo dei Database nel Sistema
@@ -801,13 +594,13 @@ o	Non c'è bisogno di un try-catch manuale: l'eccezione interrompe il flusso e v
 •	Transazioni Separate: MongoDB e Neo4j usano transaction manager diversi (Spring Data MongoDB vs. Spring Data Neo4j). Il @Transactional copre solo MongoDB; per Neo4j, il controllo manuale è necessario per il rollback cross-database.
 •	Logging e Recupero: Il catch permette di loggare l'errore specifico e rilanciare un'eccezione più chiara (RuntimeException), facilitando il debugging.
 
-AUTHENTICATION: REGISTER e LOGIN
+3.6	AUTHENTICATION: REGISTER e LOGIN
 Nella Register l’operazione su mongodb non è in un try-catch mentre quella per neo4j sì perché
-MAPPER
+3.7	MAPPER
 Implementato via MapStruct.
-Spring Retry
+3.8	Spring Retry
 Abilitato in tutta l’applicazione, metodo dichiarato che ritenta più volte l’esecuzione di certe operazioni sul db  in caso di fallimento.
-SPRING-BOOT-STARTER-DATA-NEO4J instead of neo4j-java-driver
+3.8.1	SPRING-BOOT-STARTER-DATA-NEO4J instead of neo4j-java-driver
 Lo starter include il driver e integra spring con neo4j gestendo automaticamente le connessioni con l’application-properties.
 
 📋 ARCHITETTURA MANCANTE
@@ -817,12 +610,12 @@ Pattern Architetturali:
 3.	Processor Pattern - elaborazione asincrona
 4.	Notification System - sistema di notifiche
 
-CAP theorem
+4	CAP theorem
 We to prioritize the availability (we need to discuss it).
 On the primary we do the write, the read on the secondary.
 Mongo DB automatically managed the eventual consistency (w=majority), when set the replicas will be acknowledged of the writes before committed. 
 
-Eventual Consistency between Mongo and Neo4j
+5	Eventual Consistency between Mongo and Neo4j
 In order to guarantee the consistency between the DBs...
 •	Retryable
 •	getOrCreate: es. Dopo aver controllato che un utente esiste su MongoDB, su neo4j viene fatta get or create
@@ -1014,230 +807,527 @@ Logica Graph: Percorsi a 2-3 salti (FOLLOWS/LIKES, LIKES/WROTE, LIKES/BELONGS_TO
 2. Estrae i book_id con status "read".
 
 
-3. Passa questa lista come parametro $excludedMongoIds a Neo4j.	cypher<br>// PARAM: $username, $excludedMongoIds<br>MATCH (u:User {username: $username})<br><br>// Path A: Books liked by people I follow<br>OPTIONAL MATCH (u)-[:FOLLOWS]->(:User)-[:LIKES]->(b1:Book)<br><br>// Path B: Books written by authors I like<br>OPTIONAL MATCH (u)-[:LIKES]->(:Author)-[:WROTE]->(b2:Book)<br><br>// Path C: Books belonging to genres I like<br>OPTIONAL MATCH (u)-[:LIKES]->(:Genre)<-[:BELONGS_TO]-(b3:Book)<br><br>WITH collect(b1) + collect(b2) + collect(b3) AS recommendations, u<br>UNWIND recommendations AS book<br><br>// Filter out books reviewed OR read in Mongo Bookshelf<br>WHERE NOT (u)-[:POSTED]->(:Review)-[:REFER_TO]->(book)<br> AND NOT book.mongoId IN $excludedMongoIds<br><br>RETURN book.title, book.mongoId, count(*) AS score<br>ORDER BY score DESC<br>LIMIT 10<br>
-2. Internationality Index	Calcola "quanto viaggia" un libro/autore analizzando la provenienza geografica di chi mette Like o scrive recensioni.		#### 2. Internationality Index (Book/Author Travel)
-```cypher
-MATCH (target) 
-WHERE (target:Book {title: "The 
+3. Passa questa lista come parametro $excludedMongoIds a Neo4j.	MATCH (u:User {mongoId: $userId})
+        OPTIONAL MATCH (u)-[:FOLLOWS]->(:User)-[:LIKES]->(b1:Book)
+        OPTIONAL MATCH (u)-[:LIKES]->(:Author)-[:WROTE]->(b2:Book)
+        OPTIONAL MATCH (u)-[:LIKES]->(:Genre)<-[:BELONGS_TO]-(b3:Book)
+        WITH collect(b1) + collect(b2) + collect(b3) AS recommendations, u
+        UNWIND recommendations AS book
+        WITH u, book
+        WHERE NOT EXISTS((u)-[:POSTED]->(:Review)-[:REFER_TO]->(book)) AND book IS NOT NULL
+        WITH book, count(*) AS score
+        ORDER BY score DESC
+        LIMIT $limit
+        MATCH (a:Author)-[:WROTE]->(book)
+        RETURN book.mongoId AS bookId, 
+            book.title AS title, 
+            book.year AS publicationYear,
+            score,
+            collect(a.name) AS authors // Uso collect per evitare righe duplicate se ci sono più autori
 
-Name of the Rose"}) OR (target:Author {name: "Umberto Eco"})
-// Match users who interacted via Review or direct Like
-MATCH (u:User)-[:POSTED|LIKES]->(interaction)
-WHERE (interaction)-[:REFER_TO]->(target) OR interaction = target
-RETURN u.country AS Country, 
-       count(DISTINCT u) AS UniqueUsers, 
-       count(interaction) AS TotalInteractions
-ORDER BY UniqueUsers DESC
-```
+2. Internationality Index	Calcola "quanto viaggia" un libro/autore analizzando la provenienza geografica di chi mette Like o scrive recensioni.		#### 2. Internationality Index (Book Travel)
+MATCH (b:Book {mongoId: $bookId})
+        OPTIONAL MATCH (b)<-[:REFER_TO]-(r:Review)<-[:POSTED]-(reviewer:User)
+        OPTIONAL MATCH (b)<-[:LIKES]-(liker:User)
+        WITH reviewer, liker
+        WITH collect(DISTINCT reviewer) + collect(DISTINCT liker) AS users
+        UNWIND users AS u
+        WITH u WHERE u IS NOT NULL AND u.country IS NOT NULL
+        RETURN u.country AS country, count(DISTINCT u.mongoId) AS uniqueUsers, count(*) AS totalInteractions
+        ORDER BY uniqueUsers DESC
+
+//AUTHOR
+MATCH (a:Author {mongoId: $authorId})
+        OPTIONAL MATCH (a)<-[:LIKES]-(liker:User)
+        OPTIONAL MATCH (a)-[:WROTE]->(b:Book)<-[:REFER_TO]-(r:Review)<-[:POSTED]-(reviewer:User)
+        WITH liker, reviewer
+        WITH collect(DISTINCT liker) + collect(DISTINCT reviewer) AS users
+        UNWIND users AS u
+        WITH u WHERE u IS NOT NULL AND u.country IS NOT NULL
+        RETURN u.country AS country, count(DISTINCT u.mongoId) AS uniqueUsers, count(*) AS totalInteractions
+        ORDER BY uniqueUsers DESC
+
 
 4. Genre Influencer	Identifica i "Veri Influencer" in un genere (Quality over Quantity).
 
 
-Trova chi scrive review che ricevono molti Like in un dato genere.		cypher<br>// PARAM: $genreName (es. "Fantasy")<br>MATCH (g:Genre {name: $genreName})<-[:BELONGS_TO]-(b:Book)<-[:REFER_TO]-(r:Review)<-[:POSTED]-(influencer:User)<br><br>// Chi ha messo like alla review?<br>MATCH (r)<-[:LIKES]-(fan:User)<br><br>WITH influencer,<br> count(DISTINCT r) AS num_reviews,<br> count(fan) AS total_likes<br><br>// Filter for statistical relevance<br>WHERE num_reviews > 1<br><br>RETURN influencer.username AS Influencer,<br> total_likes AS TotalEngagement,<br> (toFloat(total_likes) / num_reviews) AS AvgLikesPerReview<br>ORDER BY AvgLikesPerReview DESC<br>LIMIT 5<br>
+Trova chi scrive review che ricevono molti Like in un dato genere.		//By a specific genre
+MATCH (g:Genre {name: $genreName})<-[:BELONGS_TO]-(b:Book)<-[:REFER_TO]-(r:Review)<-[:POSTED]-(influencer:User)
+        MATCH (r)<-[:LIKES]-(fan:User)
+        WITH influencer,
+             count(DISTINCT r) AS numReviews,
+             count(fan) AS totalLikes
+        WHERE numReviews > 3 AND u.username <> ""
+        RETURN influencer.username AS username,
+               totalLikes AS totalEngagement,
+               numReviews AS numReviews,
+               toFloat(totalLikes) / numReviews AS avgLikesPerReview
+        ORDER BY avgLikesPerReview DESC
+        LIMIT $limit
+
+//By all genre
+MATCH (r:Review)<-[:POSTED]-(influencer:User)
+        MATCH (r)<-[:LIKES]-(fan:User)
+        WITH influencer,
+             count(DISTINCT r) AS numReviews,
+             count(fan) AS totalLikes
+        WHERE numReviews > 5 AND u.username <> ""
+
+        RETURN influencer.username AS username,
+               totalLikes AS totalEngagement,
+               numReviews AS numReviews,
+               toFloat(totalLikes) / numReviews AS avgLikesPerReview
+        ORDER BY avgLikesPerReview DESC
+        LIMIT $limit
+
+
+
+WRAPPER DTO
+{
+  "stats": {
+    "total_books_read": 12,
+    "best_book": { "book": "Dune", "rating": 5, ... },
+    "worst_book": { "book": "Twilight", "rating": 1, ... }
+  },
+  "top_authors": [
+    { "_id": "Frank Herbert", "count": 3 },
+    { "_id": "Isaac Asimov", "count": 2 }
+  ],
+  "top_genres": [
+    { "_id": "Sci-Fi", "count": 5 },
+    { "_id": "Fantasy", "count": 2 }
+  ]
+}
+
+-Cambiato wrapper, ora usa le aggregation e mappa con mapper
+-Cambiato trend score ora vede il mese corrente
+-Fixato il ranking, ora usa aggregate e usa mapper+projection
+-Eliminato in raccomandazione l'interazione con mongo
+-aggiunto il ranking autore e per genere: per autore si potrebbe usare la lista di ID facendo un JOIN da applicazione
+-aggiunti i relativi tes
+
+-author ranking all time
+-modificata la logica ranking
+-aggiunto trend score, da cambiare nome
+-testato
+-eliminato ranking genere e relativo test
+- AVRAGE ELIMINATION: i DTO li hanno ancora, i model no e tolte tutte le interazioni con gli average rating
+
+
+TO DO
+-popolamento ad hoc (popolandolo utilizzando le API)
+- macchine virtuali Schiavo
 
 
 
 
 
 
+6	Mongo DB Analytics
+6.1	Main Analytics
 
+Funzionalità	Obiettivo dell'Analisi	Query MongoDB / Metodo
+Book Month Trend	Classifica libri in base alla viralità mensile.	
+Author Ranking	Classifica autore of all time.	
+Yearly Wrapped	Riepilogo annuale utente. In base a review year e bookshelf
 
+Si usa unwind per contare la frequenza di certi autori e generi nelle year review altrimenti con group direttamente non funzionerebbe aggregando tutto insieme.	db.users.aggregate([
+  // 1. MATCH: Filtra il singolo utente
+  {
+    "$match": {
+      "_id": "USER_ID_CORRENTE" 
+    }
+  },
 
+  // 2. ADDFIELDS: Pre-calcola i dati (filtra e ordina array interni)
+  {
+    "$addFields": {
+      "best_book": {
+        "$arrayElemAt": [
+          {
+            "$sortArray": {
+              "input": { "$ifNull": ["$reviews_year", []] },
+              "sortBy": { "rating": -1 } // DESC
+            }
+          },
+          0
+        ]
+      },
+      "worst_book": {
+        "$arrayElemAt": [
+          {
+            "$sortArray": {
+              "input": { "$ifNull": ["$reviews_year", []] },
+              "sortBy": { "rating": 1 } // ASC
+            }
+          },
+          0
+        ]
+      },
+      "yearly_books": {
+        "$filter": {
+          "input": { "$ifNull": ["$bookshelf", []] },
+          "as": "b",
+          "cond": {
+            "$and": [
+              { "$eq": ["$$b.status", "read"] },
+              { "$gte": ["$$b.added_at", ISODate("2026-01-01T00:00:00Z")] },
+              { "$lte": ["$$b.added_at", ISODate("2026-12-31T23:59:59Z")] }
+            ]
+          }
+        }
+      }
+    }
+  },
 
+  // 3. FACET: Esegue 3 analisi parallele sui dati calcolati sopra
+  {
+    "$facet": {
+      // Analisi 1: Autori più letti
+      "top_authors": [
+        { "$project": { "yearly_books": 1 } },
+        { "$unwind": "$yearly_books" },
+        { 
+          "$group": { 
+            "_id": "$yearly_books.author.name", 
+            "count": { "$sum": 1 } 
+          } 
+        },
+        { "$sort": { "count": -1 } },
+        { "$limit": 3 }
+      ],
 
-MONGODB
-Books and author ranking	AvgRating totale e per anno fatto da: somma delle stelle e contatore delle recensioni. Va tenuto aggiornato per ogni review aggiunta con eventual consistency. 
-c.	Rank books in descending rating order for a specified author/genre.
-d.	Find the highest rated books of a specific year, based on the reviews of that period (book publication year is not relevant).
-	Query 1: Ranking & Historical Analytics
-Obiettivo: Classifiche basate su dati storici aggregati (Bucket Pattern).
-1a. Ranking Libri per Autore (Media Storica Ponderata)
-Calcola la media esatta sommando i totali annuali.
-JavaScript
-db.books.aggregate([
-    { $match: { "author.name": "J.R.R. Tolkien" } },
-    { $addFields: {
-        // Calcolo media ponderata dai bucket annuali (Bucket Pattern)
-        hist_avg: { 
+      // Analisi 2: Generi preferiti
+      "top_genres": [
+        { "$project": { "yearly_books": 1 } },
+        { "$unwind": "$yearly_books" },
+        { "$unwind": "$yearly_books.genres" },
+        { 
+          "$group": { 
+            "_id": "$yearly_books.genres", 
+            "count": { "$sum": 1 } 
+          } 
+        },
+        { "$sort": { "count": -1 } },
+        { "$limit": 3 }
+      ],
+
+      // Analisi 3: Metadati (Best/Worst e Totale)
+      "meta": [
+        {
+          "$project": {
+            "best_book": 1,
+            "worst_book": 1,
+            "total_books_read": { "$size": "$yearly_books" }
+          }
+        }
+      ]
+    }
+  }
+])
+
+6.2	Other Analytics
+Funzionalità	Obiettivo dell'Analisi	Query MongoDB / Metodo
+Book Rankings	Classifica libri (Annuale/All-time).	db.books.aggregate([
+    // 1. Initial Match
+    { 
+        "$match": { 
+            "status": "ACTIVE",
+            // "author.id": {$id}, // (Optional)
+         //
+            // "genres": "Horror"             // (Optional)
+        } 
+    },
+
+    // 2. Filter Array (Year Logic)
+    {
+        "$project": {
+            "title": 1,
+            "author": 1,
+            "targetStat": {
+                "$filter": {
+                    "input": "$stats_per_year",
+                    "as": "stat",
+                    "cond": { "$eq": ["$$stat.year", 2023] }
+                }
+            }
+        }
+    },
+
+    // 3. Extract Totals (Flattening)
+    {
+        "$project": {
+            "title": 1,
+            "author": 1,
+            "totalRatings": { "$sum": "$targetStat.ratings_count" },
+            "sumRating": { "$sum": "$targetStat.sum_rating" }
+        }
+    },
+
+    // 4. Threshold Filter
+    { 
+        "$match": { "totalRatings": { "$gt": 5 } } 
+    },
+
+    // 5. Calculate Average & Rename fields for DTO
+    {
+        "$project": {
+            "name": "$title",
+            "additionalInfo": "$author.name",
+            "totalRatings": 1,
+            "averageRating": { "$divide": ["$sumRating", "$totalRatings"] }
+        }
+    },
+
+    // 6. Final Sort & Limit
+    { "$sort": { "averageRating": -1 } },
+    { "$limit": 25 }
+])
+Revaluation	Libri con maggiore scarto tra primo anno di review e ultimo anno di review	db.books.aggregate([
+    // 1. Filtra libri con almeno 2 anni di storico
+    { $match: { "stats_per_year.1": { $exists: true }, {“availability”: “ACTIVE”} },
+
+    // 2. Estrai il primo e l'ultimo oggetto statistico
+    { $project: {
+        title: 1,
+        author: 1,
+        firstStat: { $arrayElemAt: ["$stats_per_year", 0] },
+        lastStat: { $arrayElemAt: ["$stats_per_year", -1] }
+    }},
+
+    // 3. Calcola le Medie (Safe Division: Sum / Count)
+    { $project: {
+        title: 1,
+        author: "$author.name",
+        startYear: "$firstStat.year",
+        endYear: "$lastStat.year",
+        
+        // Calcolo Media Iniziale
+        startRating: {
             $cond: [
-                { $eq: [{ $sum: "$stats_per_year.ratings_count" }, 0] }, 
-                0, 
-                { $divide: [{ $sum: "$stats_per_year.sum_rating" }, { $sum: "$stats_per_year.ratings_count" }] }
-            ] 
+                { $gt: ["$firstStat.ratings_count", 0] },
+                { $divide: ["$firstStat.sum_rating", "$firstStat.ratings_count"] },
+                0.0
+            ]
+        },
+
+        // Calcolo Media Finale
+        endRating: {
+            $cond: [
+                { $gt: ["$lastStat.ratings_count", 0] },
+                { $divide: ["$lastStat.sum_rating", "$lastStat.ratings_count"] },
+                0.0
+            ]
         }
     }},
-    { $sort: { hist_avg: -1 } },
-    { $project: { title: 1, hist_avg: { $round: ["$hist_avg", 2] } } }
-]);
-1b. Top Libri dell'anno 2025
-Estrae chirurgicamente i dati del 2025 senza $unwind (usando $filter).
-JavaScript
-db.books.aggregate([
+
+    // 4. Calcola il Delta (Finale - Iniziale)
     { $addFields: {
-        // Estrazione dati 2025 senza esplodere l'array
-        stats_25: { 
-            $arrayElemAt: [{ $filter: { input: "$stats_per_year", as: "s", cond: { $eq: ["$$s.year", 2025] } } }, 0] 
-        }
+        ratingDelta: { $subtract: ["$endRating", "$startRating"] }
     }},
-    { $match: { "stats_25.ratings_count": { $gte: 5 } } }, // Filtro significatività
-    { $sort: { "stats_25.average_rating": -1 } },
-    { $project: { title: 1, rating_2025: "$stats_25.average_rating" } },
+
+    // 5. Ordina e Limita
+    { $sort: { ratingDelta: -1 } },
     { $limit: 10 }
 ]);
-1c. Top Autori dell'anno 2025
-Aggrega i libri per trovare gli autori dominanti nell'anno corrente.
-JavaScript
-db.books.aggregate([
-    { $addFields: {
-        s25: { $arrayElemAt: [{ $filter: { input: "$stats_per_year", as: "s", cond: { $eq: ["$$s.year", 2025] } } }, 0] }
-    }},
-    { $match: { "s25": { $exists: true } } },
-    { $group: {
-        _id: "$author.name",
-        avg_rating: { $avg: "$s25.average_rating" },
-        total_votes: { $sum: "$s25.ratings_count" }
-    }},
-    { $match: { total_votes: { $gte: 10 } } }, 
-    { $sort: { avg_rating: -1 } },
-    { $limit: 5 }
-]);
-1d. Top Generi dell'anno 2025
-Richiede $unwind sui generi per il conteggio statistico corretto.
-JavaScript
-db.books.aggregate([
-    { $addFields: {
-        s25: { $arrayElemAt: [{ $filter: { input: "$stats_per_year", as: "s", cond: { $eq: ["$$s.year", 2025] } } }, 0] }
-    }},
-    { $match: { "s25": { $exists: true } } },
-    { $unwind: "$genres" }, 
-    { $group: {
-        _id: "$genres",
-        avg_rating: { $avg: "$s25.average_rating" },
-        books_count: { $sum: 1 }
-    }},
-    { $sort: { avg_rating: -1 } },
-    { $limit: 5 }
-]);
-________________________________________
-Yearly wrapped	Generate yearly wrapped that includes 
-d.	Highest and lowest rated books
-e.	Most read authors (from list)
-f.	Most read genres (from list)
-	Query 2: User Yearly Wrapped (2025)
-Obiettivo: Statistiche personali (Top Autori, Top Generi, Best Book).
-Ottimizzazione: Nessun JOIN grazie alla bookshelf arricchita. Uso di $facet per calcoli paralleli.
-JavaScript
-db.users.aggregate([
-    { $match: { username: "User_12345" } },
+])
 
-    // 1. Best & Worst Book (da reviews_year embedded)
-    { $addFields: {
-        sorted_revs: { $sortArray: { input: "$reviews_year", sortBy: { rating: -1 } } }
-    }},
-    { $project: {
-        best_book: { $first: "$sorted_revs" },
-        worst_book: { $last: "$sorted_revs" },
-        // 2. Filtro Bookshelf per l'anno 2025 in memoria
-        books_2025: {
-            $filter: {
-                input: "$bookshelf", as: "b",
-                cond: { $and: [
-                    { $eq: ["$$b.status", "read"] },
-                    { $gte: ["$$b.added_at", ISODate("2025-01-01T00:00:00Z")] },
-                    { $lte: ["$$b.added_at", ISODate("2025-12-31T23:59:59Z")] }
-                ]}
+Yearly Wrapped	Riepilogo annuale utente. In base a review year e bookshelf
+
+Si usa unwind per contare la frequenza di certi autori e generi nelle year review altrimenti con group direttamente non funzionerebbe aggregando tutto insieme.	db.users.aggregate([
+  // 1. MATCH: Filtra il singolo utente
+  {
+    "$match": {
+      "_id": "USER_ID_CORRENTE" 
+    }
+  },
+
+  // 2. ADDFIELDS: Pre-calcola i dati (filtra e ordina array interni)
+  {
+    "$addFields": {
+      "best_book": {
+        "$arrayElemAt": [
+          {
+            "$sortArray": {
+              "input": { "$ifNull": ["$reviews_year", []] },
+              "sortBy": { "rating": -1 } // DESC
             }
-        }
-    }},
-    
-    // 3. Unwind necessario solo sui libri filtrati per contare le frequenze
-    { $unwind: "$books_2025" },
-    
-    // 4. Calcolo Parallelo Autori e Generi
-    { $facet: {
-        "top_authors": [
-            { $group: { _id: "$books_2025.author.name", count: { $sum: 1 } } },
-            { $sort: { count: -1 } }, { $limit: 3 }
-        ],
-        "top_genres": [
-            { $unwind: "$books_2025.genres" }, 
-            { $group: { _id: "$books_2025.genres", count: { $sum: 1 } } },
-            { $sort: { count: -1 } }, { $limit: 3 }
-        ],
-        "meta": [{ $limit: 1 }, { $project: { best_book: 1, worst_book: 1 } }]
-    }}
-]);
-________________________________________
-Popularity prediction	Popularity prediction of a book
-b.	Rating of the publications of the same author
-	Query 3: Author Popularity Prediction (Hybrid Model)
-Obiettivo: Predire il trend futuro (Rising/Falling).
-Logica: Combina la "Reputazione Storica" (60%) con il "Momentum Recente" (40%).
-JavaScript
-// Query 3: Popularity Prediction (Lightweight)
-// Target: Predire il trend per il libro "The Shining" di "Stephen King"
-
-db.books.aggregate([
-    // 1. Facet: Eseguiamo due calcoli rapidi in parallelo
-    { $facet: {
-        
-        // CALCOLO A: Media Storica dell'Autore (Requisito "a")
-        // Scansiona solo i libri di questo autore (veloce)
-        "author_stats": [
-            { $match: { "author.name": "Stephen King" } },
-            { $group: {
-                _id: null,
-                // Calcola la media pesata di tutti i suoi libri
-                avg_rating: { 
-                    $avg: { 
-                        $cond: [
-                            { $eq: [{ $sum: "$stats_per_year.ratings_count" }, 0] },
-                            0,
-                            { $divide: ["$stats_per_year.sum_rating", "$stats_per_year.ratings_count"] }
-                        ]
-                    }
-                }
-            }}
-        ],
-
-        // CALCOLO B: Momentum del Libro Target (Basato sul mese corrente)
-        "book_stats": [
-            { $match: { title: "The Shining" } },
-            { $project: { 
-                current_rating: "$month_score.rating",
-                current_activity: "$month_score.rating_count"
-            }}
+          },
+          0
         ]
-    }},
-
-    // 2. Unione dei risultati
-    { $project: {
-        author_avg: { $arrayElemAt: ["$author_stats.avg_rating", 0] },
-        book_now:   { $arrayElemAt: ["$book_stats", 0] }
-    }},
-
-    // 3. Logica di Predizione (Confronto Diretto)
-    { $project: {
-        author_benchmark: { $round: ["$author_avg", 2] },
-        book_momentum:    { $ifNull: ["$book_now.current_rating", 0] },
-        
-        prediction: {
-            $switch: {
-                branches: [
-                    // Caso 1: Libro nuovo/inattivo questo mese -> Trend Incerto
-                    { case: { $eq: ["$book_now.current_activity", 0] }, then: "⏸️ STABLE (No recent data)" },
-                    
-                    // Caso 2: Il libro performa meglio del solito standard dell'autore (+5%)
-                    { case: { $gt: ["$book_now.current_rating", { $multiply: ["$author_avg", 1.05] }] }, then: "🚀 RISING STAR" },
-                    
-                    // Caso 3: Il libro performa peggio dello standard dell'autore (-5%)
-                    { case: { $lt: ["$book_now.current_rating", { $multiply: ["$author_avg", 0.95] }] }, then: "📉 UNDERPERFORMING" }
-                ],
-                default: "➡️ STABLE"
+      },
+      "worst_book": {
+        "$arrayElemAt": [
+          {
+            "$sortArray": {
+              "input": { "$ifNull": ["$reviews_year", []] },
+              "sortBy": { "rating": 1 } // ASC
             }
+          },
+          0
+        ]
+      },
+      "yearly_books": {
+        "$filter": {
+          "input": { "$ifNull": ["$bookshelf", []] },
+          "as": "b",
+          "cond": {
+            "$and": [
+              { "$eq": ["$$b.status", "read"] },
+              { "$gte": ["$$b.added_at", ISODate("2026-01-01T00:00:00Z")] },
+              { "$lte": ["$$b.added_at", ISODate("2026-12-31T23:59:59Z")] }
+            ]
+          }
         }
-    }}
-]);________________________________________
+      }
+    }
+  },
+
+  // 3. FACET: Esegue 3 analisi parallele sui dati calcolati sopra
+  {
+    "$facet": {
+      // Analisi 1: Autori più letti
+      "top_authors": [
+        { "$project": { "yearly_books": 1 } },
+        { "$unwind": "$yearly_books" },
+        { 
+          "$group": { 
+            "_id": "$yearly_books.author.name", 
+            "count": { "$sum": 1 } 
+          } 
+        },
+        { "$sort": { "count": -1 } },
+        { "$limit": 3 }
+      ],
+
+      // Analisi 2: Generi preferiti
+      "top_genres": [
+        { "$project": { "yearly_books": 1 } },
+        { "$unwind": "$yearly_books" },
+        { "$unwind": "$yearly_books.genres" },
+        { 
+          "$group": { 
+            "_id": "$yearly_books.genres", 
+            "count": { "$sum": 1 } 
+          } 
+        },
+        { "$sort": { "count": -1 } },
+        { "$limit": 3 }
+      ],
+
+      // Analisi 3: Metadati (Best/Worst e Totale)
+      "meta": [
+        {
+          "$project": {
+            "best_book": 1,
+            "worst_book": 1,
+            "total_books_read": { "$size": "$yearly_books" }
+          }
+        }
+      ]
+    }
+  }
+])
 
 
-Per internationality index aggiungo un flag per distinguere se BOOK o AUTHOR
+
+
+Le Altre aggregation che facciamo sono:
+
+LOCAL CLUSTER 
+CLUSTER MONGODB
+
+mkdir -p ~/mongo-cluster/data1 ~/mongo-cluster/data2 ~/mongo-cluster/data3
+mkdir -p ~/mongo-cluster/logs
+
+libera le porte
+sudo systemctl stop mongod
+
+per ogni scheda del terminale
+1)
+mongod --replSet "myReplicaSet" --port 27017 --dbpath ~/mongo-cluster/data1 --bind_ip localhost
+2)
+mongod --replSet "myReplicaSet" --port 27018 --dbpath ~/mongo-cluster/data2 --bind_ip localhost
+3)
+mongod --replSet "myReplicaSet" --port 27019 --dbpath ~/mongo-cluster/data3 --bind_ip localhost
+
+quarto terminale si connette al primo nodo
+mongosh --port 27017
+
+inizializza il cluster
+rs.initiate({
+  _id: "myReplicaSet",
+  members: [
+    { _id: 0, host: "localhost:27017" },
+    { _id: 1, host: "localhost:27018" },
+    { _id: 2, host: "localhost:27019" }
+  ]
+})
+
+e il prompt deve cambiare da "test>" a "myReplicaSet [direct: primary] >"
+
+
+
+
+
+
+7	IMPLEMENTAZIONE
+7.1	STRUTTURA CARTELLE
+7.1.1	CONTROLLER E VARI END POINT
+7.1.2	DTO
+Descrizione DTO RITORNATI, non credo importi mettere la struttura, vedere altre documentazioni
+7.1.3	MAPPER
+Utili per mappare automaticamente i Model in DTO
+7.1.4	REPOSITORY
+In Repository nelle repository per Mongo e Neo4j troviamo anche Projection che servono per salvarsi dati intermedi ritornati dalle query più complesse.
+Nelle repository NEO Abbiamo anche usato Query specifiche per alcune azioni tra cui le analytics o ritornare i libri piaciuti.
+7.1.5	SERVICE
+Impelmentazione Controller, descrizione breve del contenuto e nome file. Più cartella Async per i servizi asincroni
+7.1.6	CONFIG, UTILS, VALIDATION & EXCEPTION
+Bo scrivere a che servono
+7.2	DESCRZIONE SERVICE GENERALE e SCELTE IMPELEMNTATIVE
+Si utilizza @Transaction dove si scrive e @Retrayable per le richieste
+NOTA: Quando si usa @Retryable bisogna stare attenti all’idempotenza.
+Inoltre per le operazioni di aggiornamento abbiamo scelto di Usare alcune cose con @Async in modo da avere aggiornamenti in differita delle cose meno importanti come il voto medio nell’immediato andando a sfruttare l’eventual consistency.
+Dato che i metodi Async devono essere chiamati da classi appostite sono state inseriti in una cartella apposita.
+7.2.1	ADMIN
+Operazioni di BAN User/Review e DELETE Book and AUTHOR come si sono gestite?
+Le operazioni descritte sopra comportano una cancellazione dal graph DB per non infastidire le analytics e query con dati sporchi.
+In mongo DB AUTHOR e BOOK vengono messi come ARCHIVED e non potranno più esserci interazioni con questi ultimi
+In mongoDB User viene settato con status BANNED mentre la review viene eliminata da anche da tutti le cose embedded. Inoltre una volta bannato l’utente eliminiamo tutte le sue review come se le considerassimo tutte bannate.
+7.2.2	ANALYTIC
+Qui implementiamo le analytic usabili da utenti generici sia usando neo che mongoDB, in particolare:
+-Internationality su book o author passando l’ID e AUTHOR o BOOK
+-I veri influencer passando i generi e limit per fare paging, se non c’è generi fa real influencer generico
+-I trending book in base al month score
+-BookRankins in base ad anno, genere O(esclusivo) autore. L’autore è passato tramite nome. Inoltre essite una versione ottimizzata con un join lato applicativo che è resistente allo sharding.
+-il ranking degli autori all time
+-Book Revaluation
+NOTA: Il ranking ha spesso limitazioni sul numero minimo di recensioni per evitare outlier.
+7.2.3	AUTHOR & BOOK & USER
+Serve per cercare libri e autori per id/nome
+7.2.4	BookShelf
+Gestiure la propria bookshelf, tutto senza Async
+7.2.5	LIKE
+Gestire i like, messi e retrive cose a cui si è messo like. È gestito in modo asicrono l’embedding delle popular review.
+7.2.6	FOLLOW
+Gestione Following,
+il follow di una persona che ha eliminato l’account rimane ma l’utente può eliminarlo
+7.2.7	PROFILE
+Un utente può modificare l’account cambiando nome o cancellandosi.
+In caso di cambiamento nome l’update negli snapshot e nelle review viene fatto in modo asincrono. Mentre su NEO viene fatto subito
+In caso di delete
+L’utente viene messo con username null che non è disponibile altrimenti dovendo essere di almeno 3 caratteri e viene anche rimopssa l’email oltre che settato lo status a deleted.
+Inoltre negli snapshot l’username diventa null in modo asincrono
+Su NEO viene messo come nome “” così da poter essere differenziato ed escluso da attività come find real influencer ma ancora essere valido per le raccomandazioni. 
+
+7.2.8	REVIEW
+Creazione:
+Asincrono l’aggiornamento delle statistiche di libro e autore viene fatto subito l’aggiornamento su NEO
+Update:
+Aggiornamento sincorno su NEO
+Quando avviene l’aggiornamento di una review non viene contato viene sempre contata come fatta nel momento di creazione per quanto riguarda l’aggiornamento di tutte le statistiche.
+
+7.2.9	USERFEATURE
+Impelemnta l’analytic Wrapped
+

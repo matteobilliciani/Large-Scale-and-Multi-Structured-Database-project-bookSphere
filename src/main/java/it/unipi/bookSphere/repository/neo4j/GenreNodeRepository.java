@@ -81,6 +81,30 @@ public interface GenreNodeRepository extends Neo4jRepository<GenreNode, String> 
         """)
     List<Map<String, Object>> getLikedGenresByUser(@Param("userId") String userId);
     
+    /**
+     * Get all genres liked by a user with pagination
+     */
+    @Query("""
+        MATCH (u:User {mongoId: $userId})-[r:LIKES]->(g:Genre)
+        RETURN g.name AS name, r.timestamp AS timestamp
+        ORDER BY r.timestamp DESC
+        SKIP $skip LIMIT $limit
+        """)
+    List<Map<String, Object>> getLikedGenresByUser(
+        @Param("userId") String userId, 
+        @Param("skip") long skip, 
+        @Param("limit") int limit
+    );
+    
+    /**
+     * Count liked genres for pagination
+     */
+    @Query("""
+        MATCH (u:User {mongoId: $userId})-[:LIKES]->(g:Genre)
+        RETURN count(g)
+        """)
+    long countLikedGenresByUser(@Param("userId") String userId);
+    
     // ========== GET OR CREATE METHODS ==========
     
     /**

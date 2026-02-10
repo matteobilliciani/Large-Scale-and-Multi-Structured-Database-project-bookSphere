@@ -1,6 +1,8 @@
 package it.unipi.bookSphere.repository.mongo;
 
 import it.unipi.bookSphere.model.mongodb.BookDocument;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
@@ -36,4 +38,23 @@ public interface BookRepository extends MongoRepository<BookDocument, String> {
      * @return List of matching books
      */
     List<BookDocument> findByTitleContainingIgnoreCase(String title);
+    
+    /**
+     * Search books by title with pagination (partial match, case-insensitive)
+     * 
+     * @param title Book title pattern
+     * @param pageable Pagination parameters
+     * @return Page of matching books
+     */
+    Page<BookDocument> findByTitleContainingIgnoreCase(String title, Pageable pageable);
+    
+    /**
+     * Search books by title with pagination, excluding books with specific availability (partial match, case-insensitive)
+     * 
+     * @param title Book title pattern
+     * @param availability Availability to exclude (e.g., "ARCHIVED")
+     * @param pageable Pagination parameters
+     * @return Page of matching books
+     */
+    Page<BookDocument> findByTitleContainingIgnoreCaseAndAvailabilityNot(String title, String availability, Pageable pageable);
 }

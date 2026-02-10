@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import it.unipi.bookSphere.dto.BookDTO;
 import it.unipi.bookSphere.service.BookService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -34,14 +35,18 @@ public class BookController {
 
     @Operation(
             summary = "Search book by title",
-            description = "Search for books by title (supports partial matching)"
+            description = "Search for books by title (supports partial matching). Returns paginated results."
     )
     @GetMapping
-    public ResponseEntity<List<BookDTO>> searchBookByTitle(
+    public ResponseEntity<Page<BookDTO>> searchBookByTitle(
             @Parameter(description = "Book title to search", example = "The Fellowship")
-            @RequestParam(name = "title", required = false) String title
+            @RequestParam(name = "title", required = false) String title,
+            @Parameter(description = "Page number (0-indexed)", example = "0")
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @Parameter(description = "Page size", example = "20")
+            @RequestParam(name = "size", defaultValue = "20") int size
     ) {
-        List<BookDTO> books = bookService.searchByTitle(title);
+        Page<BookDTO> books = bookService.searchByTitle(title, page, size);
         return ResponseEntity.ok(books);
     }
 }

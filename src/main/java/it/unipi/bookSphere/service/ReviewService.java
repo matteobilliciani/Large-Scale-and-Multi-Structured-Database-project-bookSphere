@@ -55,9 +55,11 @@ public class ReviewService {
     /**
      * Get reviews by list of IDs
      * Used to fetch all reviews for a book or user given their review IDs array
+     * Maximum 100 IDs per request to prevent performance issues
      * 
-     * @param reviewIds List of review MongoDB ObjectIds
+     * @param reviewIds List of review MongoDB ObjectIds (max 100)
      * @return List of ReviewDTOs
+     * @throws IllegalArgumentException if more than 100 IDs are requested
      */
     @Retryable(
         retryFor = {RuntimeException.class},
@@ -66,6 +68,11 @@ public class ReviewService {
     )
     public List<ReviewDTO> getReviewsByIds(List<String> reviewIds) {
         logger.info("Fetching {} reviews by IDs", reviewIds.size());
+        
+        // Validate maximum number of IDs
+        if (reviewIds.size() > 100) {
+            throw new IllegalArgumentException("Cannot request more than 100 reviews at once. Requested: " + reviewIds.size());
+        }
         
         List<Review> reviews = reviewRepository.findByIdIn(reviewIds);
         

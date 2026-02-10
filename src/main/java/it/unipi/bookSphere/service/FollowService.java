@@ -11,6 +11,10 @@ import it.unipi.bookSphere.utils.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
@@ -159,5 +163,50 @@ public class FollowService {
         
         logger.info("Found {} followed users for user {}", followedUsers.size(), currentUserId);
         return followedUsers;
+    }
+    
+    /**
+     * Get all users followed by current user (friends) with pagination
+     * Queries Neo4j for FOLLOWS relationships using repository
+     * 
+     * @param page Page number (0-indexed)
+     * @param size Page size
+     * @return Paginated list of followed users
+     */
+    @Retryable(
+        retryFor = {RuntimeException.class},
+        maxAttempts = 3,
+        backoff = @Backoff(delay = 1000, multiplier = 2)
+    )
+    public Page<UserDTO> getFollowedUsers(int page, int size) {
+        String currentUserId = SecurityUtils.getCurrentUserId();
+        
+        if (currentUserId == null) {
+            throw new UnauthorizedOperationException("User not authenticated");
+        }
+        
+        long skip = (long) page * size;
+        
+        // Query Neo4j for followed users with pagination
+        List<Map<String, Object>> results = userNodeRepository.getFollowedUsers(currentUserId, skip, size);
+        
+        // Get total count for pagination
+        long total = userNodeRepository.countFollowedUsers(currentUserId);
+        
+        // Convert to DTOs
+        List<UserDTO> followedUsers = new ArrayList<>();
+        for (Map<String, Object> result : results) {
+            UserDTO dto = new UserDTO();
+            dto.setId((String) result.get("userId"));
+            dto.setUsername((String) result.get("username"));
+            dto.setCountry((String) result.get("country"));
+            followedUsers.add(dto);
+        }
+        
+        Pageable pageable = PageRequest.of(page, size);
+        Page<UserDTO> pageResult = new PageImpl<>(followedUsers, pageable, total);
+        
+        logger.info("Found {} followed users for user {} on page {}", followedUsers.size(), currentUserId, page);
+        return pageResult;
     }
 }

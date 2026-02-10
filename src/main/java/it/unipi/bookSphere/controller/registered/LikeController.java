@@ -8,6 +8,7 @@ import it.unipi.bookSphere.dto.*;
 import it.unipi.bookSphere.service.LikeService;
 import it.unipi.bookSphere.utils.ValidationUtils;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -151,41 +152,61 @@ public class LikeController {
     
     @Operation(
             summary = "Get liked books",
-            description = "Retrieve all books liked by the current user. Queries Neo4j for LIKES relationships."
+            description = "Retrieve all books liked by the current user. Queries Neo4j for LIKES relationships. Supports pagination."
     )
     @GetMapping("/liked/book")
-    public ResponseEntity<List<BookDTO>> getLikedBooks() {
-        List<BookDTO> likedBooks = likeService.getLikedBooks();
+    public ResponseEntity<Page<BookDTO>> getLikedBooks(
+            @Parameter(description = "Page number (0-indexed)", example = "0")
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @Parameter(description = "Page size", example = "20")
+            @RequestParam(name = "size", defaultValue = "20") int size
+    ) {
+        Page<BookDTO> likedBooks = likeService.getLikedBooks(page, size);
         return ResponseEntity.ok(likedBooks);
     }
 
     @Operation(
             summary = "Get liked authors",
-            description = "Retrieve all authors liked by the current user. Queries Neo4j for LIKES relationships."
+            description = "Retrieve all authors liked by the current user. Queries Neo4j for LIKES relationships. Supports pagination."
     )
     @GetMapping("/liked/author")
-    public ResponseEntity<List<AuthorDTO>> getLikedAuthors() {
-        List<AuthorDTO> likedAuthors = likeService.getLikedAuthors();
+    public ResponseEntity<Page<AuthorDTO>> getLikedAuthors(
+            @Parameter(description = "Page number (0-indexed)", example = "0")
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @Parameter(description = "Page size", example = "20")
+            @RequestParam(name = "size", defaultValue = "20") int size
+    ) {
+        Page<AuthorDTO> likedAuthors = likeService.getLikedAuthors(page, size);
         return ResponseEntity.ok(likedAuthors);
     }
 
     @Operation(
             summary = "Get liked reviews",
-            description = "Retrieve all reviews liked by the current user. Queries Neo4j for LIKES relationships."
+            description = "Retrieve all reviews liked by the current user. Queries Neo4j for LIKES relationships. Supports pagination."
     )
     @GetMapping("/liked/review")
-    public ResponseEntity<List<ReviewDTO>> getLikedReviews() {
-        List<ReviewDTO> likedReviews = likeService.getLikedReviews();
+    public ResponseEntity<Page<ReviewDTO>> getLikedReviews(
+            @Parameter(description = "Page number (0-indexed)", example = "0")
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @Parameter(description = "Page size", example = "20")
+            @RequestParam(name = "size", defaultValue = "20") int size
+    ) {
+        Page<ReviewDTO> likedReviews = likeService.getLikedReviews(page, size);
         return ResponseEntity.ok(likedReviews);
     }
 
     @Operation(
             summary = "Get liked genres",
-            description = "Retrieve all genres liked by the current user. Queries Neo4j for LIKES relationships."
+            description = "Retrieve all genres liked by the current user. Queries Neo4j for LIKES relationships. Supports pagination."
     )
     @GetMapping("/liked/genre")
-    public ResponseEntity<List<GenreDTO>> getLikedGenres() {
-        List<GenreDTO> likedGenres = likeService.getLikedGenres();
+    public ResponseEntity<Page<GenreDTO>> getLikedGenres(
+            @Parameter(description = "Page number (0-indexed)", example = "0")
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @Parameter(description = "Page size", example = "20")
+            @RequestParam(name = "size", defaultValue = "20") int size
+    ) {
+        Page<GenreDTO> likedGenres = likeService.getLikedGenres(page, size);
         return ResponseEntity.ok(likedGenres);
     }
 }

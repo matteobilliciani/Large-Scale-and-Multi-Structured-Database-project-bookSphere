@@ -80,6 +80,30 @@ public interface BookNodeRepository extends Neo4jRepository<BookNode, String> {
         """)
     List<Map<String, Object>> getLikedBooksByUser(@Param("userId") String userId);
     
+    /**
+     * Get all books liked by a user with pagination
+     */
+    @Query("""
+        MATCH (u:User {mongoId: $userId})-[r:LIKES]->(b:Book)
+        RETURN b.mongoId AS bookId, b.title AS title, r.timestamp AS timestamp
+        ORDER BY r.timestamp DESC
+        SKIP $skip LIMIT $limit
+        """)
+    List<Map<String, Object>> getLikedBooksByUser(
+        @Param("userId") String userId, 
+        @Param("skip") long skip, 
+        @Param("limit") int limit
+    );
+    
+    /**
+     * Count liked books for pagination
+     */
+    @Query("""
+        MATCH (u:User {mongoId: $userId})-[:LIKES]->(b:Book)
+        RETURN count(b)
+        """)
+    long countLikedBooksByUser(@Param("userId") String userId);
+    
     // ========== BELONGS_TO RELATIONSHIP METHODS ==========
     
     /**

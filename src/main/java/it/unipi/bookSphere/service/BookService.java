@@ -9,6 +9,9 @@ import it.unipi.bookSphere.repository.mongo.BookRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
@@ -82,5 +85,32 @@ public class BookService {
         return books.stream()
                 .map(bookMapper::toDTO)
                 .collect(Collectors.toList());
+    }
+    
+    /**
+     * Search books by title with pagination (partial matching)
+     * 
+     * @param title Book title to search
+     * @param page Page number (0-indexed)
+     * @param size Page size
+     * @return Page of matching books
+     */
+    @Retryable(
+        retryFor = {RuntimeException.class},
+        maxAttempts = 3,
+        backoff = @Backoff(delay = 1000, multiplier = 2)
+    )
+    public Page<BookDTO> searchByTitle(String title, int page, int size) {
+        logger.info("Searching books by title: {} (page: {}, size: {})", title, page, size);
+        
+        Pageable pageable = PageRequest.of(page, size);
+        // Filter ARCHIVED books at query level for accurate pagination
+        Page<BookDocument> books = bookRepository.findByTitleContainingIgnoreCaseAndAvailabilityNot(title, "ARCHIVED", pageable);
+        
+        // Map to DTO and filter is applied by repository/database level for better performance
+        Page<BookDTO> result = books.map(bookMapper::toDTO);
+        
+        logger.info("Found {} books matching '{}' on page {}", result.getNumberOfElements(), title, page);
+        return result;
     }
 }
