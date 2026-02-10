@@ -37,7 +37,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * - Yearly Wrapped
  */
 @SpringBootTest
-@ActiveProfiles("clusterWSL")
+@ActiveProfiles("local")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class MongoDbAnalyticsPersistentTest {
 
@@ -403,6 +403,8 @@ public class MongoDbAnalyticsPersistentTest {
         boolean hasTrendingBook = result.stream()
             .anyMatch(dto -> testBookId1.equals(dto.getId()) || testBookId2.equals(dto.getId()));
         
+        assertTrue(hasTrendingBook, "Expected at least one of the test books to be trending");
+        
         System.out.println("✓ PASSED: Trending books retrieved");
     }
 
@@ -561,7 +563,7 @@ public class MongoDbAnalyticsPersistentTest {
         System.out.println("\n--- TEST 10: Book Rankings Filtered by Author (" + TEST_AUTHOR_1 + ") ---");
 
         // Chiamata: Year=null (All-time), Author=TEST_AUTHOR_1, Genre=null
-        List<RankingDTO> result = analyticsService.getBookRankings(null, TEST_AUTHOR_1, null);
+        List<RankingDTO> result = analyticsService.getBookRankings(null, testAuthorId1, null);
 
         result.forEach(dto -> System.out.println(
             String.format("  '%s' by %s - rating=%.2f", 
@@ -675,7 +677,7 @@ public class MongoDbAnalyticsPersistentTest {
 
         // Test All-Time Context (Year = null)
         System.out.println("\n>>> Querying All-Time Stats...");
-        List<RankingDTO> resultAllTime = analyticsService.getBookRankingsAuthorV2(null, TEST_AUTHOR_1);
+        List<RankingDTO> resultAllTime = analyticsService.getBookRankingsAuthorV2(null, testAuthorId1);
 
         // STAMPA RISULTATI ALL-TIME
         System.out.println("   [All-Time Results Found: " + resultAllTime.size() + "]");

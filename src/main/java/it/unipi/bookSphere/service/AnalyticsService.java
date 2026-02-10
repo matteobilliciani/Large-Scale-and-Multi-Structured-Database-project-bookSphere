@@ -236,7 +236,7 @@ public class AnalyticsService {
         
         filters.add(Criteria.where("availability").is("ACTIVE"));
         
-        if (author != null) filters.add(Criteria.where("author.name").is(author));
+        if (author != null) filters.add(Criteria.where("author.id").is(author));
         if (genre != null) filters.add(Criteria.where("genres").is(genre));
 
         pipeline.add(Aggregation.match(new Criteria().andOperator(filters.toArray(new Criteria[0]))));
@@ -404,15 +404,15 @@ public class AnalyticsService {
         maxAttempts = 3,
         backoff = @Backoff(delay = 1000, multiplier = 2)
     )
-    public List<RankingDTO> getBookRankingsAuthorV2(Integer year, String authorName) {
-        logger.info("Starting ranking calculation for author: '{}', year: {}", authorName, year);
+    public List<RankingDTO> getBookRankingsAuthorV2(Integer year, String authorID) {
+        logger.info("Starting ranking calculation for author: '{}', year: {}", authorID, year);
 
         // 1. Fetch Author using Repository
-        Optional<AuthorDocument> authorOpt = authorRepository.findByName(authorName);
+        Optional<AuthorDocument> authorOpt = authorRepository.findById(authorID);
 
 
         if (authorOpt.isEmpty()) {
-            logger.info("Author '{}' not found in database.", authorName);
+            logger.info("Author '{}' not found in database.", authorID);
             return Collections.emptyList();
         }
 
@@ -420,13 +420,13 @@ public class AnalyticsService {
 
         //CHECK IF AUTHOR IS ARCHIVED
         if(authorDoc.getStatus().equals("ARCHIVED")){
-            logger.info("Author '{}' is archived.", authorName);
+            logger.info("Author '{}' is archived.", authorID);
             return Collections.emptyList();
         }
 
         // Check if the list of published books is empty or null
         if (authorDoc.getPublishedBooks() == null || authorDoc.getPublishedBooks().isEmpty()) {
-            logger.info("Author '{}' found, but has no published books associated.", authorName);
+            logger.info("Author '{}' found, but has no published books associated.", authorID);
             return Collections.emptyList();
         }
 
@@ -435,7 +435,7 @@ public class AnalyticsService {
                 .map(book -> new ObjectId(book.getId()))
                 .collect(Collectors.toList());
 
-        logger.info("Found {} book IDs for author '{}'. Proceeding with aggregation.", bookIds.size(), authorName);
+        logger.info("Found {} book IDs for author '{}'. Proceeding with aggregation.", bookIds.size(), authorID);
 
         // 3. Setup Pipeline on BOOKS collection using IDs
         List<AggregationOperation> pipeline = new ArrayList<>();

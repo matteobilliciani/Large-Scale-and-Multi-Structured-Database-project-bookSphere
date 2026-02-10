@@ -1,7 +1,6 @@
 package it.unipi.bookSphere;
 
 import it.unipi.bookSphere.dto.ReviewDTO;
-import it.unipi.bookSphere.dto.UserDTO;
 import it.unipi.bookSphere.exceptions.*;
 import it.unipi.bookSphere.model.mongodb.*;
 import it.unipi.bookSphere.model.neo4j.UserNode;
@@ -18,11 +17,10 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.ActiveProfiles;
 
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
+
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -53,40 +51,80 @@ public class AdminModerationServiceTest {
     private static final String USER_ID = "banned_user_id";
     private static final String BOOK_ID = "book_for_ban_test";
 
+    // Tracciamento dei dati creati per il cleanup isolato
+    private List<String> createdReviewIds = new ArrayList<>();
+    private List<String> createdUserIds = new ArrayList<>();
+    private List<String> createdUserNodeIds = new ArrayList<>();
+    private List<String> createdBookIds = new ArrayList<>();
+
     @BeforeEach
     void setUp() {
-        // Clean up
-        reviewRepository.deleteAll();
-        bookRepository.deleteAll();
-        userRepository.deleteAll();
-        // Neo4j cleanup is trickier, we'll try to delete specifically what we create
+        // Resetta liste di tracciamento
+        createdReviewIds.clear();
+        createdUserIds.clear();
+        createdUserNodeIds.clear();
+        createdBookIds.clear();
 
-        // Create a test user
-        RegisteredUser user = new RegisteredUser();
-        user.setId(USER_ID);
-        user.setUsername("user_to_ban");
-        user.setStatus("active");
-        user.setReviews(new ArrayList<>());
-        userRepository.save(user);
+        // Create a test user se non esiste
+        if (!userRepository.existsById(USER_ID)) {
+            RegisteredUser user = new RegisteredUser();
+            user.setId(USER_ID);
+            user.setUsername("user_to_ban");
+            user.setStatus("active");
+            user.setReviews(new ArrayList<>());
+            userRepository.save(user);
+            createdUserIds.add(USER_ID);
+        }
 
-        // Create a Neo4j node for the user
-        UserNode userNode = new UserNode();
-        userNode.setMongoId(USER_ID);
-        userNode.setUsername("user_to_ban");
-        userNodeRepository.save(userNode);
+        // Create a Neo4j node for the user se non esiste
+        if (!userNodeRepository.findByMongoId(USER_ID).isPresent()) {
+            UserNode userNode = new UserNode();
+            userNode.setMongoId(USER_ID);
+            userNode.setUsername("user_to_ban");
+            userNodeRepository.save(userNode);
+            createdUserNodeIds.add(USER_ID);
+        }
 
-        // Create a test book
-        BookDocument book = new BookDocument();
-        book.setId(BOOK_ID);
-        book.setTitle("Test Book");
-        book.setAvailability("ACTIVE");
-        book.setStatsPerYear(new ArrayList<>());
-        book.setReviews(new ArrayList<>());
-        BookDocument.Author author = new BookDocument.Author("auth_1", "Auth Name");
-        book.setAuthor(author);
-        bookRepository.save(book);
+        // Create a test book se non esiste
+        if (!bookRepository.existsById(BOOK_ID)) {
+            BookDocument book = new BookDocument();
+            book.setId(BOOK_ID);
+            book.setTitle("Test Book");
+            book.setAvailability("ACTIVE");
+            book.setStatsPerYear(new ArrayList<>());
+            book.setReviews(new ArrayList<>());
+            BookDocument.Author author = new BookDocument.Author("auth_1", "Auth Name");
+            book.setAuthor(author);
+            bookRepository.save(book);
+            createdBookIds.add(BOOK_ID);
+        }
 
         setupAdminContext();
+    }
+
+    @AfterEach
+    void cleanup() {
+        // Elimina solo i dati creati da questo test
+        createdReviewIds.forEach(id -> {
+            if (reviewRepository.existsById(id)) {
+                reviewRepository.deleteById(id);
+            }
+        });
+        createdBookIds.forEach(id -> {
+            if (bookRepository.existsById(id)) {
+                bookRepository.deleteById(id);
+            }
+        });
+        createdUserIds.forEach(id -> {
+            if (userRepository.existsById(id)) {
+                userRepository.deleteById(id);
+            }
+        });
+        createdUserNodeIds.forEach(id -> {
+            if (userNodeRepository.findByMongoId(id).isPresent()) {
+                userNodeRepository.deleteByMongoId(id);
+            }
+        });
     }
 
     private void setupAdminContext() {
@@ -121,6 +159,7 @@ public class AdminModerationServiceTest {
         dto.setBookId(BOOK_ID);
         dto.setRating(70);
         ReviewDTO saved = reviewService.createReview(dto);
+        createdReviewIds.add(saved.getId());
         
         // 2. Switch to admin and delete it
         setupAdminContext();
@@ -142,15 +181,20 @@ public class AdminModerationServiceTest {
     void testBanUserCascading() {
         // 1. Setup user with reviews
         setupUserContext(USER_ID, "user_to_ban");
+        
+        // Salva il count iniziale per ignorare eventuali review di background
+        long initialReviewCount = reviewRepository.count();
+        
         ReviewDTO dto = new ReviewDTO();
         dto.setBookId(BOOK_ID);
         dto.setRating(90);
-        reviewService.createReview(dto);
+        ReviewDTO created = reviewService.createReview(dto);
+        createdReviewIds.add(created.getId());
         
         waitForAsync();
         
-        // Verify initial state
-        assertEquals(1, reviewRepository.count());
+        // Verify initial state - verifica che la review sia stata creata
+        assertEquals(initialReviewCount + 1, reviewRepository.count(), "One review should be created");
         BookDocument bookBefore = bookRepository.findById(BOOK_ID).get();
         assertEquals(1, bookBefore.getStatsPerYear().get(0).getRatingsCount());
 
@@ -166,8 +210,8 @@ public class AdminModerationServiceTest {
         assertEquals("BANNED", user.getStatus());
         assertNull(user.getUsername());
 
-        // Review deletion
-        assertEquals(0, reviewRepository.count(), "All reviews of banned user should be deleted");
+        // Review deletion - verifica che la review sia stata eliminata
+        assertEquals(initialReviewCount, reviewRepository.count(), "All reviews of banned user should be deleted");
 
         // Stats update
         BookDocument bookAfter = bookRepository.findById(BOOK_ID).get();

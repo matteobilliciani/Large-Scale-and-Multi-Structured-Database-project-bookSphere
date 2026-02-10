@@ -21,7 +21,6 @@ import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -54,6 +53,12 @@ public class ReviewServiceTest {
     @Autowired
     private it.unipi.bookSphere.repository.neo4j.ReviewNodeRepository reviewNodeRepository;
 
+    // Tracciamento dei dati creati per il cleanup isolato
+    private List<String> createdReviewIds = new ArrayList<>();
+    private List<String> createdUserIds = new ArrayList<>();
+    private List<String> createdBookIds = new ArrayList<>();
+    private List<String> createdAuthorIds = new ArrayList<>();
+
     private void setupNeo4jReview(String reviewId, Integer rating) {
         it.unipi.bookSphere.model.neo4j.ReviewNode node = new it.unipi.bookSphere.model.neo4j.ReviewNode();
         node.setMongoId(reviewId);
@@ -66,72 +71,108 @@ public class ReviewServiceTest {
     void setUp() {
         // Mock authentication for USER_ID
         setupUserContext(USER_ID, "testuser");
+        
+        // Resetta liste di tracciamento
+        createdReviewIds.clear();
+        createdUserIds.clear();
+        createdBookIds.clear();
+        createdAuthorIds.clear();
 
-        // Clean up
-        reviewRepository.deleteAll();
-        bookRepository.deleteAll();
-        userRepository.deleteAll();
-        authorRepository.deleteAll();
+        // Create a test user se non esiste
+        if (!userRepository.existsById(USER_ID)) {
+            RegisteredUser user = new RegisteredUser();
+            user.setId(USER_ID);
+            user.setUsername("testuser");
+            user.setEmail("test@test.com");
+            user.setReviews(new ArrayList<>());
+            user.setReviewsYear(new ArrayList<>());
+            userRepository.save(user);
+            createdUserIds.add(USER_ID);
+        }
 
-        // Create a test user
-        RegisteredUser user = new RegisteredUser();
-        user.setId(USER_ID);
-        user.setUsername("testuser");
-        user.setEmail("test@test.com");
-        user.setReviews(new ArrayList<>());
-        user.setReviewsYear(new ArrayList<>());
-        userRepository.save(user);
+        // Create another test user se non esiste
+        if (!userRepository.existsById(OTHER_USER_ID)) {
+            RegisteredUser otherUser = new RegisteredUser();
+            otherUser.setId(OTHER_USER_ID);
+            otherUser.setUsername("otheruser");
+            otherUser.setEmail("other@test.com");
+            otherUser.setReviews(new ArrayList<>());
+            otherUser.setReviewsYear(new ArrayList<>());
+            userRepository.save(otherUser);
+            createdUserIds.add(OTHER_USER_ID);
+        }
 
-        // Create another test user
-        RegisteredUser otherUser = new RegisteredUser();
-        otherUser.setId(OTHER_USER_ID);
-        otherUser.setUsername("otheruser");
-        otherUser.setEmail("other@test.com");
-        otherUser.setReviews(new ArrayList<>());
-        otherUser.setReviewsYear(new ArrayList<>());
-        userRepository.save(otherUser);
+        // Create a test author se non esiste
+        if (!authorRepository.existsById(AUTHOR_ID)) {
+            AuthorDocument authorDoc = new AuthorDocument();
+            authorDoc.setId(AUTHOR_ID);
+            authorDoc.setName("Test Author");
+            authorDoc.setRatingsCount(0);
+            authorDoc.setSumRatings(0);
+            authorRepository.save(authorDoc);
+            createdAuthorIds.add(AUTHOR_ID);
+        }
 
-        // Create a test author
-        AuthorDocument authorDoc = new AuthorDocument();
-        authorDoc.setId(AUTHOR_ID);
-        authorDoc.setName("Test Author");
-        authorDoc.setRatingsCount(0);
-        authorDoc.setSumRatings(0);
-        authorRepository.save(authorDoc);
+        // Create a test book se non esiste
+        if (!bookRepository.existsById(BOOK_ID)) {
+            BookDocument book = new BookDocument();
+            book.setId(BOOK_ID);
+            book.setTitle("Test Book");
+            book.setAvailability("ACTIVE");
+            book.setStatsPerYear(new ArrayList<>());
+            BookDocument.Author author = new BookDocument.Author();
+            author.setId(AUTHOR_ID);
+            author.setName("Test Author");
+            book.setAuthor(author);
+            bookRepository.save(book);
+            createdBookIds.add(BOOK_ID);
+        }
 
-        // Create a test book
-        BookDocument book = new BookDocument();
-        book.setId(BOOK_ID);
-        book.setTitle("Test Book");
-        book.setAvailability("ACTIVE");
-        book.setStatsPerYear(new ArrayList<>());
-        BookDocument.Author author = new BookDocument.Author();
-        author.setId(AUTHOR_ID);
-        author.setName("Test Author");
-        book.setAuthor(author);
-        bookRepository.save(book);
+        // Create an archived book se non esiste
+        if (!bookRepository.existsById(ARCHIVED_BOOK_ID)) {
+            BookDocument archivedBook = new BookDocument();
+            archivedBook.setId(ARCHIVED_BOOK_ID);
+            archivedBook.setTitle("Archived Book");
+            archivedBook.setAvailability("ARCHIVED");
+            archivedBook.setStatsPerYear(new ArrayList<>());
+            BookDocument.Author author = new BookDocument.Author();
+            author.setId(AUTHOR_ID);
+            author.setName("Test Author");
+            archivedBook.setAuthor(author);
+            bookRepository.save(archivedBook);
+            createdBookIds.add(ARCHIVED_BOOK_ID);
+        }
+    }
 
-        // Create an archived book
-        BookDocument archivedBook = new BookDocument();
-        archivedBook.setId(ARCHIVED_BOOK_ID);
-        archivedBook.setTitle("Archived Book");
-        archivedBook.setAvailability("ARCHIVED");
-        archivedBook.setStatsPerYear(new ArrayList<>());
-        archivedBook.setAuthor(author);
-        bookRepository.save(archivedBook);
+    @AfterEach
+    void cleanup() {
+        // Elimina solo i dati creati da questo test
+        createdReviewIds.forEach(id -> {
+            if (reviewRepository.existsById(id)) {
+                reviewRepository.deleteById(id);
+            }
+        });
+        createdBookIds.forEach(id -> {
+            if (bookRepository.existsById(id)) {
+                bookRepository.deleteById(id);
+            }
+        });
+        createdUserIds.forEach(id -> {
+            if (userRepository.existsById(id)) {
+                userRepository.deleteById(id);
+            }
+        });
+        createdAuthorIds.forEach(id -> {
+            if (authorRepository.existsById(id)) {
+                authorRepository.deleteById(id);
+            }
+        });
     }
 
     private void setupUserContext(String userId, String username) {
         UserPrincipal principal = new UserPrincipal(userId, username, "USER", "active");
         SecurityContextHolder.getContext().setAuthentication(
             new UsernamePasswordAuthenticationToken(principal, null, Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")))
-        );
-    }
-
-    private void setupAdminContext() {
-        UserPrincipal principal = new UserPrincipal("admin_id", "admin", "ADMIN", "active");
-        SecurityContextHolder.getContext().setAuthentication(
-            new UsernamePasswordAuthenticationToken(principal, null, Collections.singletonList(new SimpleGrantedAuthority("ROLE_ADMIN")))
         );
     }
 
@@ -153,6 +194,7 @@ public class ReviewServiceTest {
         dto.setText("Great book!");
 
         ReviewDTO saved = reviewService.createReview(dto);
+        createdReviewIds.add(saved.getId());
 
         assertNotNull(saved.getId());
         assertEquals(80, saved.getRating());
@@ -181,7 +223,8 @@ public class ReviewServiceTest {
         dto.setRating(80);
         dto.setText("First review");
 
-        reviewService.createReview(dto);
+        ReviewDTO created = reviewService.createReview(dto);
+        createdReviewIds.add(created.getId());
 
         // Try to create another review for the same book
         ReviewDTO dto2 = new ReviewDTO();
@@ -212,8 +255,9 @@ public class ReviewServiceTest {
         ReviewDTO dto = new ReviewDTO();
         dto.setBookId(BOOK_ID);
         dto.setRating(80);
-        reviewService.createReview(dto);
-        String reviewId = reviewRepository.findAll().get(0).getId();
+        ReviewDTO created = reviewService.createReview(dto);
+        createdReviewIds.add(created.getId());
+        String reviewId = created.getId();
 
         // Change context to user 2
         setupUserContext(OTHER_USER_ID, "otheruser");
@@ -236,6 +280,7 @@ public class ReviewServiceTest {
         review.setBookSnapshot(new Review.BookSnapshot(ARCHIVED_BOOK_ID, "Archived Book"));
         review.setCreatedAt(Instant.now());
         review = reviewRepository.save(review);
+        createdReviewIds.add(review.getId());
 
         // Ensure Neo4j node exists to avoid swallowing other logic in updateReview
         setupNeo4jReview(review.getId(), 50);
@@ -261,6 +306,7 @@ public class ReviewServiceTest {
         review.setUserId(USER_ID);
         review.setBookSnapshot(new Review.BookSnapshot(BOOK_ID, "Test Book"));
         review = reviewRepository.save(review);
+        createdReviewIds.add(review.getId());
         String reviewId = review.getId();
 
         // Change context to user 2
@@ -284,6 +330,7 @@ public class ReviewServiceTest {
         review.setCreatedAt(lastYearInstant);
         review.setBookSnapshot(new Review.BookSnapshot(BOOK_ID, "Test Book"));
         review = reviewRepository.save(review);
+        createdReviewIds.add(review.getId());
 
         // Setup Neo4j node
         setupNeo4jReview(review.getId(), 50);
@@ -340,6 +387,7 @@ public class ReviewServiceTest {
         review.setCreatedAt(oldYearInstant);
         review.setBookSnapshot(new Review.BookSnapshot(BOOK_ID, "Test Book"));
         review = reviewRepository.save(review);
+        createdReviewIds.add(review.getId());
 
         // Manually setup book stats for 2023
         BookDocument book = bookRepository.findById(BOOK_ID).get();
@@ -355,7 +403,9 @@ public class ReviewServiceTest {
 
         // 3. Verify
         BookDocument updatedBook = bookRepository.findById(BOOK_ID).get();
-        
+
+        System.out.println(updatedBook.getStatsPerYear());
+
         // Verify 2023 entry is removed
         assertTrue(updatedBook.getStatsPerYear().stream().noneMatch(s -> s.getYear().equals(2023)));
     }
@@ -370,6 +420,7 @@ public class ReviewServiceTest {
         dto.setRating(80);
         dto.setText("Initial text");
         ReviewDTO saved = reviewService.createReview(dto);
+        createdReviewIds.add(saved.getId());
         
         waitForAsync();
 
@@ -394,6 +445,7 @@ public class ReviewServiceTest {
         Review review = new Review();
         review.setUserId(USER_ID);
         review = reviewRepository.save(review);
+        createdReviewIds.add(review.getId());
         
         List<String> ids = List.of(review.getId(), "nonexistent123456789012");
         List<ReviewDTO> found = reviewService.getReviewsByIds(ids);

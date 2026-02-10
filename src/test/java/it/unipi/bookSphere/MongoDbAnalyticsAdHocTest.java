@@ -22,7 +22,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
-@ActiveProfiles("clusterWSL")
+@ActiveProfiles("local")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class MongoDbAnalyticsAdHocTest {
 
@@ -280,7 +280,7 @@ public class MongoDbAnalyticsAdHocTest {
         System.out.println("\n--- TEST 3: Book Rankings (Author: Arthur Pendragon, All-Time) ---");
 
         // Chiamata: Year=null, Author=Pendragon, Genre=null
-        List<RankingDTO> result = analyticsService.getBookRankings(null, AUTHOR_TOP, null);
+        List<RankingDTO> result = analyticsService.getBookRankings(null, pendragonId, null);
 
         result.forEach(dto -> System.out.println(
                 String.format("  '%s' by %s - rating=%.2f", dto.getName(), dto.getAdditionalInfo(), dto.getAverageRating())
