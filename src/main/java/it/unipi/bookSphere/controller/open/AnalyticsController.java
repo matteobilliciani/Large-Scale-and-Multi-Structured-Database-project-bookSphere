@@ -45,7 +45,7 @@ public class AnalyticsController {
             @Parameter(description = "Anno della classifica (opzionale)")
             @RequestParam(required = false) Integer year,
 
-            @Parameter(description = "Filtra per nome autore (Mutuamente esclusivo con genre)")
+            @Parameter(description = "Filtra per ID autore (Mutuamente esclusivo con genre)")
             @RequestParam(required = false) String author,
 
             @Parameter(description = "Filtra per genere (Mutuamente esclusivo con author)")
@@ -100,7 +100,7 @@ public class AnalyticsController {
             @Parameter(description = "Anno della classifica (opzionale)")
             @RequestParam(required = false) Integer year,
 
-            @Parameter(description = "Filtra per nome autore (Mutuamente esclusivo con genre)")
+            @Parameter(description = "Filtra per ID autore")
             @RequestParam(required = true) String author
     ) {
 
