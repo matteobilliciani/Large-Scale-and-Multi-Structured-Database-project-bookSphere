@@ -11,7 +11,7 @@ import it.unipi.bookSphere.model.mongodb.RegisteredUser;
 import it.unipi.bookSphere.model.mongodb.Review;
 import it.unipi.bookSphere.repository.mongo.RegisteredUserRepository;
 import it.unipi.bookSphere.repository.mongo.ReviewRepository;
-import it.unipi.bookSphere.repository.neo4j.UserNodeRepository;
+import it.unipi.bookSphere.service.async.AsyncAdminModerationTasks;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,11 +20,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 
 /**
@@ -40,9 +37,9 @@ public class AdminModerationService {
     private final ReviewService reviewService;
     private final ReviewRepository reviewRepository;
     private final RegisteredUserRepository userRepository;
-    private final UserNodeRepository userNodeRepository;
     private final ReviewMapper reviewMapper;
     private final UserMapper userMapper;
+    private final AsyncAdminModerationTasks asyncAdminModerationTasks;
 
     /**
      * Delete a review (content moderation).
@@ -113,10 +110,10 @@ public class AdminModerationService {
         
         try {
             // 2. STRICT: Dedlete User Node
-            deleteUserNode(userId);
+            asyncAdminModerationTasks.deleteUserNode(userId);
             
             // 3. EVENTUAL: delete all user's reviews (asynchronous)
-            removeUserReviews(user);
+            asyncAdminModerationTasks.removeUserReviews(user);
             
 //            // 4. EVENTUAL: Remove user's reviews from book snapshots (asynchronous)
 //            removeUserReviewsFromBookSnapshots(userId);
@@ -171,203 +168,5 @@ public class AdminModerationService {
         
         logger.info("Retrieved {} reviews", reviews.getTotalElements());
         return reviews.map(reviewMapper::toDTO);
-    }
-
-    // ========== PRIVATE HELPER METHODS (STRICT) ==========
-//
-//    /**
-//     * Remove review from book's review_ids and snapshots (STRICT)
-//     */
-//    private void removeReviewFromBook(String bookId, String reviewId) {
-//        Query query = new Query(Criteria.where("_id").is(bookId));
-//        Update update = new Update()
-//                .pull("reviews", reviewId)
-//                // In embedded snapshots, the review id is stored as field "_id"
-//                .pull("recent_reviews_snapshot", Query.query(Criteria.where("_id").is(reviewId)))
-//                .pull("popular_reviews_snapshot", Query.query(Criteria.where("_id").is(reviewId)));
-//
-//        mongoTemplate.updateFirst(query, update, BookDocument.class);
-//    }
-//
-//    // ========== PRIVATE HELPER METHODS (EVENTUAL - ASYNC) ==========
-//
-//    /**
-//     * Update book statistics after review deletion (EVENTUAL - ASYNC)
-//     */
-//    @Async
-//    protected void updateBookStatisticsAfterReviewDeletion(String bookId, Integer rating, Instant reviewCreatedAt) {
-//        try {
-//            logger.info("ASYNC: Updating book statistics after review deletion");
-//
-//            BookDocument book = bookRepository.findById(bookId).orElse(null);
-//            if (book == null || book.getStatsPerYear() == null) {
-//                logger.warn("Book not found or no stats for update: {}", bookId);
-//                return;
-//            }
-//
-//            // Get year from review createdAt
-//            int reviewYear = LocalDateTime.ofInstant(reviewCreatedAt, java.time.ZoneId.systemDefault()).getYear();
-//
-//            // Find and update stats_per_year for that year
-//            Query query = new Query(Criteria.where("_id").is(bookId));
-//            Update update = new Update();
-//
-//            BookDocument.YearStat yearStat = book.getStatsPerYear().stream()
-//                .filter(s -> s.getYear().equals(reviewYear))
-//                .findFirst()
-//                .orElse(null);
-//
-//            if (yearStat != null && yearStat.getRatingsCount() > 0) {
-//                int newCount = Math.max(0, yearStat.getRatingsCount() - 1);
-//                int newSum = Math.max(0, yearStat.getSumRating() - rating);
-//
-//                update.set("stats_per_year.$[elem].ratings_count", newCount);
-//                update.set("stats_per_year.$[elem].sum_rating", newSum);
-//                update.filterArray(Criteria.where("elem.year").is(reviewYear));
-//
-//                mongoTemplate.updateFirst(query, update, BookDocument.class);
-//                logger.info("ASYNC: Book statistics updated successfully for year {}", reviewYear);
-//            } else {
-//                logger.warn("ASYNC: No year stat found for year {} or count already 0", reviewYear);
-//            }
-//
-//        } catch (Exception e) {
-//            logger.error("ASYNC: Failed to update book statistics", e);
-//        }
-//    }
-//
-//    /**
-//     * Update author statistics after review deletion (EVENTUAL - ASYNC)
-//     * Note: Author statistics are aggregated across all books, so we update global counters
-//     */
-//    @Async
-//    protected void updateAuthorStatisticsAfterReviewDeletion(String bookId, Integer rating, Instant reviewCreatedAt) {
-//        try {
-//            logger.info("ASYNC: Updating author statistics after review deletion");
-//
-//            BookDocument book = bookRepository.findById(bookId).orElse(null);
-//            if (book == null || book.getAuthor() == null) {
-//                logger.warn("Book or author not found for stats update");
-//                return;
-//            }
-//
-//            String authorId = book.getAuthor().getId();
-//            AuthorDocument author = authorRepository.findById(authorId).orElse(null);
-//            if (author == null) {
-//                logger.warn("Author not found: {}", authorId);
-//                return;
-//            }
-//
-//            // Update author global statistics
-//            int currentCount = author.getRatingsCount() != null ? author.getRatingsCount() : 0;
-//            int currentSum = author.getSumRatings() != null ? author.getSumRatings() : 0;
-//
-//            int newCount = Math.max(0, currentCount - 1);
-//            int newSum = Math.max(0, currentSum - rating);
-//
-//            author.setRatingsCount(newCount);
-//            author.setSumRatings(newSum);
-//
-//            authorRepository.save(author);
-//            logger.info("ASYNC: Author statistics updated successfully");
-//
-//        } catch (Exception e) {
-//            logger.error("ASYNC: Failed to update author statistics", e);
-//        }
-//    }
-//
-//    /**
-//     * Remove review from user's reviews_year and review_ids (EVENTUAL - ASYNC)
-//     */
-//    @Async
-//    protected void removeReviewFromUser(String userId, String reviewId) {
-//        try {
-//            logger.info("ASYNC: Removing review from user's data");
-//
-//            Query query = new Query(Criteria.where("_id").is(userId));
-//            Update update = new Update()
-//                    .pull("reviews", reviewId)
-//                    .pull("reviews_year.$[].review_ids", reviewId);
-//
-//            mongoTemplate.updateFirst(query, update, RegisteredUser.class);
-//            logger.info("ASYNC: Review removed from user's data successfully");
-//
-//        } catch (Exception e) {
-//            logger.error("ASYNC: Failed to remove review from user", e);
-//        }
-//    }
-
-    /**
-     * Mark all user's reviews as banned (EVENTUAL - ASYNC)
-     */
-    @Async
-    protected void removeUserReviews(RegisteredUser user) {
-        // 2. REUSE LOGIC: Delete all reviews associated with the user
-        // We create a copy of the list to avoid concurrent modification issues during iteration
-        List<String> userReviews = user.getReviews();
-        
-        if (userReviews != null && !userReviews.isEmpty()) {
-            logger.info("Deleting {} reviews for banned user {}", userReviews.size(), user.getId());
-            
-            // Create a safe copy of the IDs to iterate over
-            List<String> reviewsToDelete = List.copyOf(userReviews);
-            
-            for (String reviewId : reviewsToDelete) {
-                try {
-                    // Reuse existing logic
-                    reviewService.deleteReview(reviewId);
-                } catch (ReviewNotFoundException e) {
-                    logger.warn("Review {} already deleted or not found during ban process", reviewId);
-                } catch (Exception e) {
-                    logger.error("Error deleting review {} during user ban. Continuing...", reviewId, e);
-                    // We continue the loop to ensure we delete as much as possible
-                }
-            }
-        }
-    }
-//
-//    /**
-//     * Remove user's reviews from all book snapshots (EVENTUAL - ASYNC)
-//     */
-//    @Async
-//    protected void removeUserReviewsFromBookSnapshots(String userId) {
-//        try {
-//            logger.info("ASYNC: Removing user reviews from book snapshots");
-//
-//            // Find all reviews by the user
-//            List<Review> userReviews = reviewRepository.findByUserId(userId);
-//
-//            // For each review, remove it from the book's snapshots
-//            for (Review review : userReviews) {
-//                try {
-//                    String bookId = review.getBookSnapshot().getBookId();
-//                    String reviewId = review.getId();
-//
-//                    Query query = new Query(Criteria.where("_id").is(bookId));
-//                    Update update = new Update()
-//                            .pull("recent_reviews_snapshot", Query.query(Criteria.where("review_id").is(reviewId)))
-//                            .pull("popular_reviews_snapshot", Query.query(Criteria.where("review_id").is(reviewId)));
-//
-//                    mongoTemplate.updateFirst(query, update, BookDocument.class);
-//
-//                } catch (Exception e) {
-//                    logger.warn("Failed to remove review snapshot for review: {}", review.getId(), e);
-//                }
-//            }
-//
-//            logger.info("ASYNC: User reviews removed from book snapshots successfully");
-//
-//        } catch (Exception e) {
-//            logger.error("ASYNC: Failed to remove user reviews from book snapshots", e);
-//        }
-//    }
-
-    /**
-     * Delete user node form Neo4j (ASYNC)
-     */
-    @Async
-    protected void deleteUserNode(String userId){
-        userNodeRepository.deleteByMongoId(userId);
-            logger.info("Deleted user Node");
     }
 }

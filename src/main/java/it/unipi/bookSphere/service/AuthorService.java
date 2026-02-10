@@ -37,6 +37,7 @@ public class AuthorService {
      */
     @Retryable(
         retryFor = {RuntimeException.class},
+        noRetryFor = {AuthorNotFoundException.class, AuthorArchivedException.class},    
         maxAttempts = 3,
         backoff = @Backoff(delay = 1000, multiplier = 2)
     )
