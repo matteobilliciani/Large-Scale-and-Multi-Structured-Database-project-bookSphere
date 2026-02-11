@@ -183,6 +183,8 @@ public class AdminApiTest {
         adminUser.setPasswordHashed("hashedpassword");
         adminUser.setStatus("active");
         adminUser.setJoinedAt(Instant.now());
+        adminUser.setCountry("US");
+
         adminUser = userRepository.save(adminUser);
         adminUserId = adminUser.getId();
         System.out.println("Admin user created with ID: " + adminUserId);
@@ -192,6 +194,7 @@ public class AdminApiTest {
         registerDTO.setUsername(TEST_USERNAME_1);
         registerDTO.setEmail(TEST_EMAIL_1);
         registerDTO.setPassword(TEST_PASSWORD);
+        registerDTO.setCountry("IT");
 
         UserDTO response = authService.register(registerDTO);
         testUserId1 = response.getId();

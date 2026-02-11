@@ -7,6 +7,7 @@ import it.unipi.bookSphere.mapper.UserMapper;
 import it.unipi.bookSphere.model.mongodb.RegisteredUser;
 import it.unipi.bookSphere.repository.mongo.RegisteredUserRepository;
 import it.unipi.bookSphere.repository.neo4j.UserNodeRepository;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,6 +16,7 @@ import org.springframework.retry.annotation.Retryable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.annotation.Validated;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -24,6 +26,7 @@ import java.util.ArrayList;
  */
 @Service
 @RequiredArgsConstructor
+@Validated
 public class AuthService {
 
     private static final Logger logger = LoggerFactory.getLogger(AuthService.class);
@@ -47,7 +50,7 @@ public class AuthService {
         maxAttempts = 3,
         backoff = @Backoff(delay = 1000, multiplier = 2)
     )
-    public UserDTO register(RegisterDTO registerDTO) {
+    public UserDTO register(@Valid RegisterDTO registerDTO) {
         logger.info("Attempting to register user: {}", registerDTO.getUsername());
         
         // 1. Validate that username/email doesn't exist

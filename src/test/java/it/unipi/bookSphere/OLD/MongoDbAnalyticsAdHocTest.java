@@ -43,7 +43,7 @@ public class MongoDbAnalyticsAdHocTest {
 
     // DATA CONSTANTS (FANTASY)
     private static final String USER_USERNAME = "Torch724";
-    private static final String USER_PASSWORD = "password";
+    private static final String USER_PASSWORD = "Password1";
     private static final String USER_EMAIL = "torch724@booksphere.com";
 
     private static final String AUTHOR_TOP = "Arthur Pendragon";

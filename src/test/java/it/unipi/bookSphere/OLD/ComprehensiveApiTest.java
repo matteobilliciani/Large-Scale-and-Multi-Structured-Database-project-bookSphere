@@ -353,7 +353,7 @@ public class ComprehensiveApiTest {
         registerDTO3.setUsername(TEST_USERNAME_3);
         registerDTO3.setEmail(TEST_EMAIL_3);
         registerDTO3.setPassword(TEST_PASSWORD);
-        registerDTO3.setCountry("UK");
+        registerDTO3.setCountry("GB");
 
         UserDTO userDTO3 = authService.register(registerDTO3);
         testUserId3 = userDTO3.getId();

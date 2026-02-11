@@ -10,6 +10,7 @@ import it.unipi.bookSphere.model.mongodb.RegisteredUser;
 import it.unipi.bookSphere.repository.mongo.BookRepository;
 import it.unipi.bookSphere.repository.mongo.RegisteredUserRepository;
 import it.unipi.bookSphere.utils.SecurityUtils;
+import it.unipi.bookSphere.validation.ValidBookshelfStatus;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,6 +22,7 @@ import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.annotation.Validated;
 
 import java.time.Instant;
 import java.util.Arrays;
@@ -31,6 +33,7 @@ import java.util.List;
  */
 @Service
 @RequiredArgsConstructor
+@Validated
 public class BookshelfService {
 
     private static final Logger logger = LoggerFactory.getLogger(BookshelfService.class);
@@ -42,6 +45,7 @@ public class BookshelfService {
     /**
      * Add book to user's bookshelf
      * Status can be: "to_read", "reading", "read"
+     * Status validation  is handled by @ValidBookshelfStatus
      */
     @Transactional
     @Retryable(
@@ -50,7 +54,7 @@ public class BookshelfService {
         maxAttempts = 3,
         backoff = @Backoff(delay = 1000, multiplier = 2)
     )
-    public void addBookToBookshelf(String bookId, String status) {
+    public void addBookToBookshelf(String bookId, @ValidBookshelfStatus String status) {
         String currentUserId = SecurityUtils.getCurrentUserId();
         
         if (currentUserId == null) {
@@ -58,10 +62,11 @@ public class BookshelfService {
         }
         
         // 1. Validate status
-        List<String> validStatuses = Arrays.asList("to_read", "reading", "read");
+        //see @Validated
+        /* List<String> validStatuses = Arrays.asList("to_read", "reading", "read");
         if (!validStatuses.contains(status)) {
             throw new IllegalArgumentException("Invalid status. Must be one of: to_read, reading, read");
-        }
+        }*/
         
         // 2. Validate book exists
         BookDocument book = bookRepository.findById(bookId)
