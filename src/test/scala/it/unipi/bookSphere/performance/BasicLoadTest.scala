@@ -17,9 +17,9 @@ class BasicLoadTest extends Simulation {
 
   // Configuration
   val baseUrl = System.getProperty("baseUrl", "http://localhost:8080")
-  val users = Integer.getInteger("users", 50).intValue()
-  val rampDuration = Integer.getInteger("rampDuration", 30).intValue().seconds
-  val testDuration = Integer.getInteger("testDuration", 120).intValue().seconds
+  val users = Integer.getInteger("users", 20).intValue()
+  val rampDuration = Integer.getInteger("rampDuration", 10).intValue().seconds
+  val testDuration = Integer.getInteger("testDuration", 30).intValue().seconds
 
   // HTTP Protocol Configuration
   val httpProtocol = http

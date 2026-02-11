@@ -25,12 +25,12 @@ if ($confirmation -ne 'y') {
 Write-Host ""
 Write-Host "Checking if BookSphere is running..." -ForegroundColor Yellow
 try {
-    $response = Invoke-WebRequest -Uri "http://localhost:8080/api/books?page=0&size=1" -Method GET -TimeoutSec 5 -ErrorAction Stop
+    $response = Invoke-WebRequest -Uri "http://localhost:8080/api/v1/books?page=0&size=1" -Method GET -TimeoutSec 5 -ErrorAction Stop
     Write-Host "✓ BookSphere is running!" -ForegroundColor Green
 } catch {
     Write-Host "✗ ERROR: BookSphere is not running!" -ForegroundColor Red
     Write-Host "Please start the application first:" -ForegroundColor Red
-    Write-Host "  mvn spring-boot:run" -ForegroundColor White
+    Write-Host "  .\mvnw.cmd spring-boot:run" -ForegroundColor White
     exit 1
 }
 
@@ -42,7 +42,7 @@ Write-Host ""
 Write-Host "================================================" -ForegroundColor Cyan
 Write-Host "  [1/4] Running Basic Load Test..." -ForegroundColor Yellow
 Write-Host "================================================" -ForegroundColor Cyan
-mvn gatling:test -Dgatling.simulationClass=it.unipi.bookSphere.performance.BasicLoadTest
+..\mvnw.cmd gatling:test "-Dgatling.simulationClass=it.unipi.bookSphere.performance.BasicLoadTest"
 $results += @{Name="Basic Load Test"; Success=($LASTEXITCODE -eq 0)}
 Start-Sleep -Seconds 10
 
@@ -51,7 +51,7 @@ Write-Host ""
 Write-Host "================================================" -ForegroundColor Cyan
 Write-Host "  [2/4] Running Spike Test..." -ForegroundColor Yellow
 Write-Host "================================================" -ForegroundColor Cyan
-mvn gatling:test -Dgatling.simulationClass=it.unipi.bookSphere.performance.SpikeTest
+..\mvnw.cmd gatling:test "-Dgatling.simulationClass=it.unipi.bookSphere.performance.SpikeTest"
 $results += @{Name="Spike Test"; Success=($LASTEXITCODE -eq 0)}
 Start-Sleep -Seconds 10
 
@@ -60,7 +60,7 @@ Write-Host ""
 Write-Host "================================================" -ForegroundColor Cyan
 Write-Host "  [3/4] Running Database Intensive Test..." -ForegroundColor Yellow
 Write-Host "================================================" -ForegroundColor Cyan
-mvn gatling:test -Dgatling.simulationClass=it.unipi.bookSphere.performance.DatabaseIntensiveTest
+..\mvnw.cmd gatling:test "-Dgatling.simulationClass=it.unipi.bookSphere.performance.DatabaseIntensiveTest"
 $results += @{Name="Database Intensive Test"; Success=($LASTEXITCODE -eq 0)}
 Start-Sleep -Seconds 10
 
@@ -69,7 +69,7 @@ Write-Host ""
 Write-Host "================================================" -ForegroundColor Cyan
 Write-Host "  [4/4] Running Stress Test..." -ForegroundColor Yellow
 Write-Host "================================================" -ForegroundColor Cyan
-mvn gatling:test -Dgatling.simulationClass=it.unipi.bookSphere.performance.StressTest
+..\mvnw.cmd gatling:test "-Dgatling.simulationClass=it.unipi.bookSphere.performance.StressTest"
 $results += @{Name="Stress Test"; Success=($LASTEXITCODE -eq 0)}
 
 # Summary

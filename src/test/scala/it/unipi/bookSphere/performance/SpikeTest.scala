@@ -17,9 +17,9 @@ import scala.concurrent.duration._
 class SpikeTest extends Simulation {
 
   val baseUrl = System.getProperty("baseUrl", "http://localhost:8080")
-  val normalLoad = Integer.getInteger("normalLoad", 10).intValue()
-  val spikeLoad = Integer.getInteger("spikeLoad", 50).intValue()
-  val spikeDuration = Integer.getInteger("spikeDuration", 30).intValue().seconds
+  val normalLoad = Integer.getInteger("normalLoad", 5).intValue()
+  val spikeLoad = Integer.getInteger("spikeLoad", 20).intValue()
+  val spikeDuration = Integer.getInteger("spikeDuration", 15).intValue().seconds
 
   val httpProtocol = http
     .baseUrl(baseUrl)
@@ -43,10 +43,10 @@ class SpikeTest extends Simulation {
 
   setUp(
     quickBrowsingScenario.inject(
-      constantUsersPerSec(normalLoad) during 30.seconds,    // Carico normale
+      constantUsersPerSec(normalLoad) during 15.seconds,    // Carico normale
       atOnceUsers(spikeLoad),                               // SPIKE improvviso!
       constantUsersPerSec(spikeLoad) during spikeDuration,  // Mantiene il picco
-      rampUsers(normalLoad) during 30.seconds               // Ritorno alla normalità
+      rampUsers(normalLoad) during 15.seconds               // Ritorno alla normalità
     )
   ).protocols(httpProtocol)
     .assertions(

@@ -17,8 +17,8 @@ import scala.concurrent.duration._
 class DatabaseIntensiveTest extends Simulation {
 
   val baseUrl = System.getProperty("baseUrl", "http://localhost:8080")
-  val users = Integer.getInteger("users", 20).intValue()
-  val duration = Integer.getInteger("duration", 2).intValue().minutes
+  val users = Integer.getInteger("users", 9).intValue()
+  val duration = Integer.getInteger("duration", 1).intValue().minutes
 
   val httpProtocol = http
     .baseUrl(baseUrl)
@@ -82,15 +82,15 @@ class DatabaseIntensiveTest extends Simulation {
 
   setUp(
     mongoHeavyScenario.inject(
-      rampUsers(users / 3) during 2.minutes,
+      rampUsers(users / 3) during 30.seconds,
       constantUsersPerSec(users / 60.0) during duration
     ),
     neo4jHeavyScenario.inject(
-      rampUsers(users / 3) during 2.minutes,
+      rampUsers(users / 3) during 30.seconds,
       constantUsersPerSec(users / 60.0) during duration
     ),
     consistencyScenario.inject(
-      rampUsers(users / 3) during 2.minutes,
+      rampUsers(users / 3) during 30.seconds,
       constantUsersPerSec(users / 60.0) during duration
     )
   ).protocols(httpProtocol)

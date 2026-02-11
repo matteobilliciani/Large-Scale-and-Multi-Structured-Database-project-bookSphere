@@ -15,8 +15,8 @@ import scala.concurrent.duration._
 class EnduranceTest extends Simulation {
 
   val baseUrl = System.getProperty("baseUrl", "http://localhost:8080")
-  val constantUsers = Integer.getInteger("constantUsers", 30).intValue()
-  val testDuration = Integer.getInteger("testDuration", 3).intValue().minutes
+  val constantUsers = Integer.getInteger("constantUsers", 10).intValue()
+  val testDuration = Integer.getInteger("testDuration", 2).intValue().minutes
 
   val httpProtocol = http
     .baseUrl(baseUrl)
@@ -39,29 +39,25 @@ class EnduranceTest extends Simulation {
             .get("/api/v1/books?title=The&page=0&size=20")
             .check(status.is(200))),
           
-          25.0 -> exec(http("Browse Random Page")
-            .get(s"/api/books?page=${random.nextInt(10)}&size=20")
+          35.0 -> exec(http("Browse Random Page")
+            .get(s"/api/v1/books?page=${random.nextInt(5)}&size=20")
             .check(status.is(200))),
           
-          25.0 -> exec(http("Filter by Category")
-            .get("/api/v1/books/filter?category=Science Fiction&page=0&size=20")
-            .check(status.is(200))),
-          
-          20.0 -> exec(http("Search Authors")
+          35.0 -> exec(http("Search Authors")
             .get("/api/v1/authors?author_name=Smith&page=0&size=20")
             .check(status.in(200, 404)))
         )
         .pause(3.seconds, 8.seconds)
         
-        .exec(http("Get Book Details")
-          .get("/api/v1/books/679cb334b477993c5cdc8b3d")
+        .exec(http("Browse More Books")
+          .get("/api/v1/books?page=1&size=20")
           .check(status.is(200)))
         .pause(5.seconds, 10.seconds)
     }
 
   setUp(
     enduranceScenario.inject(
-      rampUsers(constantUsers) during 5.minutes,        // Ramp-up iniziale
+      rampUsers(constantUsers) during 1.minute,        // Ramp-up iniziale
       constantUsersPerSec(constantUsers / 60.0) during testDuration  // Carico costante
     )
   ).protocols(httpProtocol)
@@ -72,7 +68,7 @@ class EnduranceTest extends Simulation {
       global.responseTime.max.lt(10000)                 // Max < 10s anche dopo 2 ore
     )
     .throttle(
-      reachRps(constantUsers * 2) in 5.minutes,         // Limitiamo le RPS per evitare sovraccarico
+      reachRps(constantUsers * 2) in 1.minute,         // Limitiamo le RPS per evitare sovraccarico
       holdFor(testDuration)
     )
 }

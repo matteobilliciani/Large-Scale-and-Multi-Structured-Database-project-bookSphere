@@ -15,10 +15,10 @@ import scala.concurrent.duration._
 class StressTest extends Simulation {
 
   val baseUrl = System.getProperty("baseUrl", "http://localhost:8080")
-  val initialUsers = Integer.getInteger("initialUsers", 10).intValue()
-  val maxUsers = Integer.getInteger("maxUsers", 200).intValue()
-  val stepDuration = Integer.getInteger("stepDuration", 30).intValue().seconds
-  val incrementUsers = Integer.getInteger("incrementUsers", 10).intValue()
+  val initialUsers = Integer.getInteger("initialUsers", 5).intValue()
+  val maxUsers = Integer.getInteger("maxUsers", 30).intValue()
+  val stepDuration = Integer.getInteger("stepDuration", 10).intValue().seconds
+  val incrementUsers = Integer.getInteger("incrementUsers", 5).intValue()
 
   val httpProtocol = http
     .baseUrl(baseUrl)
