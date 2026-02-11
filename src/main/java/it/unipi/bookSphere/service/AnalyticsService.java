@@ -153,7 +153,7 @@ public class AnalyticsService {
         
         if (genre != null && !genre.isEmpty()) {
             // Normalize genre name for consistency
-            String normalizedGenre = it.unipi.bookSphere.utils.NormalizationUtils.normalizeGenreName(genre);
+            String normalizedGenre = it.unipi.bookSphere.validation.NormalizationUtils.normalizeGenreName(genre);
             logger.info("Finding influencers for genre: {} (normalized: {})", genre, normalizedGenre);
             
             // Verify genre exists

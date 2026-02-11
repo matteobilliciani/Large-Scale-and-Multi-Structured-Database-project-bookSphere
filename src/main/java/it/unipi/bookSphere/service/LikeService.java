@@ -9,7 +9,7 @@ import it.unipi.bookSphere.repository.mongo.*;
 import it.unipi.bookSphere.repository.neo4j.*;
 import it.unipi.bookSphere.repository.neo4j.projections.*;
 import it.unipi.bookSphere.service.async.AsyncLikeTasks;
-import it.unipi.bookSphere.utils.NormalizationUtils;
+import it.unipi.bookSphere.validation.NormalizationUtils;
 import it.unipi.bookSphere.utils.SecurityUtils;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;

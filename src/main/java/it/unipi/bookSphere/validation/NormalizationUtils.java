@@ -1,4 +1,4 @@
-package it.unipi.bookSphere.utils;
+package it.unipi.bookSphere.validation;
 
 import java.text.Normalizer;
 import java.util.Arrays;

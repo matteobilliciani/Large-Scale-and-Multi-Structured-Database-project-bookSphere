@@ -1,4 +1,4 @@
-package it.unipi.bookSphere.utils;
+package it.unipi.bookSphere.validation;
 
 import it.unipi.bookSphere.exceptions.ValidationException;
 

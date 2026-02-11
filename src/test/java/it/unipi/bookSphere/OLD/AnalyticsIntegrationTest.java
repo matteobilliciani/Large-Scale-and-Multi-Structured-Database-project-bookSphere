@@ -49,12 +49,12 @@ public class AnalyticsIntegrationTest {
     private static String testBookId1, testBookId2, testBookId3, testBookId4;
     private static String testAuthorId;
     
-    private static final String TEST_PREFIX = "AnalyticsTest_";
-    private static final String TEST_USERNAME1 = TEST_PREFIX + "Italy";
-    private static final String TEST_USERNAME2 = TEST_PREFIX + "USA";
-    private static final String TEST_USERNAME3 = TEST_PREFIX + "UK";
-    private static final String TEST_USERNAME4 = TEST_PREFIX + "France";
-    private static final String TEST_USERNAME5 = TEST_PREFIX + "Germany";
+    private static final String TEST_PREFIX = "analyticstest_";
+    private static final String TEST_USERNAME1 = TEST_PREFIX + "italy";
+    private static final String TEST_USERNAME2 = TEST_PREFIX + "usa";
+    private static final String TEST_USERNAME3 = TEST_PREFIX + "uk";
+    private static final String TEST_USERNAME4 = TEST_PREFIX + "france";
+    private static final String TEST_USERNAME5 = TEST_PREFIX + "germany";
     private static final String TEST_GENRE = TEST_PREFIX + "Genre";
     private static final String TEST_AUTHOR_NAME = TEST_PREFIX + "Author";
     private static final String TEST_PASSWORD = "Pass123!";
@@ -78,7 +78,7 @@ public class AnalyticsIntegrationTest {
         
         // Cleanup users
         userRepository.findAll().stream()
-            .filter(u -> u.getUsername() != null && u.getUsername().startsWith(TEST_PREFIX))
+            .filter(u -> u.getUsername() != null && u.getUsername().toLowerCase().startsWith(TEST_PREFIX))
             .forEach(user -> {
                 userRepository.deleteById(user.getId());
                 System.out.println("  Deleted user: " + user.getUsername());
@@ -86,7 +86,7 @@ public class AnalyticsIntegrationTest {
         
         // Cleanup reviews  
         reviewRepository.findAll().stream()
-            .filter(r -> r.getUsername() != null && r.getUsername().startsWith(TEST_PREFIX))
+            .filter(r -> r.getUsername() != null && r.getUsername().toLowerCase().startsWith(TEST_PREFIX))
             .forEach(review -> {
                 reviewRepository.deleteById(review.getId());
                 System.out.println("  Deleted review: " + review.getId());
@@ -110,7 +110,7 @@ public class AnalyticsIntegrationTest {
         
         // Cleanup Neo4j
         userNodeRepository.findAll().stream()
-            .filter(u -> u.getUsername() != null && u.getUsername().startsWith(TEST_PREFIX))
+            .filter(u -> u.getUsername() != null && u.getUsername().toLowerCase().startsWith(TEST_PREFIX))
             .forEach(user -> {
                 userNodeRepository.deleteByMongoId(user.getMongoId());
                 System.out.println("  Deleted Neo4j user node: " + user.getUsername());
@@ -419,7 +419,7 @@ public class AnalyticsIntegrationTest {
         bookNodeRepository.getOrCreate(bookId, title, year);
         authorNodeRepository.createWroteRelationship(testAuthorId, bookId);
         // Normalize genre name for Neo4j relationship
-        String normalizedGenre = it.unipi.bookSphere.utils.NormalizationUtils.normalizeGenreName(TEST_GENRE);
+        String normalizedGenre = it.unipi.bookSphere.validation.NormalizationUtils.normalizeGenreName(TEST_GENRE);
         bookNodeRepository.createBelongsToRelationship(bookId, normalizedGenre);
         System.out.println("  Created book: " + title);
         return bookId;

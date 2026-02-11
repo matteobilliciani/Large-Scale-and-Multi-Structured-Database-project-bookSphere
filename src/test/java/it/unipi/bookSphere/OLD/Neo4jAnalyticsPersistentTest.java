@@ -219,7 +219,7 @@ public class Neo4jAnalyticsPersistentTest {
         bookNodeRepository.getOrCreate(testBookId1, book1.getTitle(), 2020);
         authorNodeRepository.createWroteRelationship(testAuthorId, testBookId1);
         // Normalize genre name for Neo4j relationship
-        String normalizedGenre = it.unipi.bookSphere.utils.NormalizationUtils.normalizeGenreName(TEST_GENRE);
+        String normalizedGenre = it.unipi.bookSphere.validation.NormalizationUtils.normalizeGenreName(TEST_GENRE);
         bookNodeRepository.createBelongsToRelationship(testBookId1, normalizedGenre);
         
         // Create Book 2 (Popular)

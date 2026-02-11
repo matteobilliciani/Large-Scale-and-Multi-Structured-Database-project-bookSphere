@@ -6,7 +6,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import it.unipi.bookSphere.dto.ReviewDTO;
 import it.unipi.bookSphere.service.ReviewService;
-import it.unipi.bookSphere.utils.ValidationUtils;
+import it.unipi.bookSphere.validation.ValidationUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

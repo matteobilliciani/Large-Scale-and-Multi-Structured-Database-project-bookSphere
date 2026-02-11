@@ -507,7 +507,7 @@ public class AdminApiTest {
         GenreDTO created = adminCatalogService.addGenre(genreDTO);
 
         // Genre name will be normalized to Title Case
-        String expectedName = it.unipi.bookSphere.utils.NormalizationUtils.normalizeGenreName(TEST_GENRE_1);
+        String expectedName = it.unipi.bookSphere.validation.NormalizationUtils.normalizeGenreName(TEST_GENRE_1);
         assertEquals(expectedName, created.getName(), "Genre name should match (normalized)");
 
         // Verify in Neo4j

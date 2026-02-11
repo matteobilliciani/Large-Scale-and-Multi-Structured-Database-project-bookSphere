@@ -45,7 +45,7 @@ public class AuthControllerTest {
         
         // Remove all test users from MongoDB
         userRepository.findAll().stream()
-                .filter(u -> u.getUsername() != null && u.getUsername().startsWith(TEST_PREFIX))
+                .filter(u -> u.getUsername() != null && u.getUsername().toLowerCase().startsWith(TEST_PREFIX.toLowerCase()))
                 .forEach(user -> {
                     userRepository.deleteById(user.getId());
                     System.out.println("Deleted test user: " + user.getUsername());
@@ -53,7 +53,7 @@ public class AuthControllerTest {
 
         // Remove all test users from Neo4j
         userNodeRepository.findAll().stream()
-                .filter(u -> u.getUsername() != null && u.getUsername().startsWith(TEST_PREFIX))
+                .filter(u -> u.getUsername() != null && u.getUsername().toLowerCase().startsWith(TEST_PREFIX.toLowerCase()))
                 .forEach(user -> {
                     userNodeRepository.deleteByMongoId(user.getMongoId());
                     System.out.println("Deleted test user node: " + user.getUsername());
@@ -78,7 +78,7 @@ public class AuthControllerTest {
 
         assertNotNull(result);
         assertNotNull(result.getId());
-        assertEquals(TEST_PREFIX + "User1", result.getUsername());
+        assertEquals((TEST_PREFIX + "User1").toLowerCase(), result.getUsername());
         assertEquals("IT", result.getCountry());
         assertEquals("active", result.getStatus());
 
@@ -87,7 +87,7 @@ public class AuthControllerTest {
         // Verify in MongoDB
         RegisteredUser userMongo = userRepository.findById(testUserId).orElse(null);
         assertNotNull(userMongo);
-        assertEquals(TEST_PREFIX + "User1", userMongo.getUsername());
+        assertEquals((TEST_PREFIX + "User1").toLowerCase(), userMongo.getUsername());
         assertEquals(TEST_PREFIX + "user1@test.com", userMongo.getEmail());
         assertNotNull(userMongo.getPasswordHashed());
 
@@ -95,7 +95,7 @@ public class AuthControllerTest {
         var userNodeOpt = userNodeRepository.findByMongoId(testUserId);
         assertTrue(userNodeOpt.isPresent());
         var userNode = userNodeOpt.get();
-        assertEquals(TEST_PREFIX + "User1", userNode.getUsername());
+        assertEquals((TEST_PREFIX + "User1").toLowerCase(), userNode.getUsername());
         assertEquals("IT", userNode.getCountry());
 
         System.out.println("User registered successfully: " + result.getUsername());
@@ -153,7 +153,7 @@ public class AuthControllerTest {
 
         assertNotNull(result);
         assertEquals(testUserId, result.getId());
-        assertEquals(TEST_PREFIX + "User1", result.getUsername());
+        assertEquals((TEST_PREFIX + "User1").toLowerCase(), result.getUsername());
         assertEquals("active", result.getStatus());
 
         System.out.println("Login successful: " + result.getUsername());
@@ -173,7 +173,7 @@ public class AuthControllerTest {
 
         assertNotNull(result);
         assertEquals(testUserId, result.getId());
-        assertEquals(TEST_PREFIX + "User1", result.getUsername());
+        assertEquals((TEST_PREFIX + "User1").toLowerCase(), result.getUsername());
 
         System.out.println("Login successful with email: " + result.getUsername());
     }

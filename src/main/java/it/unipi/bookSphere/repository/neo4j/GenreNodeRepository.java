@@ -4,7 +4,7 @@ import it.unipi.bookSphere.model.neo4j.GenreNode;
 import it.unipi.bookSphere.repository.neo4j.projections.GenreLikeProjection;
 import it.unipi.bookSphere.repository.neo4j.projections.InfluencerProjection;
 import it.unipi.bookSphere.repository.neo4j.projections.AuthorLikeProjection;
-import it.unipi.bookSphere.utils.NormalizationUtils;
+import it.unipi.bookSphere.validation.NormalizationUtils;
 import org.springframework.data.neo4j.repository.Neo4jRepository;
 import org.springframework.data.neo4j.repository.query.Query;
 import org.springframework.data.repository.query.Param;

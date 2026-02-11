@@ -7,6 +7,7 @@ import it.unipi.bookSphere.mapper.UserMapper;
 import it.unipi.bookSphere.model.mongodb.RegisteredUser;
 import it.unipi.bookSphere.repository.mongo.RegisteredUserRepository;
 import it.unipi.bookSphere.repository.neo4j.UserNodeRepository;
+import it.unipi.bookSphere.validation.NormalizationUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -53,9 +54,12 @@ public class AuthService {
     public UserDTO register(@Valid RegisterDTO registerDTO) {
         logger.info("Attempting to register user: {}", registerDTO.getUsername());
         
+        // Normalize username for consistency
+        String normalizedUsername = NormalizationUtils.normalizeUsername(registerDTO.getUsername());
+        
         // 1. Validate that username/email doesn't exist
-        if (userRepository.existsByUsername(registerDTO.getUsername())) {
-            logger.warn("Registration failed: username {} already exists", registerDTO.getUsername());
+        if (userRepository.existsByUsername(normalizedUsername)) {
+            logger.warn("Registration failed: username {} already exists", normalizedUsername);
             throw new UserAlreadyExistsException("Username already exists");
         }
         
@@ -69,7 +73,7 @@ public class AuthService {
 
         // 3. Create user in MongoDB with default role "USER" (status: "active")
         RegisteredUser user = new RegisteredUser();
-        user.setUsername(registerDTO.getUsername());
+        user.setUsername(normalizedUsername);
         user.setEmail(registerDTO.getEmail());
         user.setPasswordHashed(hashedPassword);
         user.setCountry(registerDTO.getCountry());
@@ -114,8 +118,14 @@ public class AuthService {
     public UserDTO login(LoginDTO loginDTO) {
         logger.info("Login attempt for: {}", loginDTO.getUsernameOrEmail());
 
+        // Normalize username for search (email doesn't need normalization)
+        String normalizedUsernameOrEmail = loginDTO.getUsernameOrEmail();
+        if (!normalizedUsernameOrEmail.contains("@")) {
+            normalizedUsernameOrEmail = NormalizationUtils.normalizeUsername(normalizedUsernameOrEmail);
+        }
+
         // 1. Find user by username or email
-        RegisteredUser user = userRepository.findByUsername(loginDTO.getUsernameOrEmail())
+        RegisteredUser user = userRepository.findByUsername(normalizedUsernameOrEmail)
                 .or(() -> userRepository.findByEmail(loginDTO.getUsernameOrEmail()))
                 .orElseThrow(() -> {
                     logger.warn("Login failed: user not found - {}", loginDTO.getUsernameOrEmail());

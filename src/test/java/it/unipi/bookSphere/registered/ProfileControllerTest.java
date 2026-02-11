@@ -56,7 +56,7 @@ public class ProfileControllerTest {
 
         // Remove test users by username prefix
         userRepository.findAll().stream()
-                .filter(u -> u.getUsername() != null && u.getUsername().startsWith(TEST_PREFIX))
+                .filter(u -> u.getUsername() != null && u.getUsername().toLowerCase().startsWith(TEST_PREFIX.toLowerCase()))
                 .forEach(user -> {
                     userRepository.deleteById(user.getId());
                     userNodeRepository.deleteByMongoId(user.getId());
@@ -82,7 +82,7 @@ public class ProfileControllerTest {
         // Create test user
         RegisteredUser user = new RegisteredUser();
         originalUsername = TEST_PREFIX + "User";
-        user.setUsername(originalUsername);
+        user.setUsername(originalUsername.toLowerCase());
         user.setEmail(TEST_PREFIX + "user@test.com");
         user.setPasswordHashed(passwordEncoder.encode("password"));
         user.setCountry("IT");
@@ -115,12 +115,12 @@ public class ProfileControllerTest {
         // Verify in MongoDB
         RegisteredUser userMongo = userRepository.findById(testUserId).orElse(null);
         assertNotNull(userMongo);
-        assertEquals(newUsername, userMongo.getUsername());
+        assertEquals(newUsername.toLowerCase(), userMongo.getUsername());
 
         // Verify in Neo4j
         var userNodeOpt = userNodeRepository.findByMongoId(testUserId);
         assertTrue(userNodeOpt.isPresent());
-        assertEquals(newUsername, userNodeOpt.get().getUsername());
+        assertEquals(newUsername.toLowerCase(), userNodeOpt.get().getUsername());
 
         // Update authentication for next tests
         setupAuthentication(testUserId, newUsername);
@@ -168,7 +168,7 @@ public class ProfileControllerTest {
         // Create another user
         RegisteredUser anotherUser = new RegisteredUser();
         String existingUsername = TEST_PREFIX + "ExistingUser";
-        anotherUser.setUsername(existingUsername);
+        anotherUser.setUsername(existingUsername.toLowerCase());
         anotherUser.setEmail(TEST_PREFIX + "existing@test.com");
         anotherUser.setPasswordHashed(passwordEncoder.encode("password"));
         anotherUser.setCountry("IT");

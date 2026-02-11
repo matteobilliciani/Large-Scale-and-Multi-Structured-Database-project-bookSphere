@@ -7,7 +7,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import it.unipi.bookSphere.dto.AuthorDTO;
 import it.unipi.bookSphere.dto.GenreDTO;
 import it.unipi.bookSphere.service.AdminCatalogService;
-import it.unipi.bookSphere.utils.ValidationUtils;
+import it.unipi.bookSphere.validation.ValidationUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

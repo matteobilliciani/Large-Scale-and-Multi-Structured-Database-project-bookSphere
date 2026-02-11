@@ -357,7 +357,7 @@ public class RegisteredUserIntegrationTest {
         System.out.println("✓ Liked genre: " + TEST_GENRE);
 
         // Genre names are normalized to Title Case
-        String normalizedGenre = it.unipi.bookSphere.utils.NormalizationUtils.normalizeGenreName(TEST_GENRE);
+        String normalizedGenre = it.unipi.bookSphere.validation.NormalizationUtils.normalizeGenreName(TEST_GENRE);
         boolean genreLiked = genreNodeRepository.userLikesGenre(testUserId, normalizedGenre);
         assertTrue(genreLiked, "Genre LIKES relationship should exist");
         System.out.println("✓ Genre LIKES relationship verified");

@@ -12,7 +12,7 @@ import it.unipi.bookSphere.repository.mongo.BookRepository;
 import it.unipi.bookSphere.repository.neo4j.AuthorNodeRepository;
 import it.unipi.bookSphere.repository.neo4j.BookNodeRepository;
 import it.unipi.bookSphere.repository.neo4j.GenreNodeRepository;
-import it.unipi.bookSphere.utils.NormalizationUtils;
+import it.unipi.bookSphere.validation.NormalizationUtils;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

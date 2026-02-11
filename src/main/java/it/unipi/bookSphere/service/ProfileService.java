@@ -9,6 +9,8 @@ import it.unipi.bookSphere.repository.mongo.RegisteredUserRepository;
 import it.unipi.bookSphere.repository.neo4j.UserNodeRepository;
 import it.unipi.bookSphere.service.async.AsyncProfileTasks;
 import it.unipi.bookSphere.utils.SecurityUtils;
+import it.unipi.bookSphere.validation.NormalizationUtils;
+import it.unipi.bookSphere.validation.ValidationUtils;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,22 +51,13 @@ public class ProfileService {
             throw new UnauthorizedOperationException("User not authenticated");
         }
         
-        // 1. Validate new username
-        if (newUsername == null || newUsername.trim().isEmpty()) {
-            throw new IllegalArgumentException("Username cannot be empty");
-        }
-        
-        if (newUsername.contains(" ")) {
-            throw new IllegalArgumentException("Username cannot contain spaces");
-        }
-        
-        if (newUsername.length() < 3) {
-            throw new IllegalArgumentException("Username must be at least 3 characters long");
-        }
+        // 1. Normalize and validate new username
+        String normalizedUsername = NormalizationUtils.normalizeUsername(newUsername);
+        ValidationUtils.validateUsername(normalizedUsername);
         
         // 2. Check if username is already taken
-        if (userRepository.existsByUsername(newUsername)) {
-            throw new AlreadyExistsException("Username already exists: " + newUsername);
+        if (userRepository.existsByUsername(normalizedUsername)) {
+            throw new AlreadyExistsException("Username already exists: " + normalizedUsername);
         }
         
         // 3. Find user
@@ -74,24 +67,24 @@ public class ProfileService {
         String oldUsername = user.getUsername();
         
         // 4. Update username in MongoDB
-        user.setUsername(newUsername);
+        user.setUsername(normalizedUsername);
         userRepository.save(user);
-        logger.info("Updated username in MongoDB from {} to {}", oldUsername, newUsername);
+        logger.info("Updated username in MongoDB from {} to {}", oldUsername, normalizedUsername);
         
         try {
             // 5. Update username in Neo4j UserNode
             UserNode userNode = userNodeRepository.findByMongoId(currentUserId).orElse(null);
             if (userNode != null) {
-                userNode.setUsername(newUsername);
+                userNode.setUsername(normalizedUsername);
                 userNodeRepository.save(userNode);
-                logger.info("Updated username in Neo4j UserNode from {} to {}", oldUsername, newUsername);
+                logger.info("Updated username in Neo4j UserNode from {} to {}", oldUsername, normalizedUsername);
             }
             
             // 6. Update username in all reviews (eventual consistency - ASYNC)
-            asyncProfileTasks.updateUsernameInReviews(currentUserId, newUsername);
+            asyncProfileTasks.updateUsernameInReviews(currentUserId, normalizedUsername);
             
             // 7. Update username in book snapshots (eventual consistency - ASYNC)
-            asyncProfileTasks.updateUsernameInBookSnapshots(currentUserId, oldUsername, newUsername);
+            asyncProfileTasks.updateUsernameInBookSnapshots(currentUserId, oldUsername, normalizedUsername);
             
         } catch (Exception e) {
             // If Neo4j update fails, rollback MongoDB

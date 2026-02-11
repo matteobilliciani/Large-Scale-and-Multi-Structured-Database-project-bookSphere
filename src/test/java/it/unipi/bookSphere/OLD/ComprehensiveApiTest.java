@@ -640,7 +640,7 @@ public class ComprehensiveApiTest {
         System.out.println("✓ Genre liked: " + TEST_GENRE_1);
 
         // Verify Neo4j relationship (genre names are normalized to Title Case)
-        String normalizedGenre = it.unipi.bookSphere.utils.NormalizationUtils.normalizeGenreName(TEST_GENRE_1);
+        String normalizedGenre = it.unipi.bookSphere.validation.NormalizationUtils.normalizeGenreName(TEST_GENRE_1);
         boolean liked = genreNodeRepository.userLikesGenre(testUserId1, normalizedGenre);
         assertTrue(liked, "LIKES relationship should exist for genre");
         System.out.println("✓ Genre LIKES relationship verified in Neo4j");
