@@ -13,6 +13,7 @@ import it.unipi.bookSphere.repository.mongo.ReviewRepository;
 import it.unipi.bookSphere.repository.neo4j.ReviewNodeRepository;
 import it.unipi.bookSphere.service.async.AsyncReviewTasks;
 import it.unipi.bookSphere.utils.SecurityUtils;
+import it.unipi.bookSphere.validation.ValidObjectId;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,6 +25,7 @@ import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.annotation.Validated;
 
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -35,6 +37,7 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
+@Validated
 public class ReviewService {
 
     private static final Logger logger = LoggerFactory.getLogger(ReviewService.class);
@@ -137,7 +140,9 @@ public class ReviewService {
         // Note: We create the Review manually instead of using reviewMapper.toDocument() 
         // because we need to set several fields that are not in the DTO (userId, createdAt, 
         // likesCount, source). The mapper is used for DTO conversion at the end.
+
         Review review = new Review();
+
         review.setUserId(currentUserId);
         review.setUsername(currentUsername);
         review.setRating(reviewDTO.getRating());
@@ -194,7 +199,7 @@ public class ReviewService {
         maxAttempts = 3,
         backoff = @Backoff(delay = 1000, multiplier = 2)
     )
-    public ReviewDTO updateReview(String reviewId, ReviewDTO reviewDTO) {
+    public ReviewDTO updateReview(@ValidObjectId String reviewId, ReviewDTO reviewDTO) {
         String currentUserId = SecurityUtils.getCurrentUserId();
         
         if (currentUserId == null) {
@@ -288,7 +293,7 @@ public class ReviewService {
         maxAttempts = 3,
         backoff = @Backoff(delay = 1000, multiplier = 2)
     )
-    public void deleteReview(String reviewId) {
+    public void deleteReview(@ValidObjectId String reviewId) {
         String currentUserId = SecurityUtils.getCurrentUserId();
         
         if (currentUserId == null) {

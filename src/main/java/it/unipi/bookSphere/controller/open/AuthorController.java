@@ -5,9 +5,11 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import it.unipi.bookSphere.dto.AuthorDTO;
 import it.unipi.bookSphere.service.AuthorService;
+import it.unipi.bookSphere.validation.ValidObjectId;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -15,6 +17,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/authors")
 @RequiredArgsConstructor
+@Validated
 @Tag(name = "Authors (Open)", description = "Public author endpoints accessible to all users")
 public class AuthorController {
 
@@ -27,6 +30,7 @@ public class AuthorController {
     @GetMapping("/{id}")
     public ResponseEntity<AuthorDTO> getAuthorById(
             @Parameter(description = "MongoDB ObjectId of the author", example = "65b3a...")
+            @ValidObjectId
             @PathVariable String id
     ) {
         AuthorDTO author = authorService.findById(id);

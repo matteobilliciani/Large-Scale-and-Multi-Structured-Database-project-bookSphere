@@ -433,6 +433,7 @@ public class ComprehensiveApiTest {
         setupSecurityContext(testUserId1, TEST_USERNAME_1);
 
         ReviewDTO reviewDTO = new ReviewDTO();
+        reviewDTO.setId(null);
         reviewDTO.setBookId(testBookId1);
         reviewDTO.setRating(85);
         reviewDTO.setText("This is an excellent book! Highly recommended.");
