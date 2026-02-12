@@ -13,6 +13,7 @@ import it.unipi.bookSphere.repository.neo4j.AuthorNodeRepository;
 import it.unipi.bookSphere.repository.neo4j.BookNodeRepository;
 import it.unipi.bookSphere.repository.neo4j.GenreNodeRepository;
 import it.unipi.bookSphere.validation.NormalizationUtils;
+import it.unipi.bookSphere.validation.ValidObjectId;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,6 +21,7 @@ import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.annotation.Validated;
 
 import java.util.ArrayList;
 
@@ -29,6 +31,7 @@ import java.util.ArrayList;
  */
 @Service
 @RequiredArgsConstructor
+@Validated
 public class AdminBookService {
 
     private static final Logger logger = LoggerFactory.getLogger(AdminBookService.class);
@@ -71,7 +74,7 @@ public class AdminBookService {
         
         // 1. Create book in MongoDB
         BookDocument bookDocument = bookMapper.toDocument(bookDTO);
-        //bookDocument.setStatus("ACTIVE");
+        bookDocument.setId(null);
         bookDocument.setSource("admin");
         
         // Initialize empty lists if not present
@@ -86,7 +89,8 @@ public class AdminBookService {
         
         BookDocument savedBook = bookRepository.save(bookDocument);
         logger.info("Book created in MongoDB with ID: {}", savedBook.getId());
-        
+
+
         try {
             // 2. Create or get AuthorNode in Neo4j (centralized in repository)
             AuthorNode authorNode = authorNodeRepository.getOrCreate(
@@ -153,7 +157,7 @@ public class AdminBookService {
         maxAttempts = 3,
         backoff = @Backoff(delay = 1000, multiplier = 2)
     )
-    public BookDTO updateBook(String id, BookDTO bookDTO) {
+    public BookDTO updateBook(@ValidObjectId String id, BookDTO bookDTO) {
         logger.info("Admin updating book with ID: {}", id);
         
         // Normalize book title and author name for consistency
@@ -290,7 +294,7 @@ public class AdminBookService {
         maxAttempts = 3,
         backoff = @Backoff(delay = 1000, multiplier = 2)
     )
-    public void deleteBook(String id) {
+    public void deleteBook(@ValidObjectId String id) {
         logger.info("Admin archiving book with ID: {}", id);
         
         // 1. Soft delete in MongoDB (set status to ARCHIVED)
