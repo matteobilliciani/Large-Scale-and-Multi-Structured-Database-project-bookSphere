@@ -1,4 +1,4 @@
-package it.unipi.bookSphere.service;
+package it.unipi.bookSphere.service.admin;
 
 import it.unipi.bookSphere.dto.ReviewDTO;
 import it.unipi.bookSphere.dto.UserDTO;
@@ -12,6 +12,7 @@ import it.unipi.bookSphere.model.mongodb.Review;
 import it.unipi.bookSphere.repository.mongo.RegisteredUserRepository;
 import it.unipi.bookSphere.repository.mongo.ReviewRepository;
 import it.unipi.bookSphere.service.async.AsyncAdminModerationTasks;
+import it.unipi.bookSphere.service.open.ReviewService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

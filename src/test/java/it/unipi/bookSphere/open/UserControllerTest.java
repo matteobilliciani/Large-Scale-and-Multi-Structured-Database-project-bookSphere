@@ -4,7 +4,7 @@ import it.unipi.bookSphere.dto.UserDTO;
 import it.unipi.bookSphere.model.mongodb.RegisteredUser;
 import it.unipi.bookSphere.repository.mongo.RegisteredUserRepository;
 import it.unipi.bookSphere.repository.neo4j.UserNodeRepository;
-import it.unipi.bookSphere.service.UserService;
+import it.unipi.bookSphere.service.open.UserService;
 import it.unipi.bookSphere.TestProfile;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;

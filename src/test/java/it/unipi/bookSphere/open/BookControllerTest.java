@@ -5,7 +5,7 @@ import it.unipi.bookSphere.model.mongodb.AuthorDocument;
 import it.unipi.bookSphere.model.mongodb.BookDocument;
 import it.unipi.bookSphere.repository.mongo.AuthorRepository;
 import it.unipi.bookSphere.repository.mongo.BookRepository;
-import it.unipi.bookSphere.service.BookService;
+import it.unipi.bookSphere.service.open.BookService;
 import it.unipi.bookSphere.TestProfile;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;

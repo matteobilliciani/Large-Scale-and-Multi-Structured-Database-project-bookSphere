@@ -5,7 +5,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import it.unipi.bookSphere.dto.BookshelfRequestDTO;
-import it.unipi.bookSphere.service.BookshelfService;
+import it.unipi.bookSphere.service.registered.BookshelfService;
 import it.unipi.bookSphere.validation.ValidationUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

@@ -1,4 +1,4 @@
-package it.unipi.bookSphere.service;
+package it.unipi.bookSphere.service.open;
 
 import it.unipi.bookSphere.dto.AuthorDTO;
 import it.unipi.bookSphere.dto.BookDTO;

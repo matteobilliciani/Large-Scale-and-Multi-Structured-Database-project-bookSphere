@@ -1,4 +1,4 @@
-package it.unipi.bookSphere.service;
+package it.unipi.bookSphere.service.registered;
 
 import it.unipi.bookSphere.dto.RecommendationDTO;
 import it.unipi.bookSphere.dto.WrappedDTO;

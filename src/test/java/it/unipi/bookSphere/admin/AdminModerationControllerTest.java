@@ -11,8 +11,8 @@ import it.unipi.bookSphere.repository.mongo.RegisteredUserRepository;
 import it.unipi.bookSphere.repository.mongo.ReviewRepository;
 import it.unipi.bookSphere.repository.neo4j.ReviewNodeRepository;
 import it.unipi.bookSphere.repository.neo4j.UserNodeRepository;
-import it.unipi.bookSphere.service.AdminModerationService;
-import it.unipi.bookSphere.service.ReviewService;
+import it.unipi.bookSphere.service.admin.AdminModerationService;
+import it.unipi.bookSphere.service.open.ReviewService;
 import it.unipi.bookSphere.utils.UserPrincipal;
 import it.unipi.bookSphere.TestProfile;
 import org.junit.jupiter.api.*;
@@ -71,6 +71,7 @@ public class AdminModerationControllerTest {
     private PasswordEncoder passwordEncoder;
 
     private static final String TEST_PREFIX = "AdminModTest_";
+    private static final String TEST_RUN_ID = String.valueOf(System.currentTimeMillis() % 100000); // Unique per test run
     private static String testUserId;
     private static String testBookId;
     private static String testAuthorId;
@@ -106,6 +107,7 @@ public class AdminModerationControllerTest {
 
         userRepository.findAll().stream()
                 .filter(u -> u.getUsername() != null && u.getUsername().startsWith(TEST_PREFIX))
+                .filter(u -> !"deleted".equals(u.getStatus()) && !"BANNED".equals(u.getStatus()))
                 .forEach(user -> {
                     userRepository.deleteById(user.getId());
                     userNodeRepository.deleteByMongoId(user.getId());
@@ -249,11 +251,17 @@ public class AdminModerationControllerTest {
     void test07_BanUser_WithCascadingEffects() {
         System.out.println("\n=== TEST 07: Ban User with Cascading Effects ===");
 
+        // Cleanup: delete user if exists from previous runs (check by email before it gets nulled)
+        userRepository.findByEmail(TEST_PREFIX + "usertoban@test.com").ifPresent(u -> {
+            userRepository.deleteById(u.getId());
+            userNodeRepository.findByMongoId(u.getId()).ifPresent(userNodeRepository::delete);
+        });
+
         // Create a NEW test user with review for cascading test
         setupAdminAuthentication();
 
         RegisteredUser userToBan = new RegisteredUser();
-        userToBan.setUsername(TEST_PREFIX + "UserToBan");
+        userToBan.setUsername(TEST_PREFIX + "UserToBan_" + TEST_RUN_ID);
         userToBan.setEmail(TEST_PREFIX + "usertoban@test.com");
         userToBan.setPasswordHashed(passwordEncoder.encode("password"));
         userToBan.setCountry("DE");
@@ -268,7 +276,7 @@ public class AdminModerationControllerTest {
         userNodeRepository.getOrCreate(userToBanId, userToBan.getUsername(), userToBan.getCountry());
 
         // Switch to user authentication to create review
-        setupUserAuthentication(userToBanId, TEST_PREFIX + "UserToBan");
+        setupUserAuthentication(userToBanId, TEST_PREFIX + "UserToBan_" + TEST_RUN_ID);
 
         // Create review for the user
         ReviewDTO reviewDTO = new ReviewDTO();
@@ -311,7 +319,7 @@ public class AdminModerationControllerTest {
         RegisteredUser userAfterBan = userRepository.findById(userToBanId).orElse(null);
         assertNotNull(userAfterBan, "User should still exist in MongoDB");
         assertEquals("BANNED", userAfterBan.getStatus(), "User status should be BANNED");
-        assertNull(userAfterBan.getUsername(), "Username should be null after ban");
+        assertNull(userAfterBan.getUsername(), "Username should be null for soft delete");
 
         // 2. User's review should be DELETED from MongoDB
         boolean reviewExists = reviewRepository.existsById(reviewToBanId);
@@ -334,13 +342,13 @@ public class AdminModerationControllerTest {
 
         System.out.println("✓ Ban with cascading effects verified:");
         System.out.println("  - User status: BANNED");
-        System.out.println("  - Username: null");
+        System.out.println("  - Username: null (soft delete)");
         System.out.println("  - Reviews deleted: " + (reviewCountBefore - reviewCountAfter));
         System.out.println("  - Neo4j user node: deleted");
         System.out.println("  - Neo4j review node: deleted");
 
-        // Cleanup
-        userRepository.deleteById(userToBanId);
+        // No cleanup needed - user is soft-deleted (BANNED)
+        System.out.println("User remains as soft-deleted (BANNED status)");
     }
 
     @Test
@@ -364,9 +372,25 @@ public class AdminModerationControllerTest {
     void test09_BanUser_AlreadyBanned() {
         System.out.println("\n=== TEST 09: Ban Already Banned User ===");
 
+        // Cleanup: delete ALL users with this email from previous runs
+        try {
+            // Try to find and delete all users with this email
+            List<RegisteredUser> existingUsers = userRepository.findAll().stream()
+                .filter(u -> (TEST_PREFIX + "banned@test.com").equals(u.getEmail()))
+                .toList();
+            
+            for (RegisteredUser u : existingUsers) {
+                userRepository.deleteById(u.getId());
+                userNodeRepository.findByMongoId(u.getId()).ifPresent(userNodeRepository::delete);
+            }
+        } catch (Exception e) {
+            // Ignore cleanup errors
+            System.out.println("Cleanup warning: " + e.getMessage());
+        }
+
         // Create a user specifically for this test
         RegisteredUser bannedUser = new RegisteredUser();
-        bannedUser.setUsername(TEST_PREFIX + "BannedUser");
+        bannedUser.setUsername(TEST_PREFIX + "BannedUser_" + TEST_RUN_ID);
         bannedUser.setEmail(TEST_PREFIX + "banned@test.com");
         bannedUser.setPasswordHashed(passwordEncoder.encode("password"));
         bannedUser.setCountry("IT");
@@ -404,9 +428,9 @@ public class AdminModerationControllerTest {
                    exception.getMessage().contains("Already banned") ||
                    exception.getClass().getSimpleName().contains("UserAlreadyBanned"));
 
-        // Cleanup
-        userRepository.deleteById(bannedUserId);
+        // No cleanup needed - user remains soft-deleted (BANNED)
         System.out.println("✓ Ban already banned user correctly rejected");
+        System.out.println("User remains as soft-deleted (BANNED status)");
     }
 
     @Test
@@ -521,11 +545,11 @@ public class AdminModerationControllerTest {
         Page<?> reviews = adminModerationService.getAllReviews(0, 20);
         System.out.println("Total reviews in system: " + reviews.getTotalElements());
 
-        // Cleanup second user immediately
-        userRepository.deleteById(testUserId2);
-        userNodeRepository.deleteByMongoId(testUserId2);
+        // Cleanup second user and review immediately
         reviewRepository.deleteById(review2.getId());
         reviewNodeRepository.deleteByMongoId(review2.getId());
+        userRepository.deleteById(testUserId2);
+        userNodeRepository.deleteByMongoId(testUserId2);
         System.out.println("Cleaned up second user and review");
     }
 
@@ -548,9 +572,14 @@ public class AdminModerationControllerTest {
         }
 
         if (testUserId != null) {
-            userRepository.deleteById(testUserId);
-            userNodeRepository.deleteByMongoId(testUserId);
-            System.out.println("Deleted test user");
+            RegisteredUser testUser = userRepository.findById(testUserId).orElse(null);
+            if (testUser != null && !"deleted".equals(testUser.getStatus()) && !"BANNED".equals(testUser.getStatus())) {
+                userRepository.deleteById(testUserId);
+                userNodeRepository.deleteByMongoId(testUserId);
+                System.out.println("Deleted test user");
+            } else if (testUser != null) {
+                System.out.println("Test user left as soft-deleted (" + testUser.getStatus() + ")");
+            }
         }
 
         System.out.println("Final cleanup completed - All test data removed");

@@ -1,4 +1,4 @@
-package it.unipi.bookSphere.service;
+package it.unipi.bookSphere.service.open;
 
 import it.unipi.bookSphere.dto.AuthorDTO;
 import it.unipi.bookSphere.exceptions.AuthorArchivedException;
@@ -104,8 +104,15 @@ public class AuthorService {
         logger.info("Searching authors by name: {} (page: {}, size: {})", name, page, size);
         
         Pageable pageable = PageRequest.of(page, size);
-        // Filter ARCHIVED authors at query level for accurate pagination
-        Page<AuthorDocument> authors = authorRepository.findByNameContainingIgnoreCaseAndStatusNot(name, "ARCHIVED", pageable);
+        Page<AuthorDocument> authors;
+        
+        // If name is null or empty, return all active authors
+        if (name == null || name.trim().isEmpty()) {
+            authors = authorRepository.findByStatusNot("ARCHIVED", pageable);
+        } else {
+            // Filter ARCHIVED authors at query level for accurate pagination
+            authors = authorRepository.findByNameContainingIgnoreCaseAndStatusNot(name, "ARCHIVED", pageable);
+        }
         
         // Map to DTO and filter is applied by repository/database level for better performance
         Page<AuthorDTO> result = authors.map(authorMapper::toDTO);

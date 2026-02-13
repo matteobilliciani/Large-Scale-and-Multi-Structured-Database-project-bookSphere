@@ -57,4 +57,13 @@ public interface BookRepository extends MongoRepository<BookDocument, String> {
      * @return Page of matching books
      */
     Page<BookDocument> findByTitleContainingIgnoreCaseAndAvailabilityNot(String title, String availability, Pageable pageable);
+    
+    /**
+     * Find all books excluding specific availability status
+     * 
+     * @param availability Availability to exclude (e.g., "ARCHIVED")
+     * @param pageable Pagination parameters
+     * @return Page of matching books
+     */
+    Page<BookDocument> findByAvailabilityNot(String availability, Pageable pageable);
 }

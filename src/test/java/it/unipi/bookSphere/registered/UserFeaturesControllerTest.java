@@ -11,7 +11,7 @@ import it.unipi.bookSphere.repository.mongo.BookRepository;
 import it.unipi.bookSphere.repository.mongo.RegisteredUserRepository;
 import it.unipi.bookSphere.repository.mongo.ReviewRepository;
 import it.unipi.bookSphere.repository.neo4j.*;
-import it.unipi.bookSphere.service.UserFeaturesService;
+import it.unipi.bookSphere.service.registered.UserFeaturesService;
 import it.unipi.bookSphere.utils.UserPrincipal;
 import it.unipi.bookSphere.TestProfile;
 import org.junit.jupiter.api.*;
@@ -118,9 +118,10 @@ public class UserFeaturesControllerTest {
                     System.out.println("Deleted test author: " + author.getName());
                 });
 
-        // Remove test users
+        // Remove test users (skip soft-deleted users)
         userRepository.findAll().stream()
                 .filter(u -> u.getUsername() != null && u.getUsername().startsWith(TEST_PREFIX))
+                .filter(u -> !"deleted".equals(u.getStatus()) && !"BANNED".equals(u.getStatus()))
                 .forEach(user -> {
                     userRepository.deleteById(user.getId());
                     userNodeRepository.deleteByMongoId(user.getId());
@@ -457,15 +458,25 @@ public class UserFeaturesControllerTest {
         }
 
         if (testUserId != null) {
-            userRepository.deleteById(testUserId);
-            userNodeRepository.deleteByMongoId(testUserId);
-            System.out.println("Deleted test user");
+            RegisteredUser testUser = userRepository.findById(testUserId).orElse(null);
+            if (testUser != null && !"deleted".equals(testUser.getStatus()) && !"BANNED".equals(testUser.getStatus())) {
+                userRepository.deleteById(testUserId);
+                userNodeRepository.deleteByMongoId(testUserId);
+                System.out.println("Deleted test user");
+            } else if (testUser != null) {
+                System.out.println("Test user left as soft-deleted (" + testUser.getStatus() + ")");
+            }
         }
 
         if (testFriendId != null) {
-            userRepository.deleteById(testFriendId);
-            userNodeRepository.deleteByMongoId(testFriendId);
-            System.out.println("Deleted friend user");
+            RegisteredUser friendUser = userRepository.findById(testFriendId).orElse(null);
+            if (friendUser != null && !"deleted".equals(friendUser.getStatus()) && !"BANNED".equals(friendUser.getStatus())) {
+                userRepository.deleteById(testFriendId);
+                userNodeRepository.deleteByMongoId(testFriendId);
+                System.out.println("Deleted friend user");
+            } else if (friendUser != null) {
+                System.out.println("Friend user left as soft-deleted (" + friendUser.getStatus() + ")");
+            }
         }
 
         genreNodeRepository.deleteByName(TEST_GENRE);

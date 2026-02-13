@@ -1,4 +1,4 @@
-package it.unipi.bookSphere.service;
+package it.unipi.bookSphere.service.open;
 
 import it.unipi.bookSphere.dto.ReviewDTO;
 import it.unipi.bookSphere.exceptions.*;

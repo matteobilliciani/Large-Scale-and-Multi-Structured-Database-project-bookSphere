@@ -3,7 +3,7 @@ package it.unipi.bookSphere.registered;
 import it.unipi.bookSphere.model.mongodb.RegisteredUser;
 import it.unipi.bookSphere.repository.mongo.RegisteredUserRepository;
 import it.unipi.bookSphere.repository.neo4j.UserNodeRepository;
-import it.unipi.bookSphere.service.ProfileService;
+import it.unipi.bookSphere.service.registered.ProfileService;
 import it.unipi.bookSphere.utils.UserPrincipal;
 import it.unipi.bookSphere.TestProfile;
 import org.junit.jupiter.api.*;
@@ -45,6 +45,8 @@ public class ProfileControllerTest {
     private PasswordEncoder passwordEncoder;
 
     private static final String TEST_PREFIX = "ProfileTest_";
+    private static final String TEST_RUN_ID = String.valueOf(System.currentTimeMillis() % 100000); // Unique per test run
+    private static final String TEST_EMAIL = TEST_PREFIX + "user_" + TEST_RUN_ID + "@test.com";
     private static String testUserId;
     private static String originalUsername;
 
@@ -54,20 +56,23 @@ public class ProfileControllerTest {
     void test01_Cleanup() {
         System.out.println("\n=== TEST 01: Cleanup ===");
 
-        // Remove test users by username prefix
+        // Remove test users by username prefix (skip soft-deleted users)
         userRepository.findAll().stream()
                 .filter(u -> u.getUsername() != null && u.getUsername().toLowerCase().startsWith(TEST_PREFIX.toLowerCase()))
+                .filter(u -> !"deleted".equals(u.getStatus()) && !"BANNED".equals(u.getStatus()))
                 .forEach(user -> {
                     userRepository.deleteById(user.getId());
                     userNodeRepository.deleteByMongoId(user.getId());
                     System.out.println("Deleted test user: " + user.getUsername());
                 });
 
-        // Also remove by email to catch users whose username was changed
-        userRepository.findByEmail(TEST_PREFIX + "user@test.com").ifPresent(user -> {
-            userRepository.deleteById(user.getId());
-            userNodeRepository.deleteByMongoId(user.getId());
-            System.out.println("Deleted test user by email: " + user.getEmail());
+        // Also remove by email to catch users whose username was changed (skip soft-deleted users)
+        userRepository.findByEmail(TEST_EMAIL).ifPresent(user -> {
+            if (!"deleted".equals(user.getStatus()) && !"BANNED".equals(user.getStatus())) {
+                userRepository.deleteById(user.getId());
+                userNodeRepository.deleteByMongoId(user.getId());
+                System.out.println("Deleted test user by email: " + user.getEmail());
+            }
         });
 
         System.out.println("Cleanup completed");
@@ -81,9 +86,9 @@ public class ProfileControllerTest {
 
         // Create test user
         RegisteredUser user = new RegisteredUser();
-        originalUsername = TEST_PREFIX + "User";
+        originalUsername = TEST_PREFIX + "User_" + TEST_RUN_ID;
         user.setUsername(originalUsername);
-        user.setEmail(TEST_PREFIX + "user@test.com");
+        user.setEmail(TEST_EMAIL);
         user.setPasswordHashed(passwordEncoder.encode("password"));
         user.setCountry("IT");
         user.setStatus("active");
@@ -109,7 +114,7 @@ public class ProfileControllerTest {
         // Re-setup authentication
         setupAuthentication(testUserId, originalUsername);
 
-        String newUsername = TEST_PREFIX + "UpdatedUser";
+        String newUsername = TEST_PREFIX + "UpdatedUser_" + TEST_RUN_ID;
         profileService.updateUsername(newUsername);
 
         // Verify in MongoDB
@@ -135,7 +140,7 @@ public class ProfileControllerTest {
         System.out.println("\n=== TEST 04: Update Username - Invalid Format ===");
 
         // Re-setup authentication
-        setupAuthentication(testUserId, TEST_PREFIX + "UpdatedUser");
+        setupAuthentication(testUserId, TEST_PREFIX + "UpdatedUser_" + TEST_RUN_ID);
 
         // Empty username
         Exception exception1 = assertThrows(Exception.class, () -> {
@@ -163,7 +168,7 @@ public class ProfileControllerTest {
         System.out.println("\n=== TEST 05: Update Username - Duplicate ===");
 
         // Re-setup authentication
-        setupAuthentication(testUserId, TEST_PREFIX + "UpdatedUser");
+        setupAuthentication(testUserId, TEST_PREFIX + "UpdatedUser_" + TEST_RUN_ID);
 
         // Create another user
         RegisteredUser anotherUser = new RegisteredUser();
@@ -195,8 +200,16 @@ public class ProfileControllerTest {
     void test06_DeleteAccount_Success() {
         System.out.println("\n=== TEST 06: Delete Account ===");
 
-        // Re-setup authentication
-        setupAuthentication(testUserId, TEST_PREFIX + "UpdatedUser");
+        // Re-setup authentication - create fresh context for proxied service call
+        UserPrincipal principal = new UserPrincipal(testUserId, TEST_PREFIX + "UpdatedUser_" + TEST_RUN_ID, "USER", "active");
+        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
+                principal,
+                null,
+                List.of(new SimpleGrantedAuthority("ROLE_USER"))
+        );
+        SecurityContextHolder.setContext(SecurityContextHolder.createEmptyContext());
+        SecurityContextHolder.getContext().setAuthentication(auth);
+        System.out.println("Authentication setup for user: " + (TEST_PREFIX + "UpdatedUser_" + TEST_RUN_ID));
 
         // Delete the account
         profileService.deleteAccount();
@@ -212,12 +225,13 @@ public class ProfileControllerTest {
         RegisteredUser userMongo = userRepository.findById(testUserId).orElse(null);
         assertNotNull(userMongo, "User should still exist in MongoDB");
         assertEquals("deleted", userMongo.getStatus(), "Status should be 'deleted'");
-        assertNull(userMongo.getUsername(), "Username should be null");
+        assertNull(userMongo.getUsername(), "Username should be null for soft delete");
         assertNull(userMongo.getEmail(), "Email should be null");
 
-        // Verify in Neo4j - User node should be deleted
+        // Verify in Neo4j - User node should be anonymized with empty username
         var userNodeOpt = userNodeRepository.findByMongoId(testUserId);
-        assertFalse(userNodeOpt.isPresent(), "User node should be deleted from Neo4j");
+        assertTrue(userNodeOpt.isPresent(), "User node should still exist in Neo4j");
+        assertEquals("", userNodeOpt.get().getUsername(), "Username should be anonymized to empty string");
 
         System.out.println("Account deleted successfully");
     }
@@ -228,9 +242,10 @@ public class ProfileControllerTest {
     void test99_FinalCleanup() {
         System.out.println("\n=== TEST 99: Final Cleanup ===");
 
-        // Clean up any remaining test users
+        // Clean up any remaining test users (skip soft-deleted users)
         userRepository.findAll().stream()
                 .filter(u -> u.getUsername() != null && u.getUsername().startsWith(TEST_PREFIX))
+                .filter(u -> !"deleted".equals(u.getStatus()) && !"BANNED".equals(u.getStatus()))
                 .forEach(user -> {
                     userRepository.deleteById(user.getId());
                     userNodeRepository.deleteByMongoId(user.getId());

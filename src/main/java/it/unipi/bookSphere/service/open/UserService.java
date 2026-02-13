@@ -1,4 +1,4 @@
-package it.unipi.bookSphere.service;
+package it.unipi.bookSphere.service.open;
 
 import it.unipi.bookSphere.dto.UserDTO;
 import it.unipi.bookSphere.exceptions.UserNotFoundException;

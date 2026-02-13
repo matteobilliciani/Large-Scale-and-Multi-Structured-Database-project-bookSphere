@@ -1,4 +1,4 @@
-package it.unipi.bookSphere.service;
+package it.unipi.bookSphere.service.open;
 
 import it.unipi.bookSphere.dto.BookDTO;
 import it.unipi.bookSphere.exceptions.BookArchivedException;
@@ -104,8 +104,15 @@ public class BookService {
         logger.info("Searching books by title: {} (page: {}, size: {})", title, page, size);
         
         Pageable pageable = PageRequest.of(page, size);
-        // Filter ARCHIVED books at query level for accurate pagination
-        Page<BookDocument> books = bookRepository.findByTitleContainingIgnoreCaseAndAvailabilityNot(title, "ARCHIVED", pageable);
+        Page<BookDocument> books;
+        
+        // If title is null or empty, return all active books
+        if (title == null || title.trim().isEmpty()) {
+            books = bookRepository.findByAvailabilityNot("ARCHIVED", pageable);
+        } else {
+            // Filter ARCHIVED books at query level for accurate pagination
+            books = bookRepository.findByTitleContainingIgnoreCaseAndAvailabilityNot(title, "ARCHIVED", pageable);
+        }
         
         // Map to DTO and filter is applied by repository/database level for better performance
         Page<BookDTO> result = books.map(bookMapper::toDTO);

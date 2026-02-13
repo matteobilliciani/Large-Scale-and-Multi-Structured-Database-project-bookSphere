@@ -1,4 +1,4 @@
-package it.unipi.bookSphere.service;
+package it.unipi.bookSphere.service.admin;
 
 import it.unipi.bookSphere.dto.BookDTO;
 import it.unipi.bookSphere.exceptions.BookArchivedException;

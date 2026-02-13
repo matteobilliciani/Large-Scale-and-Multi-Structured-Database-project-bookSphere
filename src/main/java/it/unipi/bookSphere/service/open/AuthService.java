@@ -1,4 +1,4 @@
-package it.unipi.bookSphere.service;
+package it.unipi.bookSphere.service.open;
 
 import it.unipi.bookSphere.dto.*;
 import it.unipi.bookSphere.exceptions.InvalidCredentialsException;
@@ -8,6 +8,7 @@ import it.unipi.bookSphere.model.mongodb.RegisteredUser;
 import it.unipi.bookSphere.repository.mongo.RegisteredUserRepository;
 import it.unipi.bookSphere.repository.neo4j.UserNodeRepository;
 import it.unipi.bookSphere.validation.NormalizationUtils;
+import it.unipi.bookSphere.validation.ValidationUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -56,7 +57,7 @@ public class AuthService {
         
         // Normalize username for consistency
         String normalizedUsername = NormalizationUtils.normalizeUsername(registerDTO.getUsername());
-        
+        ValidationUtils.validateUsername(normalizedUsername);        
         // 1. Validate that username/email doesn't exist
         if (userRepository.existsByUsername(normalizedUsername)) {
             logger.warn("Registration failed: username {} already exists", normalizedUsername);

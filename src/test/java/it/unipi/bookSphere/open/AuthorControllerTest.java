@@ -3,7 +3,7 @@ package it.unipi.bookSphere.open;
 import it.unipi.bookSphere.dto.AuthorDTO;
 import it.unipi.bookSphere.model.mongodb.AuthorDocument;
 import it.unipi.bookSphere.repository.mongo.AuthorRepository;
-import it.unipi.bookSphere.service.AuthorService;
+import it.unipi.bookSphere.service.open.AuthorService;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import it.unipi.bookSphere.TestProfile;

@@ -60,6 +60,15 @@ public interface AuthorRepository extends MongoRepository<AuthorDocument, String
     Page<AuthorDocument> findByNameContainingIgnoreCaseAndStatusNot(String name, String status, Pageable pageable);
     
     /**
+     * Find all authors excluding specific status
+     * 
+     * @param status Status to exclude (e.g., "ARCHIVED")
+     * @param pageable Pagination parameters
+     * @return Page of matching authors
+     */
+    Page<AuthorDocument> findByStatusNot(String status, Pageable pageable);
+    
+    /**
      * Check if author exists by name
      * 
      * @param name Author name

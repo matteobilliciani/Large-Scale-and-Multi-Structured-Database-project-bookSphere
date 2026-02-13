@@ -1,4 +1,4 @@
-package it.unipi.bookSphere.service;
+package it.unipi.bookSphere.service.registered;
 
 import it.unipi.bookSphere.exceptions.AlreadyExistsException;
 import it.unipi.bookSphere.exceptions.UnauthorizedOperationException;

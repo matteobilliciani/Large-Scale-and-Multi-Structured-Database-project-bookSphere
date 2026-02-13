@@ -3,7 +3,7 @@ package it.unipi.bookSphere.service.async;
 import it.unipi.bookSphere.exceptions.ReviewNotFoundException;
 import it.unipi.bookSphere.model.mongodb.RegisteredUser;
 import it.unipi.bookSphere.repository.neo4j.UserNodeRepository;
-import it.unipi.bookSphere.service.ReviewService;
+import it.unipi.bookSphere.service.open.ReviewService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

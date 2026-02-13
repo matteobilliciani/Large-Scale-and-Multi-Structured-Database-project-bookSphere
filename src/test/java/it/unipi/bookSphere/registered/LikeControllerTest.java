@@ -13,7 +13,7 @@ import it.unipi.bookSphere.repository.mongo.BookRepository;
 import it.unipi.bookSphere.repository.mongo.RegisteredUserRepository;
 import it.unipi.bookSphere.repository.mongo.ReviewRepository;
 import it.unipi.bookSphere.repository.neo4j.*;
-import it.unipi.bookSphere.service.LikeService;
+import it.unipi.bookSphere.service.registered.LikeService;
 import it.unipi.bookSphere.utils.UserPrincipal;
 import it.unipi.bookSphere.TestProfile;
 import org.junit.jupiter.api.*;

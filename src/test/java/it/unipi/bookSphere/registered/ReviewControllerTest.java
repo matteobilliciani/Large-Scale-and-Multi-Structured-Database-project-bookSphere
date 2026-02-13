@@ -11,7 +11,7 @@ import it.unipi.bookSphere.repository.mongo.RegisteredUserRepository;
 import it.unipi.bookSphere.repository.mongo.ReviewRepository;
 import it.unipi.bookSphere.repository.neo4j.ReviewNodeRepository;
 import it.unipi.bookSphere.repository.neo4j.UserNodeRepository;
-import it.unipi.bookSphere.service.ReviewService;
+import it.unipi.bookSphere.service.open.ReviewService;
 import it.unipi.bookSphere.utils.UserPrincipal;
 import it.unipi.bookSphere.TestProfile;
 import org.junit.jupiter.api.*;
@@ -102,9 +102,10 @@ public class ReviewControllerTest {
                     System.out.println("Deleted test author: " + author.getName());
                 });
 
-        // Remove test users
+        // Remove test users (skip soft-deleted users)
         userRepository.findAll().stream()
                 .filter(u -> u.getUsername() != null && u.getUsername().startsWith(TEST_PREFIX))
+                .filter(u -> !"deleted".equals(u.getStatus()) && !"BANNED".equals(u.getStatus()))
                 .forEach(user -> {
                     userRepository.deleteById(user.getId());
                     userNodeRepository.deleteByMongoId(user.getId());

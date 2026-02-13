@@ -6,7 +6,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import it.unipi.bookSphere.dto.RecommendationDTO;
 import it.unipi.bookSphere.dto.WrappedDTO;
-import it.unipi.bookSphere.service.UserFeaturesService;
+import it.unipi.bookSphere.service.registered.UserFeaturesService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

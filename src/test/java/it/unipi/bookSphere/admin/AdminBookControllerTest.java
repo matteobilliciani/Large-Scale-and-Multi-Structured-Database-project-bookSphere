@@ -7,7 +7,7 @@ import it.unipi.bookSphere.model.mongodb.BookDocument;
 import it.unipi.bookSphere.repository.mongo.AuthorRepository;
 import it.unipi.bookSphere.repository.mongo.BookRepository;
 import it.unipi.bookSphere.repository.neo4j.BookNodeRepository;
-import it.unipi.bookSphere.service.AdminBookService;
+import it.unipi.bookSphere.service.admin.AdminBookService;
 import it.unipi.bookSphere.utils.UserPrincipal;
 import it.unipi.bookSphere.TestProfile;
 import org.junit.jupiter.api.*;
