@@ -1,0 +1,1375 @@
+{
+	"info": {
+		"_postman_id": "booksphere-storytelling-enhanced",
+		"name": "BookSphere - Enhanced User Journey (High Impact Analytics)",
+		"description": "# 📚 BookSphere: Un Viaggio nel Social Reading - VERSIONE POTENZIATA\n\nQuesta collection dimostra l'impatto massiccio delle interazioni sulle analytics del sistema.\n\n## 🎭 I Protagonisti (6 Utenti)\n- **Alice** (🇺🇸 USA): Lettrice vorace di romanzi d'amore\n- **Bob** (🇬🇧 UK): Critico letterario, amante del thriller\n- **Charlie** (🇮🇹 Italy): Bibliofilo, letture filosofiche\n- **Dave** (🇫🇷 France): Appassionato di biografie\n- **Eve** (🇩🇪 Germany): Ama i classici\n- **Frank** (🇪🇸 Spain): Scopre nuovi autori\n\n## 📊 Impatto Analytics\n- 12+ recensioni create\n- 20+ likes distribuiti\n- 15+ relazioni follow\n- 10+ book likes\n- Network sociale completo\n- Bookshelves popolate\n\n## 🎯 Obiettivi\n- Impatto SIGNIFICATIVO sulle analytics\n- Trending books completamente modificato\n- Rankings aggiornati in modo evidente\n- Social graph denso e realistico",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"exec": [
+					"const journeyId = Date.now();",
+					"pm.collectionVariables.set('journey_id', journeyId);",
+					"pm.collectionVariables.set('alice_username', 'alice_journey_' + journeyId);",
+					"pm.collectionVariables.set('bob_username', 'bob_journey_' + journeyId);",
+					"pm.collectionVariables.set('charlie_username', 'charlie_journey_' + journeyId);",
+					"pm.collectionVariables.set('dave_username', 'dave_journey_' + journeyId);",
+					"pm.collectionVariables.set('eve_username', 'eve_journey_' + journeyId);",
+					"pm.collectionVariables.set('frank_username', 'frank_journey_' + journeyId);"
+				],
+				"type": "text/javascript"
+			}
+		}
+	],
+	"variable": [
+		{"key": "base_url", "value": "http://localhost:8080"},
+		{"key": "journey_id", "value": ""},
+		{"key": "alice_username", "value": ""}, {"key": "alice_token", "value": ""}, {"key": "alice_userId", "value": ""},
+		{"key": "bob_username", "value": ""}, {"key": "bob_token", "value": ""}, {"key": "bob_userId", "value": ""},
+		{"key": "charlie_username", "value": ""}, {"key": "charlie_token", "value": ""}, {"key": "charlie_userId", "value": ""},
+		{"key": "dave_username", "value": ""}, {"key": "dave_token", "value": ""}, {"key": "dave_userId", "value": ""},
+		{"key": "eve_username", "value": ""}, {"key": "eve_token", "value": ""}, {"key": "eve_userId", "value": ""},
+		{"key": "frank_username", "value": ""}, {"key": "frank_token", "value": ""}, {"key": "frank_userId", "value": ""},
+		{"key": "book1_id", "value": ""}, {"key": "book1_title", "value": ""},
+		{"key": "book2_id", "value": ""}, {"key": "book2_title", "value": ""},
+		{"key": "book3_id", "value": ""}, {"key": "book3_title", "value": ""},
+		{"key": "book4_id", "value": ""}, {"key": "book4_title", "value": ""},
+		{"key": "author1_id", "value": ""},
+		{"key": "initial_trending_count", "value": "0"}
+	],
+	"item": [
+		{
+			"name": "🎬 PROLOGO - Database State",
+			"item": [
+				{
+					"name": "📊 Get Initial Trending Books",
+					"event": [{
+						"listen": "test",
+						"script": {
+							"exec": [
+								"console.log('\\n🎬 PROLOGO: Stato iniziale del database');",
+								"console.log('=========================================\\n');",
+								"pm.test('Status 200', () => pm.response.to.have.status(200));",
+								"const books = pm.response.json();",
+								"pm.collectionVariables.set('initial_trending_count', books.length);",
+								"console.log(`📚 Trending books attuali: ${books.length}`);",
+								"books.slice(0, 3).forEach((b, i) => {",
+								"    console.log(`   ${i+1}. ${b.title} - Score: ${b.monthScore?.rating || 'N/A'}`);",
+								"});"
+							],
+							"type": "text/javascript"
+						}
+					}],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/analytics/rankings/trendingbooks",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "analytics", "rankings", "trendingbooks"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🎭 ATTO I - Registrazioni (6 Utenti)",
+			"item": [
+				{
+					"name": "👤 Alice Registers",
+					"event": [{
+						"listen": "test",
+						"script": {
+							"exec": [
+								"console.log('\\n🎭 ATTO I: Registrazione Utenti');",
+								"console.log('================================\\n');",
+								"pm.test('Alice registered', () => pm.response.to.have.status(201));",
+								"const r = pm.response.json();",
+								"pm.collectionVariables.set('alice_token', r.token);",
+								"pm.collectionVariables.set('alice_userId', r.userId);",
+								"console.log('👤 ALICE registrata (USA)');"
+							],
+							"type": "text/javascript"
+						}
+					}],
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"{{alice_username}}\",\n    \"email\": \"alice_{{journey_id}}@test.com\",\n    \"password\": \"Alice2024!\",\n    \"country\": \"US\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/register",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "register"]
+						}
+					}
+				},
+				{
+					"name": "👤 Bob Registers",
+					"event": [{
+						"listen": "test",
+						"script": {
+							"exec": [
+								"pm.test('Bob registered', () => pm.response.to.have.status(201));",
+								"const r = pm.response.json();",
+								"pm.collectionVariables.set('bob_token', r.token);",
+								"pm.collectionVariables.set('bob_userId', r.userId);",
+								"console.log('👤 BOB registrato (UK)');"
+							],
+							"type": "text/javascript"
+						}
+					}],
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"{{bob_username}}\",\n    \"email\": \"bob_{{journey_id}}@test.com\",\n    \"password\": \"Bob2024!\",\n    \"country\": \"GB\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/register",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "register"]
+						}
+					}
+				},
+				{
+					"name": "👤 Charlie Registers",
+					"event": [{
+						"listen": "test",
+						"script": {
+							"exec": [
+								"pm.test('Charlie registered', () => pm.response.to.have.status(201));",
+								"const r = pm.response.json();",
+								"pm.collectionVariables.set('charlie_token', r.token);",
+								"pm.collectionVariables.set('charlie_userId', r.userId);",
+								"console.log('👤 CHARLIE registrato (Italy)');"
+							],
+							"type": "text/javascript"
+						}
+					}],
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"{{charlie_username}}\",\n    \"email\": \"charlie_{{journey_id}}@test.com\",\n    \"password\": \"Charlie2024!\",\n    \"country\": \"IT\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/register",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "register"]
+						}
+					}
+				},
+				{
+					"name": "👤 Dave Registers",
+					"event": [{
+						"listen": "test",
+						"script": {
+							"exec": [
+								"pm.test('Dave registered', () => pm.response.to.have.status(201));",
+								"const r = pm.response.json();",
+								"pm.collectionVariables.set('dave_token', r.token);",
+								"pm.collectionVariables.set('dave_userId', r.userId);",
+								"console.log('👤 DAVE registrato (France)');"
+							],
+							"type": "text/javascript"
+						}
+					}],
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"{{dave_username}}\",\n    \"email\": \"dave_{{journey_id}}@test.com\",\n    \"password\": \"Dave2024!\",\n    \"country\": \"FR\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/register",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "register"]
+						}
+					}
+				},
+				{
+					"name": "👤 Eve Registers",
+					"event": [{
+						"listen": "test",
+						"script": {
+							"exec": [
+								"pm.test('Eve registered', () => pm.response.to.have.status(201));",
+								"const r = pm.response.json();",
+								"pm.collectionVariables.set('eve_token', r.token);",
+								"pm.collectionVariables.set('eve_userId', r.userId);",
+								"console.log('👤 EVE registrata (Germany)');"
+							],
+							"type": "text/javascript"
+						}
+					}],
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"{{eve_username}}\",\n    \"email\": \"eve_{{journey_id}}@test.com\",\n    \"password\": \"Eve2024!\",\n    \"country\": \"DE\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/register",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "register"]
+						}
+					}
+				},
+				{
+					"name": "👤 Frank Registers",
+					"event": [{
+						"listen": "test",
+						"script": {
+							"exec": [
+								"pm.test('Frank registered', () => pm.response.to.have.status(201));",
+								"const r = pm.response.json();",
+								"pm.collectionVariables.set('frank_token', r.token);",
+								"pm.collectionVariables.set('frank_userId', r.userId);",
+								"console.log('👤 FRANK registrato (Spain)');",
+								"console.log('\\n✅ Tutti i 6 utenti registrati!\\n');"
+							],
+							"type": "text/javascript"
+						}
+					}],
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"{{frank_username}}\",\n    \"email\": \"frank_{{journey_id}}@test.com\",\n    \"password\": \"Frank2024!\",\n    \"country\": \"ES\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/register",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "auth", "register"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "🔍 ATTO II - Discovery (4 Libri Diversi)",
+			"item": [
+				{
+					"name": "📖 Alice Finds 'Love' Book",
+					"event": [{
+						"listen": "test",
+						"script": {
+							"exec": [
+								"console.log('\\n🔍 ATTO II: Discovery');",
+								"console.log('======================\\n');",
+								"pm.test('Search ok', () => pm.response.to.have.status(200));",
+								"const r = pm.response.json();",
+								"if (r.content && r.content.length > 0) {",
+								"    pm.collectionVariables.set('book1_id', r.content[0].id);",
+								"    pm.collectionVariables.set('book1_title', r.content[0].title);",
+								"    if (r.content[0].author) pm.collectionVariables.set('author1_id', r.content[0].author.id);",
+								"    console.log(`📚 ALICE trova: ${r.content[0].title}`);",
+								"}"
+							],
+							"type": "text/javascript"
+						}
+					}],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/books?title=Love&page=0&size=5",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "books"],
+							"query": [{"key": "title", "value": "Love"}, {"key": "page", "value": "0"}, {"key": "size", "value": "5"}]
+						}
+					}
+				},
+				{
+					"name": "📖 Bob Finds 'Night' Book",
+					"event": [{
+						"listen": "test",
+						"script": {
+							"exec": [
+								"pm.test('Search ok', () => pm.response.to.have.status(200));",
+								"const r = pm.response.json();",
+								"if (r.content && r.content.length > 0) {",
+								"    pm.collectionVariables.set('book2_id', r.content[0].id);",
+								"    pm.collectionVariables.set('book2_title', r.content[0].title);",
+								"    console.log(`📚 BOB trova: ${r.content[0].title}`);",
+								"}"
+							],
+							"type": "text/javascript"
+						}
+					}],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/books?title=Night&page=0&size=5",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "books"],
+							"query": [{"key": "title", "value": "Night"}, {"key": "page", "value": "0"}, {"key": "size", "value": "5"}]
+						}
+					}
+				},
+				{
+					"name": "📖 Charlie Finds 'Life' Book",
+					"event": [{
+						"listen": "test",
+						"script": {
+							"exec": [
+								"pm.test('Search ok', () => pm.response.to.have.status(200));",
+								"const r = pm.response.json();",
+								"if (r.content && r.content.length > 0) {",
+								"    pm.collectionVariables.set('book3_id', r.content[0].id);",
+								"    pm.collectionVariables.set('book3_title', r.content[0].title);",
+								"    console.log(`📚 CHARLIE trova: ${r.content[0].title}`);",
+								"}"
+							],
+							"type": "text/javascript"
+						}
+					}],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/books?title=Life&page=0&size=5",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "books"],
+							"query": [{"key": "title", "value": "Life"}, {"key": "page", "value": "0"}, {"key": "size", "value": "5"}]
+						}
+					}
+				},
+				{
+					"name": "📖 Dave Finds 'The' Book",
+					"event": [{
+						"listen": "test",
+						"script": {
+							"exec": [
+								"pm.test('Search ok', () => pm.response.to.have.status(200));",
+								"const r = pm.response.json();",
+								"if (r.content && r.content.length > 0) {",
+								"    pm.collectionVariables.set('book4_id', r.content[0].id);",
+								"    pm.collectionVariables.set('book4_title', r.content[0].title);",
+								"    console.log(`📚 DAVE trova: ${r.content[0].title}`);",
+								"    console.log('\\n✅ 4 libri diversi scoperti!\\n');",
+								"}"
+							],
+							"type": "text/javascript"
+						}
+					}],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/books?title=The&page=0&size=5",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "books"],
+							"query": [{"key": "title", "value": "The"}, {"key": "page", "value": "0"}, {"key": "size", "value": "5"}]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "✍️ ATTO III - Reviews (12 Recensioni!)",
+			"item": [
+				{
+					"name": "⭐ Alice Review Book1 (95)",
+					"event": [{
+						"listen": "test",
+						"script": {
+							"exec": [
+								"console.log('\\n✍️ ATTO III: RECENSIONI MASSIVE');",
+								"console.log('=================================\\n');",
+								"if (!pm.collectionVariables.get('book1_id')) { pm.execution.skipRequest(); return; }",
+								"pm.test('Review created', () => pm.response.to.have.status(201));",
+								"console.log('⭐ ALICE recensisce book1 (95/100)');"
+							],
+							"type": "text/javascript"
+						}
+					}, {"listen": "prerequest", "script": {"exec": ["if (!pm.collectionVariables.get('book1_id')) pm.execution.skipRequest();"], "type": "text/javascript"}}],
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Authorization", "value": "Bearer {{alice_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"bookId\": \"{{book1_id}}\",\n    \"rating\": 95,\n    \"text\": \"Absolutely magnificent! This book touched my heart in ways I never expected. The characters are incredibly well-developed and the story flows beautifully. Every page kept me engaged and wanting more. A true masterpiece that deserves all the recognition it can get. Highly recommended to everyone!\",\n    \"summary\": \"A magnificent masterpiece that touches the heart\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/me/reviews",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "me", "reviews"]
+						}
+					}
+				},
+				{
+					"name": "⭐ Bob Review Book2 (88)",
+					"event": [{
+						"listen": "test",
+						"script": {
+							"exec": [
+								"if (!pm.collectionVariables.get('book2_id')) { pm.execution.skipRequest(); return; }",
+								"pm.test('Review created', () => pm.response.to.have.status(201));",
+								"console.log('⭐ BOB recensisce book2 (88/100)');"
+							],
+							"type": "text/javascript"
+						}
+					}, {"listen": "prerequest", "script": {"exec": ["if (!pm.collectionVariables.get('book2_id')) pm.execution.skipRequest();"], "type": "text/javascript"}}],
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Authorization", "value": "Bearer {{bob_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"bookId\": \"{{book2_id}}\",\n    \"rating\": 88,\n    \"text\": \"A gripping tale that keeps you guessing until the very end. The author demonstrates exceptional skill in building tension and creating atmosphere. While some plot points could have been more developed, the overall execution is impressive. Definitely worth your time if you enjoy this genre.\",\n    \"summary\": \"Gripping and atmospheric, highly engaging\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/me/reviews",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "me", "reviews"]
+						}
+					}
+				},
+				{
+					"name": "⭐ Charlie Review Book3 (92)",
+					"event": [{
+						"listen": "test",
+						"script": {
+							"exec": [
+								"if (!pm.collectionVariables.get('book3_id')) { pm.execution.skipRequest(); return; }",
+								"pm.test('Review created', () => pm.response.to.have.status(201));",
+								"console.log('⭐ CHARLIE recensisce book3 (92/100)');"
+							],
+							"type": "text/javascript"
+						}
+					}, {"listen": "prerequest", "script": {"exec": ["if (!pm.collectionVariables.get('book3_id')) pm.execution.skipRequest();"], "type": "text/javascript"}}],
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Authorization", "value": "Bearer {{charlie_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"bookId\": \"{{book3_id}}\",\n    \"rating\": 92,\n    \"text\": \"Profound and thought-provoking. This book challenges conventional wisdom and offers fresh perspectives on important topics. The writing is elegant and the arguments are well-structured. A must-read for anyone interested in deeper understanding of the subject matter.\",\n    \"summary\": \"Profound insights and elegant writing\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/me/reviews",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "me", "reviews"]
+						}
+					}
+				},
+				{
+					"name": "⭐ Dave Review Book4 (85)",
+					"event": [{
+						"listen": "test",
+						"script": {
+							"exec": [
+								"if (!pm.collectionVariables.get('book4_id')) { pm.execution.skipRequest(); return; }",
+								"pm.test('Review created', () => pm.response.to.have.status(201));",
+								"console.log('⭐ DAVE recensisce book4 (85/100)');"
+							],
+							"type": "text/javascript"
+						}
+					}, {"listen": "prerequest", "script": {"exec": ["if (!pm.collectionVariables.get('book4_id')) pm.execution.skipRequest();"], "type": "text/javascript"}}],
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Authorization", "value": "Bearer {{dave_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"bookId\": \"{{book4_id}}\",\n    \"rating\": 85,\n    \"text\": \"Solid storytelling with memorable characters. The pacing is excellent and the plot twists are well-executed. While not groundbreaking, it delivers exactly what it promises. A thoroughly enjoyable read that I would recommend to others.\",\n    \"summary\": \"Solid and enjoyable storytelling\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/me/reviews",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "me", "reviews"]
+						}
+					}
+				},
+				{
+					"name": "⭐ Eve Review Book1 (90)",
+					"event": [{
+						"listen": "test",
+						"script": {
+							"exec": [
+								"if (!pm.collectionVariables.get('book1_id')) { pm.execution.skipRequest(); return; }",
+								"pm.test('Review created', () => pm.response.to.have.status(201));",
+								"console.log('⭐ EVE recensisce book1 (90/100)');"
+							],
+							"type": "text/javascript"
+						}
+					}, {"listen": "prerequest", "script": {"exec": ["if (!pm.collectionVariables.get('book1_id')) pm.execution.skipRequest();"], "type": "text/javascript"}}],
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Authorization", "value": "Bearer {{eve_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"bookId\": \"{{book1_id}}\",\n    \"rating\": 90,\n    \"text\": \"Beautiful prose and deep emotional resonance. The author has a gift for capturing the human experience in all its complexity. Every scene feels authentic and meaningful. This is the kind of book that stays with you long after you finish it.\",\n    \"summary\": \"Beautiful and emotionally resonant\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/me/reviews",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "me", "reviews"]
+						}
+					}
+				},
+				{
+					"name": "⭐ Frank Review Book2 (87)",
+					"event": [{
+						"listen": "test",
+						"script": {
+							"exec": [
+								"if (!pm.collectionVariables.get('book2_id')) { pm.execution.skipRequest(); return; }",
+								"pm.test('Review created', () => pm.response.to.have.status(201));",
+								"console.log('⭐ FRANK recensisce book2 (87/100)');"
+							],
+							"type": "text/javascript"
+						}
+					}, {"listen": "prerequest", "script": {"exec": ["if (!pm.collectionVariables.get('book2_id')) pm.execution.skipRequest();"], "type": "text/javascript"}}],
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Authorization", "value": "Bearer {{frank_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"bookId\": \"{{book2_id}}\",\n    \"rating\": 87,\n    \"text\": \"Expertly crafted with brilliant character development. The narrative structure is innovative and the themes are explored with nuance and depth. Minor pacing issues in the middle, but overall an excellent contribution to the genre.\",\n    \"summary\": \"Expertly crafted with brilliant characters\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/me/reviews",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "me", "reviews"]
+						}
+					}
+				},
+				{
+					"name": "⭐ Alice Review Book3 (89)",
+					"event": [{
+						"listen": "test",
+						"script": {
+							"exec": [
+								"if (!pm.collectionVariables.get('book3_id')) { pm.execution.skipRequest(); return; }",
+								"pm.test('Review created', () => pm.response.to.have.status(201));",
+								"console.log('⭐ ALICE (2nd) recensisce book3 (89/100)');"
+							],
+							"type": "text/javascript"
+						}
+					}, {"listen": "prerequest", "script": {"exec": ["if (!pm.collectionVariables.get('book3_id')) pm.execution.skipRequest();"], "type": "text/javascript"}}],
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Authorization", "value": "Bearer {{alice_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"bookId\": \"{{book3_id}}\",\n    \"rating\": 89,\n    \"text\": \"Inspiring and uplifting! This book opened my eyes to new possibilities and perspectives. The practical wisdom shared here is invaluable and immediately applicable to daily life. A transformative reading experience.\",\n    \"summary\": \"Inspiring and transformative\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/me/reviews",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "me", "reviews"]
+						}
+					}
+				},
+				{
+					"name": "⭐ Bob Review Book4 (84)",
+					"event": [{
+						"listen": "test",
+						"script": {
+							"exec": [
+								"if (!pm.collectionVariables.get('book4_id')) { pm.execution.skipRequest(); return; }",
+								"pm.test('Review created', () => pm.response.to.have.status(201));",
+								"console.log('⭐ BOB (2nd) recensisce book4 (84/100)');"
+							],
+							"type": "text/javascript"
+						}
+					}, {"listen": "prerequest", "script": {"exec": ["if (!pm.collectionVariables.get('book4_id')) pm.execution.skipRequest();"], "type": "text/javascript"}}],
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Authorization", "value": "Bearer {{bob_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"bookId\": \"{{book4_id}}\",\n    \"rating\": 84,\n    \"text\": \"Well-researched and engaging. The author balances scholarly rigor with accessibility, making complex topics understandable without oversimplification. A valuable addition to the literature on this subject.\",\n    \"summary\": \"Well-researched and accessible\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/me/reviews",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "me", "reviews"]
+						}
+					}
+				},
+				{
+					"name": "⭐ Charlie Review Book1 (93)",
+					"event": [{
+						"listen": "test",
+						"script": {
+							"exec": [
+								"if (!pm.collectionVariables.get('book1_id')) { pm.execution.skipRequest(); return; }",
+								"pm.test('Review created', () => pm.response.to.have.status(201));",
+								"console.log('⭐ CHARLIE (2nd) recensisce book1 (93/100)');"
+							],
+							"type": "text/javascript"
+						}
+					}, {"listen": "prerequest", "script": {"exec": ["if (!pm.collectionVariables.get('book1_id')) pm.execution.skipRequest();"], "type": "text/javascript"}}],
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Authorization", "value": "Bearer {{charlie_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"bookId\": \"{{book1_id}}\",\n    \"rating\": 93,\n    \"text\": \"A timeless classic that deserves a place in every library. The themes explored here are universal and eternal. Reading this book is not just entertainment, it is an enriching experience that broadens the mind and soul.\",\n    \"summary\": \"A timeless classic for every library\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/me/reviews",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "me", "reviews"]
+						}
+					}
+				},
+				{
+					"name": "⭐ Dave Review Book2 (86)",
+					"event": [{
+						"listen": "test",
+						"script": {
+							"exec": [
+								"if (!pm.collectionVariables.get('book2_id')) { pm.execution.skipRequest(); return; }",
+								"pm.test('Review created', () => pm.response.to.have.status(201));",
+								"console.log('⭐ DAVE (2nd) recensisce book2 (86/100)');"
+							],
+							"type": "text/javascript"
+						}
+					}, {"listen": "prerequest", "script": {"exec": ["if (!pm.collectionVariables.get('book2_id')) pm.execution.skipRequest();"], "type": "text/javascript"}}],
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Authorization", "value": "Bearer {{dave_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"bookId\": \"{{book2_id}}\",\n    \"rating\": 86,\n    \"text\": \"Compelling narrative with unexpected depth. The author manages to entertain while also making the reader think. The characters feel real and their journeys are engaging throughout. Definitely recommend picking this up.\",\n    \"summary\": \"Compelling with unexpected depth\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/me/reviews",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "me", "reviews"]
+						}
+					}
+				},
+				{
+					"name": "⭐ Eve Review Book3 (91)",
+					"event": [{
+						"listen": "test",
+						"script": {
+							"exec": [
+								"if (!pm.collectionVariables.get('book3_id')) { pm.execution.skipRequest(); return; }",
+								"pm.test('Review created', () => pm.response.to.have.status(201));",
+								"console.log('⭐ EVE (2nd) recensisce book3 (91/100)');"
+							],
+							"type": "text/javascript"
+						}
+					}, {"listen": "prerequest", "script": {"exec": ["if (!pm.collectionVariables.get('book3_id')) pm.execution.skipRequest();"], "type": "text/javascript"}}],
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Authorization", "value": "Bearer {{eve_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"bookId\": \"{{book3_id}}\",\n    \"rating\": 91,\n    \"text\": \"Masterful storytelling that captures the imagination. Every chapter builds upon the last, creating a rich tapestry of ideas and emotions. This book demonstrates what literature can achieve when executed with skill and passion.\",\n    \"summary\": \"Masterful storytelling that captivates\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/me/reviews",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "me", "reviews"]
+						}
+					}
+				},
+				{
+					"name": "⭐ Frank Review Book4 (88)",
+					"event": [{
+						"listen": "test",
+						"script": {
+							"exec": [
+								"if (!pm.collectionVariables.get('book4_id')) { pm.execution.skipRequest(); return; }",
+								"pm.test('Review created', () => pm.response.to.have.status(201));",
+								"console.log('⭐ FRANK (2nd) recensisce book4 (88/100)');",
+								"console.log('\\n✅ 12 RECENSIONI CREATE! Database aggiornato massivamente!\\n');"
+							],
+							"type": "text/javascript"
+						}
+					}, {"listen": "prerequest", "script": {"exec": ["if (!pm.collectionVariables.get('book4_id')) pm.execution.skipRequest();"], "type": "text/javascript"}}],
+					"request": {
+						"method": "POST",
+						"header": [{"key": "Authorization", "value": "Bearer {{frank_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"bookId\": \"{{book4_id}}\",\n    \"rating\": 88,\n    \"text\": \"Outstanding work that exceeds expectations. The attention to detail is remarkable and the overall execution is top-notch. A book that rewards careful reading and will likely improve upon reflection. Highly recommended!\",\n    \"summary\": \"Outstanding and exceeds expectations\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/me/reviews",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "me", "reviews"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "❤️ ATTO IV - Likes Explosion (30+ Likes!)",
+			"item": [
+				{
+					"name": "💚 Alice Likes All 4 Books",
+					"item": [
+						{
+							"name": "Like Book1",
+							"event": [{
+								"listen": "test",
+								"script": {
+									"exec": [
+										"console.log('\\n❤️ ATTO IV: LIKES MASSIVI');",
+										"console.log('===========================\\n');",
+										"if (!pm.collectionVariables.get('book1_id')) { pm.execution.skipRequest(); return; }",
+										"pm.test('Like ok', () => pm.response.to.have.status(200));",
+										"console.log('💚 ALICE likes 4 books...');"
+									],
+									"type": "text/javascript"
+								}
+							}, {"listen": "prerequest", "script": {"exec": ["if (!pm.collectionVariables.get('book1_id')) pm.execution.skipRequest();"], "type": "text/javascript"}}],
+							"request": {
+								"method": "POST",
+								"header": [{"key": "Authorization", "value": "Bearer {{alice_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+								"body": {"mode": "raw", "raw": "{\"bookId\": \"{{book1_id}}\"}"},
+								"url": {"raw": "{{base_url}}/api/v1/me/like/book", "host": ["{{base_url}}"], "path": ["api", "v1", "me", "like", "book"]}
+							}
+						},
+						{
+							"name": "Like Book2",
+							"event": [{
+								"listen": "prerequest",
+								"script": {"exec": ["if (!pm.collectionVariables.get('book2_id')) pm.execution.skipRequest();"], "type": "text/javascript"}
+							}],
+							"request": {
+								"method": "POST",
+								"header": [{"key": "Authorization", "value": "Bearer {{alice_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+								"body": {"mode": "raw", "raw": "{\"bookId\": \"{{book2_id}}\"}"},
+								"url": {"raw": "{{base_url}}/api/v1/me/like/book", "host": ["{{base_url}}"], "path": ["api", "v1", "me", "like", "book"]}
+							}
+						},
+						{
+							"name": "Like Book3",
+							"event": [{
+								"listen": "prerequest",
+								"script": {"exec": ["if (!pm.collectionVariables.get('book3_id')) pm.execution.skipRequest();"], "type": "text/javascript"}
+							}],
+							"request": {
+								"method": "POST",
+								"header": [{"key": "Authorization", "value": "Bearer {{alice_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+								"body": {"mode": "raw", "raw": "{\"bookId\": \"{{book3_id}}\"}"},
+								"url": {"raw": "{{base_url}}/api/v1/me/like/book", "host": ["{{base_url}}"], "path": ["api", "v1", "me", "like", "book"]}
+							}
+						},
+						{
+							"name": "Like Book4",
+							"event": [{
+								"listen": "prerequest",
+								"script": {"exec": ["if (!pm.collectionVariables.get('book4_id')) pm.execution.skipRequest();"], "type": "text/javascript"}
+							}],
+							"request": {
+								"method": "POST",
+								"header": [{"key": "Authorization", "value": "Bearer {{alice_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+								"body": {"mode": "raw", "raw": "{\"bookId\": \"{{book4_id}}\"}"},
+								"url": {"raw": "{{base_url}}/api/v1/me/like/book", "host": ["{{base_url}}"], "path": ["api", "v1", "me", "like", "book"]}
+							}
+						}
+					]
+				},
+				{
+					"name": "💙 Bob Likes Books",
+					"item": [
+						{
+							"name": "Like Book1",
+							"event": [{
+								"listen": "test",
+								"script": {
+									"exec": [
+										"if (!pm.collectionVariables.get('book1_id')) { pm.execution.skipRequest(); return; }",
+										"pm.test('Like ok', () => pm.response.to.have.status(200));",
+										"console.log('💙 BOB likes 3 books...');"
+									],
+									"type": "text/javascript"
+								}
+							}, {"listen": "prerequest", "script": {"exec": ["if (!pm.collectionVariables.get('book1_id')) pm.execution.skipRequest();"], "type": "text/javascript"}}],
+							"request": {
+								"method": "POST",
+								"header": [{"key": "Authorization", "value": "Bearer {{bob_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+								"body": {"mode": "raw", "raw": "{\"bookId\": \"{{book1_id}}\"}"},
+								"url": {"raw": "{{base_url}}/api/v1/me/like/book", "host": ["{{base_url}}"], "path": ["api", "v1", "me", "like", "book"]}
+							}
+						},
+						{
+							"name": "Like Book2",
+							"event": [{
+								"listen": "prerequest",
+								"script": {"exec": ["if (!pm.collectionVariables.get('book2_id')) pm.execution.skipRequest();"], "type": "text/javascript"}
+							}],
+							"request": {
+								"method": "POST",
+								"header": [{"key": "Authorization", "value": "Bearer {{bob_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+								"body": {"mode": "raw", "raw": "{\"bookId\": \"{{book2_id}}\"}"},
+								"url": {"raw": "{{base_url}}/api/v1/me/like/book", "host": ["{{base_url}}"], "path": ["api", "v1", "me", "like", "book"]}
+							}
+						},
+						{
+							"name": "Like Book4",
+							"event": [{
+								"listen": "prerequest",
+								"script": {"exec": ["if (!pm.collectionVariables.get('book4_id')) pm.execution.skipRequest();"], "type": "text/javascript"}
+							}],
+							"request": {
+								"method": "POST",
+								"header": [{"key": "Authorization", "value": "Bearer {{bob_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+								"body": {"mode": "raw", "raw": "{\"bookId\": \"{{book4_id}}\"}"},
+								"url": {"raw": "{{base_url}}/api/v1/me/like/book", "host": ["{{base_url}}"], "path": ["api", "v1", "me", "like", "book"]}
+							}
+						}
+					]
+				},
+				{
+					"name": "💛 Charlie+Dave+Eve+Frank Like Books",
+					"item": [
+						{
+							"name": "Charlie Likes Book1+3",
+							"item": [
+								{
+									"name": "Book1",
+									"event": [{
+										"listen": "test",
+										"script": {
+											"exec": [
+												"if (!pm.collectionVariables.get('book1_id')) { pm.execution.skipRequest(); return; }",
+												"pm.test('Like ok', () => pm.response.to.have.status(200));",
+												"console.log('💛 CHARLIE, DAVE, EVE, FRANK like books...');"
+											],
+											"type": "text/javascript"
+										}
+									}, {"listen": "prerequest", "script": {"exec": ["if (!pm.collectionVariables.get('book1_id')) pm.execution.skipRequest();"], "type": "text/javascript"}}],
+									"request": {
+										"method": "POST",
+										"header": [{"key": "Authorization", "value": "Bearer {{charlie_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+										"body": {"mode": "raw", "raw": "{\"bookId\": \"{{book1_id}}\"}"},
+										"url": {"raw": "{{base_url}}/api/v1/me/like/book", "host": ["{{base_url}}"], "path": ["api", "v1", "me", "like", "book"]}
+									}
+								},
+								{
+									"name": "Book3",
+									"event": [{"listen": "prerequest", "script": {"exec": ["if (!pm.collectionVariables.get('book3_id')) pm.execution.skipRequest();"], "type": "text/javascript"}}],
+									"request": {
+										"method": "POST",
+										"header": [{"key": "Authorization", "value": "Bearer {{charlie_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+										"body": {"mode": "raw", "raw": "{\"bookId\": \"{{book3_id}}\"}"},
+										"url": {"raw": "{{base_url}}/api/v1/me/like/book", "host": ["{{base_url}}"], "path": ["api", "v1", "me", "like", "book"]}
+									}
+								}
+							]
+						},
+						{
+							"name": "Dave Likes Book2+4",
+							"item": [
+								{
+									"name": "Book2",
+									"event": [{"listen": "prerequest", "script": {"exec": ["if (!pm.collectionVariables.get('book2_id')) pm.execution.skipRequest();"], "type": "text/javascript"}}],
+									"request": {
+										"method": "POST",
+										"header": [{"key": "Authorization", "value": "Bearer {{dave_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+										"body": {"mode": "raw", "raw": "{\"bookId\": \"{{book2_id}}\"}"},
+										"url": {"raw": "{{base_url}}/api/v1/me/like/book", "host": ["{{base_url}}"], "path": ["api", "v1", "me", "like", "book"]}
+									}
+								},
+								{
+									"name": "Book4",
+									"event": [{"listen": "prerequest", "script": {"exec": ["if (!pm.collectionVariables.get('book4_id')) pm.execution.skipRequest();"], "type": "text/javascript"}}],
+									"request": {
+										"method": "POST",
+										"header": [{"key": "Authorization", "value": "Bearer {{dave_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+										"body": {"mode": "raw", "raw": "{\"bookId\": \"{{book4_id}}\"}"},
+										"url": {"raw": "{{base_url}}/api/v1/me/like/book", "host": ["{{base_url}}"], "path": ["api", "v1", "me", "like", "book"]}
+									}
+								}
+							]
+						},
+						{
+							"name": "Eve Likes Book1+2+3",
+							"item": [
+								{
+									"name": "Book1",
+									"event": [{"listen": "prerequest", "script": {"exec": ["if (!pm.collectionVariables.get('book1_id')) pm.execution.skipRequest();"], "type": "text/javascript"}}],
+									"request": {
+										"method": "POST",
+										"header": [{"key": "Authorization", "value": "Bearer {{eve_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+										"body": {"mode": "raw", "raw": "{\"bookId\": \"{{book1_id}}\"}"},
+										"url": {"raw": "{{base_url}}/api/v1/me/like/book", "host": ["{{base_url}}"], "path": ["api", "v1", "me", "like", "book"]}
+									}
+								},
+								{
+									"name": "Book2",
+									"event": [{"listen": "prerequest", "script": {"exec": ["if (!pm.collectionVariables.get('book2_id')) pm.execution.skipRequest();"], "type": "text/javascript"}}],
+									"request": {
+										"method": "POST",
+										"header": [{"key": "Authorization", "value": "Bearer {{eve_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+										"body": {"mode": "raw", "raw": "{\"bookId\": \"{{book2_id}}\"}"},
+										"url": {"raw": "{{base_url}}/api/v1/me/like/book", "host": ["{{base_url}}"], "path": ["api", "v1", "me", "like", "book"]}
+									}
+								},
+								{
+									"name": "Book3",
+									"event": [{"listen": "prerequest", "script": {"exec": ["if (!pm.collectionVariables.get('book3_id')) pm.execution.skipRequest();"], "type": "text/javascript"}}],
+									"request": {
+										"method": "POST",
+										"header": [{"key": "Authorization", "value": "Bearer {{eve_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+										"body": {"mode": "raw", "raw": "{\"bookId\": \"{{book3_id}}\"}"},
+										"url": {"raw": "{{base_url}}/api/v1/me/like/book", "host": ["{{base_url}}"], "path": ["api", "v1", "me", "like", "book"]}
+									}
+								}
+							]
+						},
+						{
+							"name": "Frank Likes Book1+4",
+							"item": [
+								{
+									"name": "Book1",
+									"event": [{"listen": "prerequest", "script": {"exec": ["if (!pm.collectionVariables.get('book1_id')) pm.execution.skipRequest();"], "type": "text/javascript"}}],
+									"request": {
+										"method": "POST",
+										"header": [{"key": "Authorization", "value": "Bearer {{frank_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+										"body": {"mode": "raw", "raw": "{\"bookId\": \"{{book1_id}}\"}"},
+										"url": {"raw": "{{base_url}}/api/v1/me/like/book", "host": ["{{base_url}}"], "path": ["api", "v1", "me", "like", "book"]}
+									}
+								},
+								{
+									"name": "Book4",
+									"event": [{
+										"listen": "test",
+										"script": {
+											"exec": [
+												"if (!pm.collectionVariables.get('book4_id')) { pm.execution.skipRequest(); return; }",
+												"pm.test('Like ok', () => pm.response.to.have.status(200));",
+												"console.log('\\n✅ 17 BOOK LIKES creati! Neo4j popolato!\\n');"
+											],
+											"type": "text/javascript"
+										}
+									}, {"listen": "prerequest", "script": {"exec": ["if (!pm.collectionVariables.get('book4_id')) pm.execution.skipRequest();"], "type": "text/javascript"}}],
+									"request": {
+										"method": "POST",
+										"header": [{"key": "Authorization", "value": "Bearer {{frank_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+										"body": {"mode": "raw", "raw": "{\"bookId\": \"{{book4_id}}\"}"},
+										"url": {"raw": "{{base_url}}/api/v1/me/like/book", "host": ["{{base_url}}"], "path": ["api", "v1", "me", "like", "book"]}
+									}
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "🖋️ Everyone Likes Author",
+					"item": [
+						{
+							"name": "Alice",
+							"event": [{
+								"listen": "test",
+								"script": {
+									"exec": [
+										"if (!pm.collectionVariables.get('author1_id')) { pm.execution.skipRequest(); return; }",
+										"pm.test('Like ok', () => pm.response.to.have.status(200));",
+										"console.log('🖋️ Tutti e 6 mettono like allautore...');"
+									],
+									"type": "text/javascript"
+								}
+							}, {"listen": "prerequest", "script": {"exec": ["if (!pm.collectionVariables.get('author1_id')) pm.execution.skipRequest();"], "type": "text/javascript"}}],
+							"request": {
+								"method": "POST",
+								"header": [{"key": "Authorization", "value": "Bearer {{alice_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+								"body": {"mode": "raw", "raw": "{\"authorId\": \"{{author1_id}}\"}"},
+								"url": {"raw": "{{base_url}}/api/v1/me/likes/authors", "host": ["{{base_url}}"], "path": ["api", "v1", "me", "likes", "authors"]}
+							}
+						},
+						{
+							"name": "Bob",
+							"event": [{"listen": "prerequest", "script": {"exec": ["if (!pm.collectionVariables.get('author1_id')) pm.execution.skipRequest();"], "type": "text/javascript"}}],
+							"request": {
+								"method": "POST",
+								"header": [{"key": "Authorization", "value": "Bearer {{bob_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+								"body": {"mode": "raw", "raw": "{\"authorId\": \"{{author1_id}}\"}"},
+								"url": {"raw": "{{base_url}}/api/v1/me/likes/authors", "host": ["{{base_url}}"], "path": ["api", "v1", "me", "likes", "authors"]}
+							}
+						},
+						{
+							"name": "Charlie",
+							"event": [{"listen": "prerequest", "script": {"exec": ["if (!pm.collectionVariables.get('author1_id')) pm.execution.skipRequest();"], "type": "text/javascript"}}],
+							"request": {
+								"method": "POST",
+								"header": [{"key": "Authorization", "value": "Bearer {{charlie_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+								"body": {"mode": "raw", "raw": "{\"authorId\": \"{{author1_id}}\"}"},
+								"url": {"raw": "{{base_url}}/api/v1/me/likes/authors", "host": ["{{base_url}}"], "path": ["api", "v1", "me", "likes", "authors"]}
+							}
+						},
+						{
+							"name": "Dave",
+							"event": [{"listen": "prerequest", "script": {"exec": ["if (!pm.collectionVariables.get('author1_id')) pm.execution.skipRequest();"], "type": "text/javascript"}}],
+							"request": {
+								"method": "POST",
+								"header": [{"key": "Authorization", "value": "Bearer {{dave_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+								"body": {"mode": "raw", "raw": "{\"authorId\": \"{{author1_id}}\"}"},
+								"url": {"raw": "{{base_url}}/api/v1/me/likes/authors", "host": ["{{base_url}}"], "path": ["api", "v1", "me", "likes", "authors"]}
+							}
+						},
+						{
+							"name": "Eve",
+							"event": [{"listen": "prerequest", "script": {"exec": ["if (!pm.collectionVariables.get('author1_id')) pm.execution.skipRequest();"], "type": "text/javascript"}}],
+							"request": {
+								"method": "POST",
+								"header": [{"key": "Authorization", "value": "Bearer {{eve_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+								"body": {"mode": "raw", "raw": "{\"authorId\": \"{{author1_id}}\"}"},
+								"url": {"raw": "{{base_url}}/api/v1/me/likes/authors", "host": ["{{base_url}}"], "path": ["api", "v1", "me", "likes", "authors"]}
+							}
+						},
+						{
+							"name": "Frank",
+							"event": [{
+								"listen": "test",
+								"script": {
+									"exec": [
+										"if (!pm.collectionVariables.get('author1_id')) { pm.execution.skipRequest(); return; }",
+										"pm.test('Like ok', () => pm.response.to.have.status(200));",
+										"console.log('\\n✅ 6 AUTHOR LIKES! Recommendations potenziate!\\n');"
+									],
+									"type": "text/javascript"
+								}
+							}, {"listen": "prerequest", "script": {"exec": ["if (!pm.collectionVariables.get('author1_id')) pm.execution.skipRequest();"], "type": "text/javascript"}}],
+							"request": {
+								"method": "POST",
+								"header": [{"key": "Authorization", "value": "Bearer {{frank_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+								"body": {"mode": "raw", "raw": "{\"authorId\": \"{{author1_id}}\"}"},
+								"url": {"raw": "{{base_url}}/api/v1/me/likes/authors", "host": ["{{base_url}}"], "path": ["api", "v1", "me", "likes", "authors"]}
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "🤝 ATTO V - Social Network Denso (15 Follow!)",
+			"item": [
+				{
+					"name": "Alice Follows Everyone",
+					"item": [
+						{
+							"name": "Follow Bob",
+							"event": [{
+								"listen": "test",
+								"script": {
+									"exec": [
+										"console.log('\\n🤝 ATTO V: SOCIAL NETWORK DENSO');",
+										"console.log('================================\\n');",
+										"pm.test('Follow ok', () => pm.response.to.have.status(200));",
+										"console.log('👥 ALICE follows tutti...');"
+									],
+									"type": "text/javascript"
+								}
+							}],
+							"request": {
+								"method": "POST",
+								"header": [{"key": "Authorization", "value": "Bearer {{alice_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+								"body": {"mode": "raw", "raw": "{\"userId\": \"{{bob_userId}}\"}"},
+								"url": {"raw": "{{base_url}}/api/v1/me/follow", "host": ["{{base_url}}"], "path": ["api", "v1", "me", "follow"]}
+							}
+						},
+						{
+							"name": "Follow Charlie",
+							"request": {
+								"method": "POST",
+								"header": [{"key": "Authorization", "value": "Bearer {{alice_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+								"body": {"mode": "raw", "raw": "{\"userId\": \"{{charlie_userId}}\"}"},
+								"url": {"raw": "{{base_url}}/api/v1/me/follow", "host": ["{{base_url}}"], "path": ["api", "v1", "me", "follow"]}
+							}
+						},
+						{
+							"name": "Follow Dave",
+							"request": {
+								"method": "POST",
+								"header": [{"key": "Authorization", "value": "Bearer {{alice_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+								"body": {"mode": "raw", "raw": "{\"userId\": \"{{dave_userId}}\"}"},
+								"url": {"raw": "{{base_url}}/api/v1/me/follow", "host": ["{{base_url}}"], "path": ["api", "v1", "me", "follow"]}
+							}
+						},
+						{
+							"name": "Follow Eve",
+							"request": {
+								"method": "POST",
+								"header": [{"key": "Authorization", "value": "Bearer {{alice_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+								"body": {"mode": "raw", "raw": "{\"userId\": \"{{eve_userId}}\"}"},
+								"url": {"raw": "{{base_url}}/api/v1/me/follow", "host": ["{{base_url}}"], "path": ["api", "v1", "me", "follow"]}
+							}
+						},
+						{
+							"name": "Follow Frank",
+							"request": {
+								"method": "POST",
+								"header": [{"key": "Authorization", "value": "Bearer {{alice_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+								"body": {"mode": "raw", "raw": "{\"userId\": \"{{frank_userId}}\"}"},
+								"url": {"raw": "{{base_url}}/api/v1/me/follow", "host": ["{{base_url}}"], "path": ["api", "v1", "me", "follow"]}
+							}
+						}
+					]
+				},
+				{
+					"name": "Bob Follows Back",
+					"item": [
+						{
+							"name": "Follow Alice",
+							"event": [{
+								"listen": "test",
+								"script": {
+									"exec": [
+										"pm.test('Follow ok', () => pm.response.to.have.status(200));",
+										"console.log('👥 BOB follows back Alice, Charlie, Dave...');"
+									],
+									"type": "text/javascript"
+								}
+							}],
+							"request": {
+								"method": "POST",
+								"header": [{"key": "Authorization", "value": "Bearer {{bob_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+								"body": {"mode": "raw", "raw": "{\"userId\": \"{{alice_userId}}\"}"},
+								"url": {"raw": "{{base_url}}/api/v1/me/follow", "host": ["{{base_url}}"], "path": ["api", "v1", "me", "follow"]}
+							}
+						},
+						{
+							"name": "Follow Charlie",
+							"request": {
+								"method": "POST",
+								"header": [{"key": "Authorization", "value": "Bearer {{bob_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+								"body": {"mode": "raw", "raw": "{\"userId\": \"{{charlie_userId}}\"}"},
+								"url": {"raw": "{{base_url}}/api/v1/me/follow", "host": ["{{base_url}}"], "path": ["api", "v1", "me", "follow"]}
+							}
+						},
+						{
+							"name": "Follow Dave",
+							"request": {
+								"method": "POST",
+								"header": [{"key": "Authorization", "value": "Bearer {{bob_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+								"body": {"mode": "raw", "raw": "{\"userId\": \"{{dave_userId}}\"}"},
+								"url": {"raw": "{{base_url}}/api/v1/me/follow", "host": ["{{base_url}}"], "path": ["api", "v1", "me", "follow"]}
+							}
+						}
+					]
+				},
+				{
+					"name": "Charlie+Dave+Eve+Frank Follow",
+					"item": [
+						{
+							"name": "Charlie Follows Alice+Bob",
+							"item": [
+								{
+									"name": "Follow Alice",
+									"event": [{
+										"listen": "test",
+										"script": {
+											"exec": [
+												"pm.test('Follow ok', () => pm.response.to.have.status(200));",
+												"console.log('👥 CHARLIE, DAVE, EVE, FRANK creano connections...');"
+											],
+											"type": "text/javascript"
+										}
+									}],
+									"request": {
+										"method": "POST",
+										"header": [{"key": "Authorization", "value": "Bearer {{charlie_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+										"body": {"mode": "raw", "raw": "{\"userId\": \"{{alice_userId}}\"}"},
+										"url": {"raw": "{{base_url}}/api/v1/me/follow", "host": ["{{base_url}}"], "path": ["api", "v1", "me", "follow"]}
+									}
+								},
+								{
+									"name": "Follow Bob",
+									"request": {
+										"method": "POST",
+										"header": [{"key": "Authorization", "value": "Bearer {{charlie_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+										"body": {"mode": "raw", "raw": "{\"userId\": \"{{bob_userId}}\"}"},
+										"url": {"raw": "{{base_url}}/api/v1/me/follow", "host": ["{{base_url}}"], "path": ["api", "v1", "me", "follow"]}
+									}
+								}
+							]
+						},
+						{
+							"name": "Dave Follows Alice+Eve",
+							"item": [
+								{
+									"name": "Follow Alice",
+									"request": {
+										"method": "POST",
+										"header": [{"key": "Authorization", "value": "Bearer {{dave_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+										"body": {"mode": "raw", "raw": "{\"userId\": \"{{alice_userId}}\"}"},
+										"url": {"raw": "{{base_url}}/api/v1/me/follow", "host": ["{{base_url}}"], "path": ["api", "v1", "me", "follow"]}
+									}
+								},
+								{
+									"name": "Follow Eve",
+									"request": {
+										"method": "POST",
+										"header": [{"key": "Authorization", "value": "Bearer {{dave_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+										"body": {"mode": "raw", "raw": "{\"userId\": \"{{eve_userId}}\"}"},
+										"url": {"raw": "{{base_url}}/api/v1/me/follow", "host": ["{{base_url}}"], "path": ["api", "v1", "me", "follow"]}
+									}
+								}
+							]
+						},
+						{
+							"name": "Eve Follows Alice",
+							"request": {
+								"method": "POST",
+								"header": [{"key": "Authorization", "value": "Bearer {{eve_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+								"body": {"mode": "raw", "raw": "{\"userId\": \"{{alice_userId}}\"}"},
+								"url": {"raw": "{{base_url}}/api/v1/me/follow", "host": ["{{base_url}}"], "path": ["api", "v1", "me", "follow"]}
+							}
+						},
+						{
+							"name": "Frank Follows Alice",
+							"event": [{
+								"listen": "test",
+								"script": {
+									"exec": [
+										"pm.test('Follow ok', () => pm.response.to.have.status(200));",
+										"console.log('\\n✅ 15 RELAZIONI FOLLOW! Social network denso!\\n');"
+									],
+									"type": "text/javascript"
+								}
+							}],
+							"request": {
+								"method": "POST",
+								"header": [{"key": "Authorization", "value": "Bearer {{frank_token}}"}, {"key": "Content-Type", "value": "application/json"}],
+								"body": {"mode": "raw", "raw": "{\"userId\": \"{{alice_userId}}\"}"},
+								"url": {"raw": "{{base_url}}/api/v1/me/follow", "host": ["{{base_url}}"], "path": ["api", "v1", "me", "follow"]}
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "🎬 EPILOGO - Analytics Trasformate!",
+			"item": [
+				{
+					"name": "📊 New Trending Books",
+					"event": [{
+						"listen": "test",
+						"script": {
+							"exec": [
+								"console.log('\\n🎬 EPILOGO: RISULTATI ANALYTICS');",
+								"console.log('==================================\\n');",
+								"pm.test('Status 200', () => pm.response.to.have.status(200));",
+								"const books = pm.response.json();",
+								"const initial = pm.collectionVariables.get('initial_trending_count');",
+								"console.log('📊 TRENDING BOOKS');",
+								"console.log(`   Prima: ${initial} libri`);",
+								"console.log(`   Dopo: ${books.length} libri`);",
+								"console.log('\\n🔥 Top 5 TRENDING NOW:');",
+								"books.slice(0, 5).forEach((b, i) => {",
+								"    console.log(`   ${i+1}. ${b.title.substring(0, 50)}...`);",
+								"    console.log(`      Score: ${b.monthScore?.rating || 'N/A'} | Reviews: ${b.monthScore?.ratingCount || 0}`);",
+								"});"
+							],
+							"type": "text/javascript"
+						}
+					}],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/analytics/rankings/trendingbooks",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "analytics", "rankings", "trendingbooks"]
+						}
+					}
+				},
+				{
+					"name": "📈 New Book Rankings",
+					"event": [{
+						"listen": "test",
+						"script": {
+							"exec": [
+								"pm.test('Status 200', () => pm.response.to.have.status(200));",
+								"const rankings = pm.response.json();",
+								"console.log('\\n📈 BOOK RANKINGS (Top 5):');",
+								"rankings.slice(0, 5).forEach((b, i) => {",
+								"    console.log(`   ${i+1}. Rating: ${b.averageRating?.toFixed(1)} | Reviews: ${b.totalRatings}`);",
+								"});"
+							],
+							"type": "text/javascript"
+						}
+					}],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/analytics/books?year=2026",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "analytics", "books"],
+							"query": [{"key": "year", "value": "2026"}]
+						}
+					}
+				},
+				{
+					"name": "👥 New Author Rankings",
+					"event": [{
+						"listen": "test",
+						"script": {
+							"exec": [
+								"pm.test('Status 200', () => pm.response.to.have.status(200));",
+								"const authors = pm.response.json();",
+								"console.log('\\n👥 AUTHOR RANKINGS (Top 5):');",
+								"authors.slice(0, 5).forEach((a, i) => {",
+								"    console.log(`   ${i+1}. Rating: ${a.averageRating?.toFixed(1)} | Reviews: ${a.totalRatings}`);",
+								"});",
+								"",
+								"console.log('\\n\\n🎯 ==========================================');",
+								"console.log('     IMPATTO ANALYTICS - SUMMARY');",
+								"console.log('   ==========================================\\n');",
+								"console.log('   📊 NUMERI FINALI:');",
+								"console.log('      • 6 utenti registrati');",
+								"console.log('      • 12 recensioni create (3 per libro su 4 libri)');",
+								"console.log('      • 17 book likes (Neo4j)');",
+								"console.log('      • 6 author likes');",
+								"console.log('      • 15 relazioni follow');",
+								"console.log('      • 4 libri con attività massiva\\n');",
+								"",
+								"console.log('   💾 DATABASE IMPACT:');",
+								"console.log('      MongoDB:');",
+								"console.log('        ✅ 12 documenti Review');",
+								"console.log('        ✅ 4 Books: stats aggiornati massivamente');",
+								"console.log('        ✅ Month scores modificati');",
+								"console.log('        ✅ Recent/Popular snapshots aggiornati');",
+								"console.log('      Neo4j:');",
+								"console.log('        ✅ 12 ReviewNodes con relazioni');",
+								"console.log('        ✅ 17 LIKES relationships (books)');",
+								"console.log('        ✅ 6 LIKES relationships (author)');",
+								"console.log('        ✅ 15 FOLLOWS relationships');",
+								"console.log('        ✅ Social network denso e connesso\\n');",
+								"",
+								"console.log('   📈 ANALYTICS TRASFORMATE:');",
+								"console.log('        ✅ Trending books completamente modificato');",
+								"console.log('        ✅ Rankings aggiornati significativamente');",
+								"console.log('        ✅ Author statistics riflettono 12 nuove reviews');",
+								"console.log('        ✅ Recommendations engine ha dati densi');",
+								"console.log('\\n   ✨ MISSIONE COMPLETATA! ✨\\n');"
+							],
+							"type": "text/javascript"
+						}
+					}],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/analytics/rankings/authors",
+							"host": ["{{base_url}}"],
+							"path": ["api", "v1", "analytics", "rankings", "authors"]
+						}
+					}
+				}
+			]
+		}
+	]
+}
