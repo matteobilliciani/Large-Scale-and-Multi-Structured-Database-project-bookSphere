@@ -87,7 +87,7 @@ public class NormalizationUtils {
             return username;
         }
         
-        return username.trim().toLowerCase();
+        return username.trim();
     }
     
     /**

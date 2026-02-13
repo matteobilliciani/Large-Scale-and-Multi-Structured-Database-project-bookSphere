@@ -8,6 +8,7 @@ import it.unipi.bookSphere.dto.RegisterDTO;
 import it.unipi.bookSphere.dto.UserDTO;
 import it.unipi.bookSphere.service.AuthService;
 import it.unipi.bookSphere.utils.JwtUtil;
+import it.unipi.bookSphere.validation.ValidationUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -33,6 +34,7 @@ public class AuthController {
     ) {
         // Create new user account
         UserDTO user = authService.register(registerDTO);
+        ValidationUtils.validateUsername(user.getUsername());
         
         // Generate JWT token with status (new users are always "active")
         String token = jwtUtil.generateToken(user.getId(), user.getUsername(), "USER", "active");
