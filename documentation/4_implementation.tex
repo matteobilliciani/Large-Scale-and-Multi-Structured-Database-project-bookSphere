@@ -1,0 +1,399 @@
+\chapter{Implementation}
+
+\section{Technologies and Frameworks}
+The application is built using Java and the \textbf{Spring Boot} framework, chosen for its robust ecosystem and native support for building RESTful web services. To manage the interaction with the NoSQL databases, the project relies on \textbf{Spring Data MongoDB} and the \textbf{spring-boot-starter-data-neo4j} module, which seamlessly integrates the Neo4j Java driver. Furthermore, the application employs \textbf{MapStruct} for automated object mapping and \textbf{JSON Web Tokens (JWT)} to enforce stateless, role-based security.
+
+Additionally, tools such as \textbf{Lombok} have been utilized to significantly reduce boilerplate code and facilitate secure, constructor-based dependency injection. Regarding security, the application leverages Spring Security's dedicated and integrated features to reinforce overall system protection. Finally, the project adopts a strict layered architecture, which is thoroughly described in Section \ref{sec:directory_structure}.
+
+\section{Directory Structure and Modules}
+\label{sec:directory_structure}
+To ensure maintainability, scalability, and a clear separation of concerns, the codebase is organized following a strict Layered Architecture. The main packages and their responsibilities are detailed below.
+
+\subsection{Config}
+The \texttt{Config} module groups all the configuration classes required to bootstrap and secure the application environment. Key components include:
+\begin{itemize}
+    \item \texttt{SecurityConfig}: Defines the role-based access rules and permissions for every exposed REST endpoint.
+    \item \texttt{JwtAuthenticationFilter}: A custom filter that intercepts incoming HTTP requests to validate the signature and expiration (set to 24 hours) of the provided JWT.
+    \item \texttt{JwtAuthenticationEntryPoint}: Manages authentication failures, gracefully handling unauthorized access attempts by returning standardized HTTP 401 (Unauthorized) responses.
+    \item \texttt{DatabaseConfig}: Creates the transactional managers for the two databases.
+\end{itemize}
+
+\subsection{Controllers}
+This package contains the REST controllers responsible for exposing the application's endpoints and handling incoming HTTP requests. To ensure a clear separation of concerns, these controllers delegate all the underlying business logic to the Service layer, thereby maintaining the presentation layer as lightweight and efficient as possible. 
+
+The API endpoints are logically divided into three main categories based on their access level: open (public APIs), registered (user-specific APIs, distinguished by the \texttt{/me/} prefix), and administrative (distinguished by the \texttt{/admin/} prefix).
+
+\subsubsection*{Public Controllers}
+These controllers handle requests that do not require user authentication:
+\begin{itemize}
+    \item \textbf{AuthController}: Manages user authentication, including login and logout functionalities.
+    \item \textbf{AnalyticsController}: Implements the main system analytics and statistics, accessible without registration[cite: 19].
+    \item \textbf{BookController}: Allows users to search for and retrieve book details by ID or title.
+    \item \textbf{AuthorController}: Handles queries related to authors (e.g., retrieving author details or searching by name).
+    \item \textbf{UserController}: Provides functionalities to search for registered users by their ID or username.
+    \item \textbf{ReviewsController}: Fetches multiple reviews based on a provided list of identifiers.
+\end{itemize}
+
+\subsubsection*{Registered User Controllers (\texttt{/me/})}
+These controllers expose functionalities reserved for authenticated users:
+\begin{itemize}
+    \item \textbf{BookshelfController}: Enables users to manage their personal bookshelves (add, modify, or remove books).
+    \item \textbf{ReviewController}: Allows authenticated users to create, update, or delete their personal reviews.
+    \item \textbf{FollowController}: Manages the social graph, allowing users to follow/unfollow other users or retrieve the list of followed accounts.
+    \item \textbf{LikeController}: Handles the interactions for liking or unliking specific content (e.g., reviews or books).
+    \item \textbf{ProfileController}: Manages account settings, providing options to update the username or delete the account entirely.
+    \item \textbf{UserFeaturesController}: Implements user-specific analytics and custom features, such as personalized book recommendations or yearly summaries (e.g., "Wrapped").
+\end{itemize}
+
+\subsubsection*{Admin Controllers (\texttt{/admin/})}
+These controllers are restricted to users with administrative privileges:
+\begin{itemize}
+    \item \textbf{AdminBookController} \& \textbf{AdminCatalogController}: Used by administrators to manage the application's catalog, including adding or updating books, authors, and genres.
+    \item \textbf{AdminModerationController}: Provides moderation tools to ban malicious users or remove inappropriate reviews.
+\end{itemize}
+
+\subsubsection*{Endpoint Architecture and Validation}
+As recommended by the project guidelines, we adopted the Spring framework to implement the RESTful APIs. Furthermore, annotations such as \texttt{@Operation} are used to seamlessly integrate with Swagger for complete API documentation[cite: 52, 53].
+
+The following snippet illustrates a typical controller method, demonstrating how requests are received, validated, and passed to the Service layer:
+
+\begin{lstlisting}[language=Java, caption={Example of a Controller endpoint with input validation (BookshelfController)}]
+@Operation(
+    summary = "Update book status",
+    description = "Change the status of a book in the bookshelf"
+)
+@PatchMapping("/{bookID}")
+public ResponseEntity<Map<String, String>> updateBookStatus(
+        @Parameter(description = "MongoDB ObjectId of the book", example = "65b3f...")
+        @PathVariable String bookID,
+        @Parameter(description = "New status", example = "read")
+        @RequestBody Map<String, String> requestBody
+) {
+    // Input validation performed at the controller level
+    ValidationUtils.validateObjectId(bookID, "bookID");
+    String status = ValidationUtils.extractAndValidateField(requestBody, "status");
+    ValidationUtils.validateBookshelfStatus(status);
+    
+    // Delegation to the Service layer
+    bookshelfService.updateBookStatus(bookID, status);
+    
+    return ResponseEntity.ok(Map.of("message", "Book status updated"));
+}
+\end{lstlisting}
+
+As demonstrated in the code above, user input validation is strictly enforced at the controller level prior to any business logic execution. To avoid redundancy in this documentation, we omit further code examples for other endpoints. The architectural pattern remains highly consistent across the application: variations strictly depend on the required CRUD operation [cite: 18] (mapped via standard annotations like \texttt{@GetMapping}, \texttt{@PostMapping}, \texttt{@PutMapping}, \texttt{@PatchMapping}, or \texttt{@DeleteMapping}) and the method of parameter extraction (using \texttt{@PathVariable}, \texttt{@RequestParam}, or \texttt{@RequestBody}).
+
+\subsection{DTO}
+To decouple the internal domain models (Entities) from the data exposed through the APIs, the application makes extensive use of \textit{Data Transfer Objects} (DTOs), such as the \texttt{AuthResponseDTO}.
+
+
+\subsection{Mappers}
+The \texttt{Mappers} directory contains the MapStruct interfaces, which automatically generate the boilerplate code required for bidirectional conversion between Entities and DTOs.
+
+\subsection{Model}
+Light model description
+
+\subsection{Repositories}
+This layer manages all data access operations. It contains interfaces extending \texttt{MongoRepository} and \texttt{Neo4jRepository}. Besides the standard CRUD operations, the Neo4j repositories include custom \texttt{@Query} methods written in Cypher for complex graph traversals (e.g., fetching user recommendations or analytics). The package also includes \textit{Projections}, which are specific interfaces used by Spring Data to capture and map intermediate results returned by complex aggregation queries.
+
+\subsection{Services and Async}
+The \texttt{Services} package encapsulates the core business logic of the application. It orchestrates the flow of data, applies business rules, and interacts with the repositories. Within this package, a dedicated \texttt{Async} sub-directory was created to group all the asynchronous services. These classes are annotated with \texttt{@Async} and are crucial for implementing the \textit{Eventual Consistency} patterns (e.g., updating denormalized review snapshots in the background).
+DETEAILED DESCRITION(?) AND CODE OF SOME NICE FUNCTION
+
+\subsection{Utils}
+The \texttt{Utils} package provides shared helper classes and utilities utilized across different layers of the application:
+\begin{itemize}
+    \item \texttt{JWTUtils}: Responsible for generating tokens and securely extracting claims during the validation phase.
+    \item \texttt{UserPrincipal}: A structural class representing the currently authenticated entity (either a standard user or an admin).
+    \item \texttt{SecurityUtils}: A utility class designed to easily retrieve the \texttt{UserPrincipal} and the current user's details directly from the Spring Security context, avoiding the need to pass the JWT manually through method signatures.
+\end{itemize}
+
+\subsection{Validation}
+This module centralizes request payload validation
+
+\subsection{Exceptions}
+To guarantee data integrity and provide meaningful feedback to the clients, this module centralizes error handling. It leverages a \texttt{GlobalExceptionHandler}
+
+\section{MongoDB Relevant queries}
+To fulfill the analytical requirements of the application and handle the large dataset efficiently, several complex aggregation pipelines have been designed for the Document Database. These pipelines heavily leverage MongoDB's native operators to process and transform data directly within the database engine, minimizing data transfer and optimizing performance.
+
+\subsection{Ranking}
+This pipeline computes the ranking of books based on their average rating. It filters the statistics by a specific year, aggregates the total ratings, and enforces a minimum threshold to exclude statistical outliers. Finally, it calculates the exact average and sorts the results.
+
+\begin{lstlisting}[language=json, caption={Book Rankings Aggregation Pipeline}]
+db.books.aggregate([
+    // 1. Initial Match
+    { 
+        "$match": { 
+            "availability": "ACTIVE"
+            // "author.id": {$id}, // (Optional)
+            // "genres": "Horror"  // (Optional)
+        } 
+    },
+    // 2. Filter Array (Year Logic)
+    {
+        "$project": {
+            "title": 1,
+            "author": 1,
+            "targetStat": {
+                "$filter": {
+                    "input": "$stats_per_year",
+                    "as": "stat",
+                    "cond": { "$eq": ["$$stat.year", 2023] }
+                }
+            }
+        }
+    },
+    // 3. Extract Totals (Flattening)
+    {
+        "$project": {
+            "title": 1,
+            "author": 1,
+            "totalRatings": { "$sum": "$targetStat.ratings_count" },
+            "sumRating": { "$sum": "$targetStat.sum_rating" }
+        }
+    },
+    // 4. Threshold Filter
+    { 
+        "$match": { "totalRatings": { "$gt": 5 } } 
+    },
+    // 5. Calculate Average & Rename fields for DTO
+    {
+        "$project": {
+            "name": "$title",
+            "additionalInfo": "$author.name",
+            "totalRatings": 1,
+            "averageRating": { "$divide": ["$sumRating", "$totalRatings"] }
+        }
+    },
+    // 6. Final Sort & Limit
+    { "$sort": { "averageRating": -1 } },
+    { "$limit": 25 }
+])
+\end{lstlisting}
+
+\subsection{Revaluation}
+This query identifies the books with the most significant rating gap between their first and last year of reviews. It extracts the first and last statistical objects from the \texttt{stats\_per\_year} array, safely calculates their respective averages avoiding division by zero, and computes the delta.
+
+\begin{lstlisting}[language=json, caption={Book Revaluation Aggregation Pipeline}]
+db.books.aggregate([
+    // 1. Filter books with at least 2 years of history
+    { "$match": { 
+        "stats_per_year.1": { "$exists": true }, 
+        "availability": "ACTIVE"
+    }},
+    // 2. Extract first and last stat objects
+    { "$project": {
+        "title": 1,
+        "author": 1,
+        "firstStat": { "$arrayElemAt": ["$stats_per_year", 0] },
+        "lastStat": { "$arrayElemAt": ["$stats_per_year", -1] }
+    }},
+    // 3. Calculate Averages (Safe Division: Sum / Count)
+    { "$project": {
+        "title": 1,
+        "author": "$author.name",
+        "startYear": "$firstStat.year",
+        "endYear": "$lastStat.year",
+        "startRating": {
+            "$cond": [
+                { "$gt": ["$firstStat.ratings_count", 0] },
+                { "$divide": ["$firstStat.sum_rating", "$firstStat.ratings_count"] },
+                0.0
+            ]
+        },
+        "endRating": {
+            "$cond": [
+                { "$gt": ["$lastStat.ratings_count", 0] },
+                { "$divide": ["$lastStat.sum_rating", "$lastStat.ratings_count"] },
+                0.0
+            ]
+        }
+    }},
+    // 4. Calculate the Delta (End - Start)
+    { "$addFields": {
+        "ratingDelta": { "$subtract": ["$endRating", "$startRating"] }
+    }},
+    // 5. Sort and Limit
+    { "$sort": { "ratingDelta": -1 } },
+    { "$limit": 10 }
+]);
+\end{lstlisting}
+
+\subsection{Yearly Wrapped}
+This advanced pipeline generates an annual summary for a specific user. It leverages the \texttt{\$facet} operator to perform multiple parallel analyses—such as extracting the most read authors, the favorite genres, and the best/worst rated books—in a single database roundtrip. The \texttt{\$unwind} operator is essential here to accurately flatten and count the frequency of array elements (authors and genres) before grouping them.
+
+\begin{lstlisting}[language=json, caption={Yearly Wrapped Aggregation Pipeline}]
+db.users.aggregate([
+    // 1. MATCH: Filter by specific user
+    { "$match": { "_id": "CURRENT_USER_ID" } },
+    
+    // 2. ADDFIELDS: Pre-calculate data (filter and sort internal arrays)
+    { "$addFields": {
+        "best_book": {
+            "$arrayElemAt": [
+                { "$sortArray": {
+                    "input": { "$ifNull": ["$reviews_year", []] },
+                    "sortBy": { "rating": -1 } // DESC
+                }}, 0
+            ]
+        },
+        "worst_book": {
+            "$arrayElemAt": [
+                { "$sortArray": {
+                    "input": { "$ifNull": ["$reviews_year", []] },
+                    "sortBy": { "rating": 1 } // ASC
+                }}, 0
+            ]
+        },
+        "yearly_books": {
+            "$filter": {
+                "input": { "$ifNull": ["$bookshelf", []] },
+                "as": "b",
+                "cond": {
+                    "$and": [
+                        { "$eq": ["$$b.status", "read"] },
+                        { "$gte": ["$$b.added_at", ISODate("2026-01-01T00:00:00Z")] },
+                        { "$lte": ["$$b.added_at", ISODate("2026-12-31T23:59:59Z")] }
+                    ]
+                }
+            }
+        }
+    }},
+    
+    // 3. FACET: Execute 3 parallel sub-pipelines
+    { "$facet": {
+        // Analysis 1: Top Authors
+        "top_authors": [
+            { "$project": { "yearly_books": 1 } },
+            { "$unwind": "$yearly_books" },
+            { "$group": { 
+                "_id": "$yearly_books.author.name", 
+                "count": { "$sum": 1 } 
+            }},
+            { "$sort": { "count": -1 } },
+            { "$limit": 3 }
+        ],
+        // Analysis 2: Top Genres
+        "top_genres": [
+            { "$project": { "yearly_books": 1 } },
+            { "$unwind": "$yearly_books" },
+            { "$unwind": "$yearly_books.genres" },
+            { "$group": { 
+                "_id": "$yearly_books.genres", 
+                "count": { "$sum": 1 } 
+            }},
+            { "$sort": { "count": -1 } },
+            { "$limit": 3 }
+        ],
+        // Analysis 3: Metadata (Best/Worst & Totals)
+        "meta": [
+            { "$project": {
+                "best_book": 1,
+                "worst_book": 1,
+                "total_books_read": { "$size": "$yearly_books" }
+            }}
+        ]
+    }}
+])
+\end{lstlisting}
+
+
+\section{Neo4j Relevant Queries}
+To leverage the highly connected nature of the dataset and satisfy the requirement for typical "on-graph" domain-specific queries, several advanced Cypher queries have been implemented. These queries navigate complex, multi-hop paths to calculate metrics and provide social features that would be computationally prohibitive in a standard Document DB.
+
+\subsection{User Recommendations}
+This query provides personalized book suggestions by traversing a 2-to-3-hop path. The algorithm recommends books based on three main social factors: books liked by the users the current user follows, books written by authors the user likes, and books belonging to genres the user likes. 
+To optimize the recommendation engine and prevent suggesting books the user has already read, a pre-query is executed on the MongoDB backend to extract the read books from the user's \texttt{bookshelf}. This list is then passed to Neo4j as a blacklist parameter (\texttt{\$excludedMongoIds}).
+
+\begin{lstlisting}[language=Cypher, caption={Cypher Query for User Recommendations}]
+MATCH (u:User {mongoId: $userId})
+OPTIONAL MATCH (u)-[:FOLLOWS]->(:User)-[:LIKES]->(b1:Book)
+OPTIONAL MATCH (u)-[:LIKES]->(:Author)-[:WROTE]->(b2:Book)
+OPTIONAL MATCH (u)-[:LIKES]->(:Genre)<-[:BELONGS_TO]-(b3:Book)
+WITH collect(b1) + collect(b2) + collect(b3) AS recommendations, u
+UNWIND recommendations AS book
+WITH u, book
+WHERE NOT EXISTS((u)-[:POSTED]->(:Review)-[:REFER_TO]->(book)) AND book IS NOT NULL
+WITH book, count(*) AS score
+ORDER BY score DESC
+LIMIT $limit
+MATCH (a:Author)-[:WROTE]->(book)
+RETURN book.mongoId AS bookId, 
+       book.title AS title, 
+       book.year AS publicationYear,
+       score,
+       collect(a.name) AS authors
+\end{lstlisting}
+
+\subsection{Internationality Index}
+This analytic calculates the "global reach" (Internationality Index) of a Book or an Author by analyzing the geographic origin (\texttt{country} property) of the users who interact with the entity. The traversal captures both users who posted a review and users who simply left a "Like".
+
+\begin{lstlisting}[language=Cypher, caption={Cypher Query for Book and Author Internationality Index}]
+// Internationality Index for a Book
+MATCH (b:Book {mongoId: $bookId})
+OPTIONAL MATCH (b)<-[:REFER_TO]-(r:Review)<-[:POSTED]-(reviewer:User)
+OPTIONAL MATCH (b)<-[:LIKES]-(liker:User)
+WITH reviewer, liker
+WITH collect(DISTINCT reviewer) + collect(DISTINCT liker) AS users
+UNWIND users AS u
+WITH u WHERE u IS NOT NULL AND u.country IS NOT NULL
+RETURN u.country AS country, 
+       count(DISTINCT u.mongoId) AS uniqueUsers, 
+       count(*) AS totalInteractions
+ORDER BY uniqueUsers DESC
+
+// Internationality Index for an Author
+MATCH (a:Author {mongoId: $authorId})
+OPTIONAL MATCH (a)<-[:LIKES]-(liker:User)
+OPTIONAL MATCH (a)-[:WROTE]->(b:Book)<-[:REFER_TO]-(r:Review)<-[:POSTED]-(reviewer:User)
+WITH liker, reviewer
+WITH collect(DISTINCT liker) + collect(DISTINCT reviewer) AS users
+UNWIND users AS u
+WITH u WHERE u IS NOT NULL AND u.country IS NOT NULL
+RETURN u.country AS country, 
+       count(DISTINCT u.mongoId) AS uniqueUsers, 
+       count(*) AS totalInteractions
+ORDER BY uniqueUsers DESC
+\end{lstlisting}
+
+\subsection{Genre Influencer}
+This query aims to identify "True Influencers" within the platform, focusing on quality over quantity. It searches for users who write reviews that receive a high volume of "Likes" from other users, either globally or filtered by a specific genre. To prevent anomalies, the query enforces a minimum threshold of reviews and excludes soft-deleted or banned users (represented by an empty string username).
+
+\begin{lstlisting}[language=Cypher, caption={Cypher Query for Genre Influencers}]
+// Influencers by a specific genre
+MATCH (g:Genre {name: $genreName})<-[:BELONGS_TO]-(b:Book)<-[:REFER_TO]-(r:Review)<-[:POSTED]-(influencer:User)
+MATCH (r)<-[:LIKES]-(fan:User)
+WITH influencer,
+     count(DISTINCT r) AS numReviews,
+     count(fan) AS totalLikes
+WHERE numReviews > 3 AND influencer.username <> ""
+RETURN influencer.username AS username,
+       totalLikes AS totalEngagement,
+       numReviews AS numReviews,
+       toFloat(totalLikes) / numReviews AS avgLikesPerReview
+ORDER BY avgLikesPerReview DESC
+LIMIT $limit
+
+// Global Influencers (All genres)
+MATCH (r:Review)<-[:POSTED]-(influencer:User)
+MATCH (r)<-[:LIKES]-(fan:User)
+WITH influencer,
+     count(DISTINCT r) AS numReviews,
+     count(fan) AS totalLikes
+WHERE numReviews > 5 AND influencer.username <> ""
+RETURN influencer.username AS username,
+       totalLikes AS totalEngagement,
+       numReviews AS numReviews,
+       toFloat(totalLikes) / numReviews AS avgLikesPerReview
+ORDER BY avgLikesPerReview DESC
+LIMIT $limit
+\end{lstlisting}
+
+
+
+\section {API Documentation}
+\subsection{API endpoint}
+LIST OF ENDPOINT
+\subsection{API Examples}
+ONE OR TWO EXAMPLES

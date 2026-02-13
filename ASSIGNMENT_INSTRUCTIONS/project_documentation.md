@@ -8,7 +8,7 @@ Colori:
 -	Matteo Team Boxer
 -	Matteo Team Donna
 
-1.	Platform introduction[MB1.1][MB1.2]
+1.	Platform introduction
 Welcome to BookSphere, the ultimate social platform for book lovers designed to help you organize your reading life and connect with a global community. Beyond simply searching for titles and authors, BookSphere allows you to curate your own digital library by marking books as "To-Read," "Reading," or "Read," ensuring you never lose track of your literary journey.
 The experience is deeply social and smart: you can follow friends to instantly see their latest updates and ratings or discover "Real Influencers" - expert reviewers identified by the quality of their engagement rather than just follower count - to get the best recommendations for your favourite genres. The platform goes beyond standard suggestions by offering unique insights, such as a "Trending Probability" that predicts the next viral hit and an "Internationality Index" that shows you how far a book is traveling around the globe. You can share your own voice by leaving one-to-one-hundred ratings and written reviews, and at the end of every year, you’ll receive a personalized "Yearly Wrapped" recap to celebrate your reading highlights, top authors, and most-read genres.
 
@@ -57,7 +57,7 @@ Admin
 4.	The System must allow an Admin to view any Registered User.
 5.	The System must enable an Admin to view any review.
 6.	The System must enable an Admin to delete any review.
-7.	The System must enable an Admin to ban any Registered User[DP2.1].
+7.	The System must enable an Admin to ban any Registered User.
 Non-Functional Requirements
 1.	The System must follow RESTful design principles
 2.	The System must avoid permanent data loss
@@ -334,20 +334,20 @@ Book	User	Review	Author
   "stats_per_year": [
     {
       "year": 2023,
-      "ratings_count": 150,
+      "ratings_count": 8,
       "sum_rating": 630 // Accumulatore
     },
     {
       "year": 2024,
-      "ratings_count": 200,
+      "ratings_count": 10,
       "sum_rating": 900
     }
   ],
 
-  // PATTERN: Current Monthly score
-  "month_score": {    “rating_count”: ,
-    “sum_rating”: ,
-    "Current_Month”: 
+  // PATTERN: Current monthly score
+  "month_score": {    “rating_count”: 1,
+    “sum_rating”:91 ,
+    "Current_Month”: “2025-12”
   }
 }
 	{
@@ -431,7 +431,7 @@ Book	User	Review	Author
   ],
 
   // PATTERN: Computed (Aggregazioni pre-calcolate da tutte le recensioni dei suoi libri)
-  "ratings_count": 15000, // Totale voti ricevuti (Counter)
+  "ratings_count": 862, // Totale voti ricevuti (Counter)
   "sum_ratings": 72750    // Somma voti (Accumulatore)
 }
 
@@ -497,7 +497,7 @@ X	GET	/api/v1/books/{id}	pathVariable	Visualizza dettagli libro, snapshot recens
 X	GET	/api/v1/books?title = …	Query string	Ricerca il Libro dal titolo	MongoDB
 X	GET	/api/v1/authors/{id}	Author’s Id	Visualizza profilo autore, opere pubblicate e rating	MongoDB
 X	GET	/api/v1/authors?author_name = …	Query string	Ricerca Autore dal nome, opere pubblicate e rating	
-X	GET	/api/v1/users/username/{username[DP3.1]}	Path Variable 	Visualizza profilo utente e attività (bookshelf e reviews dell’anno e lista delle reviewID)	Mongo
+X	GET	/api/v1/users/username/{username}	Path Variable 	Visualizza profilo utente e attività (bookshelf e reviews dell’anno e lista delle reviewID)	Mongo
 X	GET	/api/v1/users/{id}	Path variable 	Ricerca utente per ID	
 X	GET	/api/v1/analytics/rankings/trendingbooks		Lista di Libri di tendenza	MongoDB
 X	GET	/api/v1/analytics/rankings/books?year = …	Query string 	Classifiche dei libri per un anno specifico o di sempre
@@ -508,7 +508,7 @@ X	GET	/api/v1/analytics/rankings/authors	Query string	Classifiche degli autori d
 X	GET	/api/v1/analytics/versatility/{authId}	Path variable	Calcola Author Versatility Index	Neo4j
 X	GET	/api/v1/analytics/internationality/{book|authorID}	Path variable	Calcola Internationality Index (Book/Author)	Neo4j
 X	GET	/api/v1/analytics/influencers?genre=…	Query string	Identifica influencer per genere (Engagement)	Neo4j
-	GET	/api/analytics/[MI4.1][DP4.2]revaluation		Identifica i libri con maggior divario di rating tra primo e ultimo anno	MongoDB
+	GET	/api/analytics/revaluation		Identifica i libri con maggior divario di rating tra primo e ultimo anno	MongoDB
 Registered User					
 X	POST	/api/v1/me/reviews	Auth + bookid + voto + commento (optional)	Scrittura di una recensione (voto + commento)	Mongo+Neo4j
 X	PATCH	/api/v1/me/reviews/{reviewID}	Auth + path variable + voto or commento (optional)	Modifica di una review postata precedentemente	Mongo+Neo4j
@@ -1032,7 +1032,7 @@ Book Rankings	Classifica libri (Annuale/All-time).	db.books.aggregate([
     // 1. Initial Match
     { 
         "$match": { 
-            "status": "ACTIVE",
+            "availability": "ACTIVE",
             // "author.id": {$id}, // (Optional)
          //
             // "genres": "Horror"             // (Optional)
@@ -1306,6 +1306,10 @@ Qui implementiamo le analytic usabili da utenti generici sia usando neo che mong
 NOTA: Il ranking ha spesso limitazioni sul numero minimo di recensioni per evitare outlier.
 7.2.3	AUTHOR & BOOK & USER
 Serve per cercare libri e autori per id/nome
+
+PAGINAZIONE
+Differenza TOTAL: In Neo4j uso il count totale (PageImpl con total), mentre in MongoDB uso solo Page<T> che già include il total automaticamente - questo è corretto perché Spring Data MongoDB calcola il total automaticamente, mentre per Neo4j con query custom Cypher devo farlo manualmente.
+
 7.2.4	BookShelf
 Gestiure la propria bookshelf, tutto senza Async
 7.2.5	LIKE
@@ -1331,3 +1335,80 @@ Quando avviene l’aggiornamento di una review non viene contato viene sempre co
 7.2.9	USERFEATURE
 Impelemnta l’analytic Wrapped
 
+8	TEST
+8.1	OPEN
+Test Funzionali Esaustivi per le API OPEN
+Nuovi Test Creati:
+ReviewControllerTest (8 test)
+
+Test per recupero singolo/multiplo di review per ID
+Test per review inesistenti
+Test per liste vuote e miste
+UserControllerTest (9 test)
+
+Test per recupero utenti per ID
+Test per recupero utenti per username
+Test per utenti inesistenti
+Test per case sensitivity
+Test per indipendenza tra utenti
+AnalyticsControllerTest (26 test)
+
+Test per trending books
+Test per book rankings (con filtri per year, author, genre)
+Test per author rankings
+Test per book revaluation
+Test per internationality (book e author)
+Test per influencer detection
+8.2	ADMIN
+Riepilogo dei Test Funzionali ADMIN
+Ho creato e migliorato test esaustivi per tutte le API ADMIN:
+✅ AdminCatalogControllerTest (14 test - NUOVO)
+•	✓ Cleanup e setup
+•	✓ Add author (con normalizzazione nomi)
+•	✓ Update author
+•	✓ Delete/Archive author
+•	✓ Test su autore archiviato (fallimenti attesi)
+•	✓ Add genre (con normalizzazione)
+•	✓ Gestione generi duplicati
+•	✓ Consistenza MongoDB + Neo4j
+✅ AdminBookControllerTest (13 test - MIGLIORATO)
+•	✓ Add, update, delete book
+•	✓ Cambio autore e generi
+•	✓ Test su book archiviato
+•	✓ Verifica relazioni Neo4j (WROTE, BELONGS_TO)
+•	✓ Gestione errori (ID non esistenti)
+•	✓ Cleanup automatico dati test
+✅ AdminModerationControllerTest (14 test - MIGLIORATO)
+•	✓ Delete review (moderazione)
+•	✓ Ban user (con verifica cascata)
+•	✓ Get all users/reviews (paginazione)
+•	✓ Test con ID invalidi
+•	✓ Creazione e pulizia dati test multipli
+•	✓ Verifica autenticazione admin
+📊 Totale: 41 test - 100% passati
+Caratteristiche implementate:
+•	Popolamento automatico database per test
+•	Pulizia completa dati dopo ogni esecuzione
+•	Test di consistenza MongoDB + Neo4j
+•	Gestione normalizzazione nomi (case-insensitive)
+•	Verifica errori e casi edge
+•	Autenticazione admin configurata correttamente
+
+LEGGI MD_COPILOT/TEST_SUITE_DOCUMENTATION
+FUNCTIONAL TEST
+Ok
+STRESS TEST
+-	Postman doesnt allow to stress the system enough
+-	JMetric is a tool with GUI but it has high resources consumption, with big XML files
+-	Gatling can be integrated in maven and allows optimized resources tests
+
+9	INDEXES
+9.1	MONGO DB
+Sulla collection book ci sono due possibili indici:
+-	Genres: così da velocizzare la ricerca di libri di un certo genere e il ranking dei libri di un certo genere
+-	Title: abbiamo due possibilità:
+•	Aggiungere un indice semplice ma la ricerca è ottimizzata solo se è fatta sull’inizio della parola
+•	Aggiungere un filtro text e usare per le ricerche l operatore text che è un motore interno a mongo per la ricerca
+Sulla collection author l’indice su nome stessa cosa di sopra per titolo dei libri.
+9.2	NEO4J
+On all the mongoID and on genre name for uniquess and search

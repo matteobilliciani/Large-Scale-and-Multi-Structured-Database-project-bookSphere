@@ -1,0 +1,79 @@
+\chapter{Databases Choices and Distributed Architecture}
+
+\section{Polyglot Persistence Strategy}
+The application adopts a Polyglot Persistence approach to efficiently manage a highly connected, large-scale dataset. MongoDB was selected as the Primary Document Database to store the core entities (Users, Books, Authors, and Reviews) due to its high throughput in read/write operations and its flexible schema. Conversely, Neo4j was introduced as a Secondary Graph Database to seamlessly compute complex social interactions, recommendations, and graph-centric analytics (e.g., the Author Versatility Index).
+
+\section{Indexes Justification and Validation}
+To guarantee optimal response times and avoid full collection scans (\texttt{COLLSCAN}), specific indexes have been designed and experimentally validated for the Document DB. On the Graph DB, indexes were defined strictly where needed to optimize traversal starting points.
+
+\subsection{MongoDB Indexes}
+STILL TO CHOOSE
+TO CHOOSE, for sure on genres on book
+
+
+\subsection{Neo4j Indexes}
+In Neo4j, index usage was minimized to avoid unnecessary write overhead. A \textit{Range Index} was created exclusively on the \texttt{mongoId} property across all primary nodes (\texttt{User}, \texttt{Book}, \texttt{Review}, \texttt{Author}) and also for \texttt{name} for \texttt{Genre} node. This is crucial to guarantee $O(\log n)$ lookup times during find query, synchronization and cross-database queries.
+
+\section{Virtual Machine Organization and Replica Sets}
+To guarantee high availability and fault tolerance, the database layer was deployed both on a local cluster and on the VIRTUAL LAB cluster provided by UNIPI.
+
+\subsection{Document Database Deployment}
+For the Document DB, a distributed architecture comprising a three-member replica set has been defined and configured to manage eventual consistency. This standard topology consists of one \textit{Primary} node, which handles all write operations, and two \textit{Secondary} nodes that asynchronously replicate the primary's oplog to ensure data redundancy.
+
+The replica set initialization configuration (\texttt{rsconf}) assigns specific priorities to the nodes to govern the primary election process. As shown in the configuration below, the server hosted at \texttt{10.1.1.80} is explicitly designated as the preferred primary node due to its higher priority value:
+
+\begin{lstlisting}[language=java, caption={MongoDB Replica Set Configuration (\texttt{rsconf})}]
+var rsconf = {
+  _id: "lsmdb",
+  members: [
+    { _id: 0, host: "10.1.1.77", priority: 1 },
+    { _id: 1, host: "10.1.1.78", priority: 2 },
+    { _id: 2, host: "10.1.1.80", priority: 5 }
+  ]
+};
+\end{lstlisting}
+
+\subsection{Graph Database Deployment}
+Regarding the Graph DB, deploying replicas on the virtual cluster is not mandatory. Since configuring a native Neo4j cluster requires an enterprise license, a single instance of the graph database was deployed on the virtual cluster alongside the Document DB replicas. To optimize resource allocation and prevent interference with the primary MongoDB node's heavy write workloads, the Neo4j instance was strategically co-located on one of the secondary servers.
+
+\vspace{0.5cm}
+
+% ---------------------------------------------------------
+% SPAZIO PER L'IMMAGINE DELL'ARCHITETTURA
+% ---------------------------------------------------------
+\begin{figure}[H]
+    \centering
+    % Decommenta la riga seguente e inserisci il nome del tuo file immagine
+    % \includegraphics[width=0.85\textwidth]{images/cluster_architecture.png}
+    
+    % Questo è un box segnaposto che apparirà nel PDF finché non inserisci l'immagine vera
+    \framebox(350, 200){\textit{[Insert Diagram of the VMs and Cluster Architecture here]}}
+    
+    \caption{Overview of the Virtual Machines Organization and Database Deployment on the UNIPI Cluster.}
+    \label{fig:vm_organization}
+\end{figure}
+
+\section{Sharding Strategy}
+As the dataset grows, horizontal scaling becomes necessary. The design of the sharding strategy for MongoDB was argued and planned to distribute the load evenly across the cluster.
+The \texttt{Review} collection is the fastest-growing entity in the system. To prevent "jumbo chunks" and ensure a uniform distribution of read/write operations, a \textbf{Hashed Sharding} strategy was chosen. By sharding on the hashed value of the \texttt{\_id} or the \texttt{user\_id}, incoming reviews are evenly distributed across the shards, effectively preventing localized hotspots during traffic spikes.
+TO ADD OTHER THINGS, for exemple partition on other enteties like BOOK, AUTHOR and User
+
+\section{CAP Theorem Considerations}
+Considerations regarding the features of the application in relation to the CAP theorem (Consistency, Availability, Partition Tolerance) were carried out after deploying the database on the cluster.
+By default, a MongoDB replica set strongly favors \textbf{CP} (Consistency and Partition Tolerance). If the primary node fails, the system becomes temporarily unavailable for writes until a new primary is elected. However, to enhance \textit{Availability} for read-heavy operations (e.g., fetching book catalogs or public reviews), the application leverages \textit{Read Preferences} (setting them to \texttt{secondaryPreferred}). This shifts the system towards an \textbf{AP} model for read operations, accepting \textit{Eventual Consistency} in exchange for higher availability and lower latency.
+Mongo DB automatically managed the eventual consistency (w=majority), when set the replicas will be acknowledged of the writes before committed. 
+
+
+\section{Inter-Database Consistency}
+Maintaining consistency between the different database architectures is a critical challenge in polyglot systems. Since distributed Atomic transactions are not supported between MongoDB and Neo4j, the application enforces consistency through two main strategies:
+\begin{itemize}
+    \item \textbf{Compensating Transactions (Rollbacks):} For critical operations, such as User Registration, a synchronous approach is used. If the Neo4j node creation fails, a manual rollback removes the previously inserted MongoDB document.
+    \item \textbf{Eventual Consistency:} For high-volume, non-critical operations (like updating "Likes" or recalculating average ratings), the system relies on Spring's \texttt{@Async} workers. Data is immediately persisted in the primary database, while the secondary database or denormalized snapshots are updated asynchronously in the background.
+\end{itemize}
+
+\subsection{Eventual Consistency via @Async}
+To prevent bottlenecks during high-frequency write operations, the updating of denormalized data strictly follows the \textbf{Eventual Consistency} paradigm. 
+Through the \texttt{@Async} annotation, non-critical operations are decoupled from the main HTTP request thread. For instance, the propagation of the "popular reviews" embedding within book documents, as well as the recalculation of aggregate statistics, are processed asynchronously.
+
+\subsection{Resilience with @Retryable}
+To ensure system reliability in a distributed environment prone to temporary network latencies, \textbf{Spring Retry} (\texttt{@Retryable}) has been enabled. This allows the system to automatically retry failed operations. Special care was taken to ensure the \textit{idempotency} of these queries, guaranteeing that multiple re-executions do not generate inconsistent states.

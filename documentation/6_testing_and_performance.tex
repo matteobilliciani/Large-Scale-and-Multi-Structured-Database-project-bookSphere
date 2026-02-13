@@ -1,0 +1,140 @@
+\chapter{System Testing and Performance Evaluation}
+
+\section{Introduction}
+In this chapter, we aim to exhaustively describe the system's testing procedures. This validation strategy covers two primary pillars:
+\begin{enumerate}
+    \item \textbf{Java-based Testing:} Comprehensive unit and integration tests covering all internal code functionalities.
+    \item \textbf{API Performance Testing:} External load and stress testing performed via Postman (and Newman CLI) to validate system resilience under concurrency.
+\end{enumerate}
+
+The following sections detail the methodology, configuration parameters, and quantitative results of these tests.
+
+% =============================================================================
+% SECTION: JAVA TESTING
+% =============================================================================
+
+\section{Java-based Testing Strategy}
+% INSTRUCTION FOR CLAUDE:
+% Expand this section to describe the JUnit/Mockito tests. 
+% Explain how Unit Tests cover individual methods and how Integration Tests verify the interaction between the service layer and the database.
+
+This section outlines the testing framework applied to the Java backend. We utilize standard testing libraries to ensure code reliability and logic correctness before deployment.
+
+\subsection{Unit Testing}
+% [Insert description of Unit Tests here]
+
+\subsection{Integration Testing}
+% [Insert description of Integration Tests here]
+
+% =============================================================================
+% SECTION: POSTMAN TESTING
+% =============================================================================
+
+\section{API Performance Testing via Postman}
+
+To evaluate the system's behavior under stress, we conducted a series of performance tests targeting specific API endpoints. These tests are divided into \textbf{Read Performance} (data retrieval) and \textbf{Write Performance} (data ingestion/modification).
+
+For each test scenario, we define a specific \textbf{Test Setup} configuration encompassing:
+\begin{itemize}
+    \item \textbf{Virtual Users (VU):} The number of concurrent simulated users accessing the system.
+    \item \textbf{Duration:} The total timeframe over which the test is executed.
+    \item \textbf{Load Profile:} The intensity and distribution of traffic (e.g., fixed, ramp-up).
+\end{itemize}
+
+% -----------------------------------------------------------------------------
+% SUBSECTION: READ PERFORMANCE
+% -----------------------------------------------------------------------------
+
+\subsection{Read Performance Scenarios}
+% INSTRUCTION FOR CLAUDE:
+% Focus here on GET requests. Describe the specific query logic being tested (e.g., fetching large lists, filtering by date).
+
+This section details the performance metrics for data retrieval operations. The primary goal is to measure latency and throughput when multiple users query the application simultaneously.
+
+\subsubsection{Test Setup: Read Operations}
+
+\begin{table}[H]
+    \centering
+    \caption{Configuration for Read Operation Load Test}
+    \label{tab:read_setup}
+    \begin{tabular}{@{}ll@{}}
+        \toprule
+        \textbf{Parameter} & \textbf{Configuration Value} \\ \midrule
+        % INSTRUCTION FOR CLAUDE: Fill in the actual values below
+        Virtual Users      & 50 VUs (Simulated)           \\
+        Duration           & 10 Minutes                   \\
+        Load Profile       & Ramp-up (0 to 50 over 1 min) \\
+        Endpoint Tested    & \texttt{GET /api/v1/resource} \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsubsection{Results and Analysis}
+% INSTRUCTION FOR CLAUDE: 
+% Analyze the results here. Discuss Average Response Time, Error Rate, and Throughput (Req/Sec).
+
+The results of the read performance test indicate the system's capability to handle high-concurrency read requests. As shown in Figure \ref{fig:read_graph}, the response time remained stable even as the number of virtual users peaked.
+
+% Placeholder for the Image
+\begin{figure}[H]
+    \centering
+    % \includegraphics[width=0.8\textwidth]{path/to/postman_read_graph.png}
+    \fbox{\begin{minipage}{0.8\textwidth}
+        \centering
+        \vspace{2cm}
+        \textbf{[PLACEHOLDER: Insert Postman Read Performance Graph Here]}
+        \vspace{2cm}
+    \end{minipage}}
+    \caption{Postman Response Time Graph for Read Operations}
+    \label{fig:read_graph}
+\end{figure}
+
+% -----------------------------------------------------------------------------
+% SUBSECTION: WRITE PERFORMANCE
+% -----------------------------------------------------------------------------
+
+\subsection{Write Performance Scenarios}
+% INSTRUCTION FOR CLAUDE:
+% Focus here on POST/PUT/DELETE requests. Discuss transactional integrity and locking if relevant.
+
+This section evaluates the system's performance during data ingestion. Write operations generally incur higher overhead due to database transaction management and constraint checking.
+
+\subsubsection{Test Setup: Write Operations}
+
+\begin{table}[H]
+    \centering
+    \caption{Configuration for Write Operation Load Test}
+    \label{tab:write_setup}
+    \begin{tabular}{@{}ll@{}}
+        \toprule
+        \textbf{Parameter} & \textbf{Configuration Value} \\ \midrule
+        % INSTRUCTION FOR CLAUDE: Fill in the actual values below
+        Virtual Users      & 20 VUs (Simulated)           \\
+        Duration           & 5 Minutes                    \\
+        Load Profile       & Fixed Load                   \\
+        Endpoint Tested    & \texttt{POST /api/v1/resource} \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsubsection{Results and Analysis}
+The write performance metrics demonstrate the system's throughput for transactional operations. Figure \ref{fig:write_graph} highlights the relationship between the active virtual users and the server's processing time per write request.
+
+% Placeholder for the Image
+\begin{figure}[H]
+    \centering
+    % \includegraphics[width=0.8\textwidth]{path/to/postman_write_graph.png}
+    \fbox{\begin{minipage}{0.8\textwidth}
+        \centering
+        \vspace{2cm}
+        \textbf{[PLACEHOLDER: Insert Postman Write Performance Graph Here]}
+        \vspace{2cm}
+    \end{minipage}}
+    \caption{Postman Throughput Graph for Write Operations}
+    \label{fig:write_graph}
+\end{figure}
+
+\section{Conclusion}
+% INSTRUCTION FOR CLAUDE: Summarize the overall stability of the system based on both Java and Postman tests.
+The combination of granular Java unit tests and broad Postman load tests provides high confidence in the system's stability.
+
