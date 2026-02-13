@@ -190,6 +190,39 @@ public class ProfileControllerTest {
     }
 
     @Test
+    @Order(6)
+    @DisplayName("06. Delete account - Success")
+    void test06_DeleteAccount_Success() {
+        System.out.println("\n=== TEST 06: Delete Account ===");
+
+        // Re-setup authentication
+        setupAuthentication(testUserId, TEST_PREFIX + "UpdatedUser");
+
+        // Delete the account
+        profileService.deleteAccount();
+
+        // Wait for async operations
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
+        // Verify in MongoDB
+        RegisteredUser userMongo = userRepository.findById(testUserId).orElse(null);
+        assertNotNull(userMongo, "User should still exist in MongoDB");
+        assertEquals("deleted", userMongo.getStatus(), "Status should be 'deleted'");
+        assertNull(userMongo.getUsername(), "Username should be null");
+        assertNull(userMongo.getEmail(), "Email should be null");
+
+        // Verify in Neo4j - User node should be deleted
+        var userNodeOpt = userNodeRepository.findByMongoId(testUserId);
+        assertFalse(userNodeOpt.isPresent(), "User node should be deleted from Neo4j");
+
+        System.out.println("Account deleted successfully");
+    }
+
+    @Test
     @Order(99)
     @DisplayName("99. Final Cleanup - Remove all test data")
     void test99_FinalCleanup() {

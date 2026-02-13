@@ -245,40 +245,175 @@ public class AdminModerationControllerTest {
 
     @Test
     @Order(7)
-    @DisplayName("07. Ban user - Success")
-    void test07_BanUser_Success() {
-        System.out.println("\n=== TEST 07: Ban User ===");
+    @DisplayName("07. Ban user with cascading effects - Comprehensive test")
+    void test07_BanUser_WithCascadingEffects() {
+        System.out.println("\n=== TEST 07: Ban User with Cascading Effects ===");
 
-        adminModerationService.banUser(testUserId);
+        // Create a NEW test user with review for cascading test
+        setupAdminAuthentication();
 
-        // Verify user is banned in MongoDB
-        RegisteredUser user = userRepository.findById(testUserId).orElse(null);
-        assertNotNull(user);
-        assertEquals("BANNED", user.getStatus());
+        RegisteredUser userToBan = new RegisteredUser();
+        userToBan.setUsername(TEST_PREFIX + "UserToBan");
+        userToBan.setEmail(TEST_PREFIX + "usertoban@test.com");
+        userToBan.setPasswordHashed(passwordEncoder.encode("password"));
+        userToBan.setCountry("DE");
+        userToBan.setStatus("active");
+        userToBan.setReviews(new ArrayList<>());
+        userToBan.setBookshelf(new ArrayList<>());
+        userToBan = userRepository.save(userToBan);
+        String userToBanId = userToBan.getId();
+        System.out.println("Created user to ban: " + userToBan.getUsername());
 
-        System.out.println("User banned successfully");
+        // Create user node in Neo4j
+        userNodeRepository.getOrCreate(userToBanId, userToBan.getUsername(), userToBan.getCountry());
+
+        // Switch to user authentication to create review
+        setupUserAuthentication(userToBanId, TEST_PREFIX + "UserToBan");
+
+        // Create review for the user
+        ReviewDTO reviewDTO = new ReviewDTO();
+        reviewDTO.setBookId(testBookId);
+        reviewDTO.setRating(3);
+        reviewDTO.setText("This user will be banned");
+        reviewDTO.setSummary("To ban");
+
+        ReviewDTO createdReview = reviewService.createReview(reviewDTO);
+        String reviewToBanId = createdReview.getId();
+        System.out.println("Created review for user to ban: " + reviewToBanId);
+
+        // Wait for async operations
+        try {
+            Thread.sleep(1500);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
+        // Get book stats BEFORE ban
+        BookDocument bookBefore = bookRepository.findById(testBookId).orElse(null);
+        assertNotNull(bookBefore);
+        int reviewCountBefore = bookBefore.getReviews() != null ? bookBefore.getReviews().size() : 0;
+        System.out.println("Book reviews count before ban: " + reviewCountBefore);
+
+        // Switch back to admin and BAN the user
+        setupAdminAuthentication();
+        adminModerationService.banUser(userToBanId);
+
+        // Wait for async cascading operations
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
+        // VERIFY CASCADING EFFECTS:
+
+        // 1. User status should be BANNED
+        RegisteredUser userAfterBan = userRepository.findById(userToBanId).orElse(null);
+        assertNotNull(userAfterBan, "User should still exist in MongoDB");
+        assertEquals("BANNED", userAfterBan.getStatus(), "User status should be BANNED");
+        assertNull(userAfterBan.getUsername(), "Username should be null after ban");
+
+        // 2. User's review should be DELETED from MongoDB
+        boolean reviewExists = reviewRepository.existsById(reviewToBanId);
+        assertFalse(reviewExists, "User's review should be deleted from MongoDB");
+
+        // 3. User's review should be DELETED from Neo4j
+        var reviewNodeOpt = reviewNodeRepository.findByMongoId(reviewToBanId);
+        assertFalse(reviewNodeOpt.isPresent(), "User's review should be deleted from Neo4j");
+
+        // 4. Book's review array should be updated
+        BookDocument bookAfter = bookRepository.findById(testBookId).orElse(null);
+        assertNotNull(bookAfter);
+        assertFalse(bookAfter.getReviews().contains(reviewToBanId), "Book should not contain banned user's review ID");
+        int reviewCountAfter = bookAfter.getReviews() != null ? bookAfter.getReviews().size() : 0;
+        assertTrue(reviewCountAfter < reviewCountBefore, "Book review count should decrease after ban");
+
+        // 5. User node should be DELETED from Neo4j
+        var userNodeOpt = userNodeRepository.findByMongoId(userToBanId);
+        assertFalse(userNodeOpt.isPresent(), "User node should be deleted from Neo4j");
+
+        System.out.println("✓ Ban with cascading effects verified:");
+        System.out.println("  - User status: BANNED");
+        System.out.println("  - Username: null");
+        System.out.println("  - Reviews deleted: " + (reviewCountBefore - reviewCountAfter));
+        System.out.println("  - Neo4j user node: deleted");
+        System.out.println("  - Neo4j review node: deleted");
+
+        // Cleanup
+        userRepository.deleteById(userToBanId);
     }
 
     @Test
     @Order(8)
-    @DisplayName("08. Ban user - Already banned")
-    void test08_BanUser_AlreadyBanned() {
-        System.out.println("\n=== TEST 08: Ban Already Banned User ===");
+    @DisplayName("08. Ban non-existent user - Should fail")
+    void test08_BanUser_NonExistent() {
+        System.out.println("\n=== TEST 08: Ban Non-Existent User ===");
 
-        // Try to ban again - should handle gracefully
-        try {
-            adminModerationService.banUser(testUserId);
-            System.out.println("Ban operation completed (user already banned)");
-        } catch (Exception e) {
-            System.out.println("Expected behavior: " + e.getMessage());
-        }
+        String fakeId = "000000000000000000000000";
+
+        Exception exception = assertThrows(Exception.class, () -> {
+            adminModerationService.banUser(fakeId);
+        });
+
+        System.out.println("Expected error caught: " + exception.getMessage());
     }
 
     @Test
     @Order(9)
-    @DisplayName("09. Test pagination - Get users with different page sizes")
-    void test09_GetUsers_Pagination() {
-        System.out.println("\n=== TEST 09: Test User Pagination ===");
+    @DisplayName("09. Ban already banned user - Should fail")
+    void test09_BanUser_AlreadyBanned() {
+        System.out.println("\n=== TEST 09: Ban Already Banned User ===");
+
+        // Create a user specifically for this test
+        RegisteredUser bannedUser = new RegisteredUser();
+        bannedUser.setUsername(TEST_PREFIX + "BannedUser");
+        bannedUser.setEmail(TEST_PREFIX + "banned@test.com");
+        bannedUser.setPasswordHashed(passwordEncoder.encode("password"));
+        bannedUser.setCountry("IT");
+        bannedUser.setStatus("active");
+        bannedUser.setReviews(new ArrayList<>());
+        bannedUser.setBookshelf(new ArrayList<>());
+        bannedUser = userRepository.save(bannedUser);
+        String bannedUserId = bannedUser.getId();
+
+        // Create user node in Neo4j
+        userNodeRepository.getOrCreate(bannedUserId, bannedUser.getUsername(), bannedUser.getCountry());
+
+        // Ban the user first time
+        adminModerationService.banUser(bannedUserId);
+
+        // Wait for async operations
+        try {
+            Thread.sleep(1000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
+        // Verify user is banned
+        RegisteredUser userAfterBan = userRepository.findById(bannedUserId).orElse(null);
+        assertNotNull(userAfterBan);
+        assertEquals("BANNED", userAfterBan.getStatus());
+
+        // Try to ban the same user again - should throw UserAlreadyBannedException
+        Exception exception = assertThrows(Exception.class, () -> {
+            adminModerationService.banUser(bannedUserId);
+        });
+
+        System.out.println("Expected error caught: " + exception.getMessage());
+        assertTrue(exception.getMessage().contains("already banned") || 
+                   exception.getMessage().contains("Already banned") ||
+                   exception.getClass().getSimpleName().contains("UserAlreadyBanned"));
+
+        // Cleanup
+        userRepository.deleteById(bannedUserId);
+        System.out.println("✓ Ban already banned user correctly rejected");
+    }
+
+    @Test
+    @Order(10)
+    @DisplayName("10. Test pagination - Get users with different page sizes")
+    void test10_GetUsers_Pagination() {
+        System.out.println("\n=== TEST 10: Test User Pagination ===");
 
         // Get first page with size 5
         Page<?> page1 = adminModerationService.getAllUsers(0, 5);
@@ -296,10 +431,10 @@ public class AdminModerationControllerTest {
     }
 
     @Test
-    @Order(10)
-    @DisplayName("10. Test pagination - Get reviews with different page sizes")
-    void test10_GetReviews_Pagination() {
-        System.out.println("\n=== TEST 10: Test Review Pagination ===");
+    @Order(11)
+    @DisplayName("11. Test pagination - Get reviews with different page sizes")
+    void test11_GetReviews_Pagination() {
+        System.out.println("\n=== TEST 11: Test Review Pagination ===");
 
         // Get first page with size 5
         Page<?> page1 = adminModerationService.getAllReviews(0, 5);
@@ -317,10 +452,10 @@ public class AdminModerationControllerTest {
     }
 
     @Test
-    @Order(11)
-    @DisplayName("11. Ban user with invalid ID - Should fail")
-    void test11_BanUser_InvalidId() {
-        System.out.println("\n=== TEST 11: Ban User with Invalid ID ===");
+    @Order(12)
+    @DisplayName("12. Ban user with invalid ID - Should fail")
+    void test12_BanUser_InvalidId() {
+        System.out.println("\n=== TEST 12: Ban User with Invalid ID ===");
 
         String invalidId = "invalid-id-format";
 
@@ -332,10 +467,10 @@ public class AdminModerationControllerTest {
     }
 
     @Test
-    @Order(12)
-    @DisplayName("12. Delete review with invalid ID - Should fail")
-    void test12_DeleteReview_InvalidId() {
-        System.out.println("\n=== TEST 12: Delete Review with Invalid ID ===");
+    @Order(13)
+    @DisplayName("13. Delete review with invalid ID - Should fail")
+    void test13_DeleteReview_InvalidId() {
+        System.out.println("\n=== TEST 13: Delete Review with Invalid ID ===");
 
         String invalidId = "invalid-id-format";
 
@@ -347,10 +482,10 @@ public class AdminModerationControllerTest {
     }
 
     @Test
-    @Order(13)
-    @DisplayName("13. Create second user and review for additional testing")
-    void test13_CreateSecondUserAndReview() {
-        System.out.println("\n=== TEST 13: Create Second User and Review ===");
+    @Order(14)
+    @DisplayName("14. Create second user and review for additional testing")
+    void test14_CreateSecondUserAndReview() {
+        System.out.println("\n=== TEST 14: Create Second User and Review ===");
 
         // Create second test user
         RegisteredUser user2 = new RegisteredUser();

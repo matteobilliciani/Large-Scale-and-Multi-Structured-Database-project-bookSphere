@@ -169,6 +169,45 @@ public class AdminBookControllerTest {
     }
 
     @Test
+    @Order(5)
+    @DisplayName("05. Add book - Duplicate title different year (should succeed)")
+    void test05_AddBook_DuplicateTitle() {
+        System.out.println("\n=== TEST 05: Add Book with Duplicate Title (Different Year) ===");
+
+        // Add a book with the same title but different year and author
+        BookDTO duplicateDTO = new BookDTO();
+        duplicateDTO.setTitle(TEST_PREFIX + "Updated Book Title"); // Same as testBookId
+        AuthorDTO dtoAuthor = new AuthorDTO();
+        dtoAuthor.setId(testAuthorId);
+        dtoAuthor.setName(TEST_PREFIX + "Author");
+        duplicateDTO.setAuthor(dtoAuthor);
+        duplicateDTO.setGenres(List.of("Romance"));
+        duplicateDTO.setPublicationYear(2020); // Different year!
+
+        BookDTO result = adminBookService.addBook(duplicateDTO);
+
+        assertNotNull(result);
+        assertNotNull(result.getId());
+        assertEquals(TEST_PREFIX + "Updated Book Title", result.getTitle());
+        assertEquals(2020, result.getPublicationYear());
+        
+        // Verify it's a different book
+        assertNotEquals(testBookId, result.getId(), "Should create a new book, not reuse existing");
+
+        // Verify in MongoDB
+        BookDocument bookMongo = bookRepository.findById(result.getId()).orElse(null);
+        assertNotNull(bookMongo);
+        assertEquals(TEST_PREFIX + "Updated Book Title", bookMongo.getTitle());
+        assertEquals(2020, bookMongo.getPublicationYear());
+
+        System.out.println("✓ Duplicate title with different year correctly added as separate book");
+
+        // Cleanup this duplicate book
+        adminBookService.deleteBook(result.getId());
+        System.out.println("Cleanup: Deleted duplicate book");
+    }
+
+    @Test
     @Order(6)
     @DisplayName("06. Update book - Non-existent (should fail)")
     void test06_UpdateBook_NotFound() {
