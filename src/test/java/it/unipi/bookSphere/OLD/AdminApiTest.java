@@ -280,9 +280,9 @@ public class AdminApiTest {
         AuthorDTO updateDTO = new AuthorDTO();
         updateDTO.setName("Some Name");
 
-        // Try to update non-existent author
+        // Try to update non-existent author (using valid ObjectId format)
         assertThrows(AuthorNotFoundException.class, () -> {
-            adminCatalogService.updateAuthor("nonexistentid123456789012", updateDTO);
+            adminCatalogService.updateAuthor("507f1f77bcf86cd799439011", updateDTO);
         }, "Should throw AuthorNotFoundException");
 
         System.out.println("Correctly threw AuthorNotFoundException");
@@ -436,9 +436,9 @@ public class AdminApiTest {
         BookDTO updateDTO = new BookDTO();
         updateDTO.setTitle("Some Title");
 
-        // Try to update non-existent book
+        // Try to update non-existent book (using valid ObjectId format)
         assertThrows(BookNotFoundException.class, () -> {
-            adminBookService.updateBook("nonexistentid123456789012", updateDTO);
+            adminBookService.updateBook("507f1f77bcf86cd799439011", updateDTO);
         }, "Should throw BookNotFoundException");
 
         System.out.println("Correctly threw BookNotFoundException");
@@ -480,9 +480,9 @@ public class AdminApiTest {
 
         setupAdminSecurityContext(adminUserId, "admin_" + TIMESTAMP);
 
-        // Try to delete non-existent book
+        // Try to delete non-existent book (using valid ObjectId format)
         assertThrows(BookNotFoundException.class, () -> {
-            adminBookService.deleteBook("nonexistentid123456789012");
+            adminBookService.deleteBook("507f1f77bcf86cd799439011");
         }, "Should throw BookNotFoundException");
 
         System.out.println("Correctly threw BookNotFoundException");
@@ -602,9 +602,9 @@ public class AdminApiTest {
 
         setupAdminSecurityContext(adminUserId, "admin_" + TIMESTAMP);
 
-        // Try to delete non-existent review
+        // Try to delete non-existent review (using valid ObjectId format)
         assertThrows(ReviewNotFoundException.class, () -> {
-            adminModerationService.deleteReview("nonexistentid123456789012");
+            adminModerationService.deleteReview("507f1f77bcf86cd799439011");
         }, "Should throw ReviewNotFoundException");
 
         System.out.println("Correctly threw ReviewNotFoundException");
@@ -693,9 +693,9 @@ public class AdminApiTest {
 
         setupAdminSecurityContext(adminUserId, "admin_" + TIMESTAMP);
 
-        // Try to delete non-existent author
+        // Try to delete non-existent author (using valid ObjectId format)
         assertThrows(AuthorNotFoundException.class, () -> {
-            adminCatalogService.deleteAuthor("nonexistentid123456789012");
+            adminCatalogService.deleteAuthor("507f1f77bcf86cd799439011");
         }, "Should throw AuthorNotFoundException");
 
         System.out.println("Correctly threw AuthorNotFoundException");

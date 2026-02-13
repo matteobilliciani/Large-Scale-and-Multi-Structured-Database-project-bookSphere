@@ -82,7 +82,7 @@ public class ProfileControllerTest {
         // Create test user
         RegisteredUser user = new RegisteredUser();
         originalUsername = TEST_PREFIX + "User";
-        user.setUsername(originalUsername.toLowerCase());
+        user.setUsername(originalUsername);
         user.setEmail(TEST_PREFIX + "user@test.com");
         user.setPasswordHashed(passwordEncoder.encode("password"));
         user.setCountry("IT");
@@ -115,12 +115,12 @@ public class ProfileControllerTest {
         // Verify in MongoDB
         RegisteredUser userMongo = userRepository.findById(testUserId).orElse(null);
         assertNotNull(userMongo);
-        assertEquals(newUsername.toLowerCase(), userMongo.getUsername());
+        assertEquals(newUsername, userMongo.getUsername());
 
         // Verify in Neo4j
         var userNodeOpt = userNodeRepository.findByMongoId(testUserId);
         assertTrue(userNodeOpt.isPresent());
-        assertEquals(newUsername.toLowerCase(), userNodeOpt.get().getUsername());
+        assertEquals(newUsername, userNodeOpt.get().getUsername());
 
         // Update authentication for next tests
         setupAuthentication(testUserId, newUsername);
@@ -168,7 +168,7 @@ public class ProfileControllerTest {
         // Create another user
         RegisteredUser anotherUser = new RegisteredUser();
         String existingUsername = TEST_PREFIX + "ExistingUser";
-        anotherUser.setUsername(existingUsername.toLowerCase());
+        anotherUser.setUsername(existingUsername);
         anotherUser.setEmail(TEST_PREFIX + "existing@test.com");
         anotherUser.setPasswordHashed(passwordEncoder.encode("password"));
         anotherUser.setCountry("IT");
