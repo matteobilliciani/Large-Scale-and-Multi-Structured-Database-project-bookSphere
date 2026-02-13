@@ -1,32 +1,67 @@
 \relax 
 \providecommand\hyper@newdestlabel[2]{}
-\@writefile{toc}{\contentsline {chapter}{\numberline {6}System Testing and Performance Evaluation}{38}{chapter.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {chapter}{\numberline {6}System Testing and Performance Evaluation}{52}{chapter.6}\protected@file@percent }
 \@writefile{lof}{\addvspace {10\p@ }}
 \@writefile{lot}{\addvspace {10\p@ }}
-\@writefile{toc}{\contentsline {section}{\numberline {6.1}Introduction}{38}{section.6.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {6.2}Java-based Testing Strategy}{38}{section.6.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.2.1}Unit Testing}{38}{subsection.6.2.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.2.2}Integration Testing}{38}{subsection.6.2.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {6.3}API Performance Testing via Postman}{38}{section.6.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.3.1}Read Performance Scenarios}{39}{subsection.6.3.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{Test Setup: Read Operations}{39}{subsection.6.3.1}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {6.1}{\ignorespaces Configuration for Read Operation Load Test}}{39}{table.caption.9}\protected@file@percent }
-\newlabel{tab:read_setup}{{6.1}{39}{Configuration for Read Operation Load Test}{table.caption.9}{}}
-\@writefile{toc}{\contentsline {subsubsection}{Results and Analysis}{39}{table.caption.9}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {6.1}{\ignorespaces Postman Response Time Graph for Read Operations}}{39}{figure.caption.10}\protected@file@percent }
-\newlabel{fig:read_graph}{{6.1}{39}{Postman Response Time Graph for Read Operations}{figure.caption.10}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.3.2}Write Performance Scenarios}{40}{subsection.6.3.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{Test Setup: Write Operations}{40}{subsection.6.3.2}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {6.2}{\ignorespaces Configuration for Write Operation Load Test}}{40}{table.caption.11}\protected@file@percent }
-\newlabel{tab:write_setup}{{6.2}{40}{Configuration for Write Operation Load Test}{table.caption.11}{}}
-\@writefile{toc}{\contentsline {subsubsection}{Results and Analysis}{40}{table.caption.11}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {6.2}{\ignorespaces Postman Throughput Graph for Write Operations}}{40}{figure.caption.12}\protected@file@percent }
-\newlabel{fig:write_graph}{{6.2}{40}{Postman Throughput Graph for Write Operations}{figure.caption.12}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {6.4}Conclusion}{40}{section.6.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {6.1}Introduction}{52}{section.6.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {6.2}Java-based Testing Strategy}{52}{section.6.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.2.1}Testing Approach}{52}{subsection.6.2.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.2.2}Test Configuration}{53}{subsection.6.2.2}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {6.1}{\ignorespaces Integration Test Configuration (all test classes follow this pattern)}}{53}{lstlisting.6.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.2.3}Test Coverage}{54}{subsection.6.2.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {6.1}{\ignorespaces Integration Test Coverage by Access Tier}}{54}{table.caption.15}\protected@file@percent }
+\newlabel{tab:test_coverage}{{6.1}{54}{Integration Test Coverage by Access Tier}{table.caption.15}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.2.4}Key Consistency Patterns Verified}{54}{subsection.6.2.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {6.3}Performance Testing with Gatling}{54}{section.6.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.3.1}Testing Methodology}{55}{subsection.6.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{Test Types}{55}{subsection.6.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.3.2}BasicLoadTest - Baseline Performance}{55}{subsection.6.3.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{Test Configuration}{55}{subsection.6.3.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {6.2}{\ignorespaces BasicLoadTest Configuration}}{55}{table.caption.16}\protected@file@percent }
+\newlabel{tab:basic_load_config}{{6.2}{55}{BasicLoadTest Configuration}{table.caption.16}{}}
+\@writefile{toc}{\contentsline {subsubsection}{Test Scenarios}{55}{table.caption.16}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{Results and Analysis}{56}{table.caption.16}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {6.3}{\ignorespaces BasicLoadTest Performance Metrics}}{56}{table.caption.17}\protected@file@percent }
+\newlabel{tab:basic_load_results}{{6.3}{56}{BasicLoadTest Performance Metrics}{table.caption.17}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.3.3}StressTest - Breaking Point Analysis}{56}{subsection.6.3.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{Test Configuration}{56}{subsection.6.3.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {6.4}{\ignorespaces StressTest Configuration}}{56}{table.caption.18}\protected@file@percent }
+\newlabel{tab:stress_config}{{6.4}{56}{StressTest Configuration}{table.caption.18}{}}
+\@writefile{toc}{\contentsline {subsubsection}{Results}{56}{table.caption.18}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.3.4}SpikeTest - Sudden Traffic Surge Recovery}{57}{subsection.6.3.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{Test Configuration}{57}{subsection.6.3.4}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {6.5}{\ignorespaces SpikeTest Configuration}}{57}{table.caption.19}\protected@file@percent }
+\newlabel{tab:spike_config}{{6.5}{57}{SpikeTest Configuration}{table.caption.19}{}}
+\@writefile{toc}{\contentsline {subsubsection}{Results}{57}{table.caption.19}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.3.5}EnduranceTest - Long-Duration Stability}{57}{subsection.6.3.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{Test Configuration}{57}{subsection.6.3.5}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {6.6}{\ignorespaces EnduranceTest Configuration}}{57}{table.caption.20}\protected@file@percent }
+\newlabel{tab:endurance_config}{{6.6}{57}{EnduranceTest Configuration}{table.caption.20}{}}
+\@writefile{toc}{\contentsline {subsubsection}{Results}{58}{table.caption.20}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.3.6}DatabaseIntensiveTest - Analytics Query Performance}{58}{subsection.6.3.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{Test Configuration}{58}{subsection.6.3.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{Results}{58}{subsection.6.3.6}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {6.7}{\ignorespaces DatabaseIntensiveTest Results by Endpoint}}{58}{table.caption.21}\protected@file@percent }
+\newlabel{tab:db_intensive_results}{{6.7}{58}{DatabaseIntensiveTest Results by Endpoint}{table.caption.21}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.3.7}Conclusion}{59}{subsection.6.3.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {6.4}Conclusion}{59}{section.6.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {6.5}API Testing with Postman Collection}{59}{section.6.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.5.1}Collection Overview: "BookSphere Enhanced User Journey"}{59}{subsection.6.5.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{Test Structure}{60}{subsection.6.5.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.5.2}Key Testing Features}{60}{subsection.6.5.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{Automated Validation}{60}{subsection.6.5.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{Dynamic Data Management}{60}{subsection.6.5.2}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {6.2}{\ignorespaces Postman Test Script Example}}{60}{lstlisting.6.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.5.3}Storytelling Scenario: "The Social Impact"}{61}{subsection.6.5.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {6.8}{\ignorespaces Analytics Changes After Collection Execution}}{61}{table.caption.22}\protected@file@percent }
+\newlabel{tab:postman_analytics_impact}{{6.8}{61}{Analytics Changes After Collection Execution}{table.caption.22}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.5.4}Example: Cross-Database Consistency Test}{61}{subsection.6.5.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.5.5}Newman CLI Execution}{61}{subsection.6.5.5}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {6.3}{\ignorespaces Newman Command Example}}{61}{lstlisting.6.3}\protected@file@percent }
 \@setckpt{6_testing_and_performance}{
-\setcounter{page}{41}
+\setcounter{page}{62}
 \setcounter{equation}{0}
-\setcounter{enumi}{2}
+\setcounter{enumi}{5}
 \setcounter{enumii}{0}
 \setcounter{enumiii}{0}
 \setcounter{enumiv}{0}
@@ -34,13 +69,13 @@
 \setcounter{mpfootnote}{0}
 \setcounter{part}{0}
 \setcounter{chapter}{6}
-\setcounter{section}{4}
-\setcounter{subsection}{0}
+\setcounter{section}{5}
+\setcounter{subsection}{5}
 \setcounter{subsubsection}{0}
 \setcounter{paragraph}{0}
 \setcounter{subparagraph}{0}
-\setcounter{figure}{2}
-\setcounter{table}{2}
+\setcounter{figure}{0}
+\setcounter{table}{8}
 \setcounter{parentequation}{0}
 \setcounter{nlinenum}{0}
 \setcounter{caption@flags}{2}
@@ -48,10 +83,10 @@
 \setcounter{subfigure}{0}
 \setcounter{subtable}{0}
 \setcounter{section@level}{0}
-\setcounter{Item}{44}
+\setcounter{Item}{77}
 \setcounter{Hfootnote}{1}
-\setcounter{bookmark@seq@number}{74}
+\setcounter{bookmark@seq@number}{99}
 \setcounter{float@type}{8}
-\setcounter{lstnumber}{9}
-\setcounter{lstlisting}{0}
+\setcounter{lstnumber}{5}
+\setcounter{lstlisting}{3}
 }

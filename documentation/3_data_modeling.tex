@@ -36,6 +36,34 @@ This real data is a user base of approximately 10,000 active accounts. The gener
     \caption{Database Volumes by Collection.}
     \label{tab:db_volumes}
 \end{table}
+
+\subsection{ETL Pipeline}
+\label{sec:etl_pipeline}
+The dataset generation follows a 6-step ETL (Extract, Transform, Load) pipeline implemented in two Python scripts:
+
+\begin{enumerate}
+    \item \textbf{Books Merge:} Amazon \texttt{books\_data.csv} and BookCrossing \texttt{Books.csv} are merged by title match. Configuration limits (\texttt{MAX\_BOOKS=20,000}, \texttt{MAX\_REVIEWS\_PER\_BOOK=50}, \texttt{MAX\_USERS=12,000}) control the final dataset size.
+    
+    \item \textbf{Users Generation:} Users are sampled from both sources, enriched with BCrypt-hashed passwords, randomized emails, and ISO country codes from 50 countries via the \\texttt{randomuser} API pattern.
+    
+    \item \textbf{Reviews Processing:} BookCrossing ratings (0--10 scale) and Amazon ratings (1--5 scale) are both normalized to the unified 10--100 scale used by BookSphere. Source provenance is preserved in the \texttt{source} field.
+    
+    \item \textbf{Data Enrichment:} The pipeline injects computed fields: ISBNs are cross-matched, bookshelves are populated (\\texttt{read} + \\texttt{want\_to\_read}), and pre-aggregated statistics are calculated (\texttt{stats\_per\_year}, \texttt{month\_score}, \texttt{popular\_reviews\_snapshot}, author \texttt{ratings\_count}/\texttt{sum\_ratings}).
+    
+    \item \textbf{MongoDB Export:} 4 JSONL files (\texttt{books.jsonl}, \texttt{users.jsonl}, \texttt{reviews.jsonl}, \texttt{authors.jsonl}) are generated for MongoDB ingestion via \texttt{mongoimport}.
+    
+    \item \textbf{Neo4j Export:} A second script reads the MongoDB JSONL output and generates 14 CSV files (5 node types + 9 relationship types) for Neo4j's \texttt{LOAD CSV} bulk import. Relationship inference is \textit{smart}: genre likes are derived from the user's actual reading history (top 3 genres), author likes from their bookshelf preferences, and book likes from high ratings ($\geq$80).
+\end{enumerate}
+
+\subsection{Deployment Scripts}
+Three shell scripts automate database population:
+\begin{itemize}
+    \item \texttt{populate\_mongo.sh}: Single-node MongoDB import with index creation.
+    \item \texttt{populate\_local\_cluster\_mongo.sh}: 3-node replica set import (\texttt{localhost:27017, 27018, 27019}).
+    \item \texttt{populate\_neo4j.sh}: Copies CSVs to the import directory, clears the database, creates indexes on \texttt{mongoId}/\texttt{name}, and executes \texttt{LOAD CSV} for all nodes and relationships.
+\end{itemize}
+
+\textit{Data Variety:} By merging Amazon and BookCrossing, the dataset satisfies the multi-source requirement. \textit{Velocity:} Old reviews (pre-2024) are excluded from trending and monthly analytics, satisfying the temporal relevance requirement.
 \section{Document Store: MongoDB}
 MongoDB acts as the primary "Source of Truth" for the system. It stores the complete information about books, users, and reviews. The schema design prioritizes \textbf{Read Performance} through specific NoSQL patterns.
 
@@ -197,115 +225,87 @@ The reviews collection stores the full textual content of user evaluations. It s
 
 \subsubsection{Authors Collection}
 The authors collection is designed to facilitate quick retrieval of author profiles and their complete bibliography. It utilizes the \textbf{Extended Reference Pattern} to list published books and the \textbf{Computed Pattern} to maintain real-time aggregate statistics.
-\\
-\begin{lstlisting}[language=json, caption={Example Author Document (Edgar Allan Poe)}, label={lst:author_example}]
+
+\begin{lstlisting}[language=json, caption={Author Document Structure}, label={lst:author_json}]
 {
-  "_id": { "$oid": "698db76c4a1f5c8fa4936c8d" },
-  "name": "Edgar Allan Poe",
-  "status": "ACTIVE",
-  "published_books": [
+  "_id": "698db76b4a1f5c8fa4933176",
+  "name": "J. R. R. Tolkien",
+  "biography": "John Ronald Reuel Tolkien was an English writer...",
+  "source": "amazon_master",
+  "availability": "ACTIVE",
+  
+  "books": [
     {
-      "_id": { "$oid": "698db76c4a1f5c8fa4936c8e" },
-      "title": "Tales of Mystery and Imagination"
-    },
-    {
-      "_id": { "$oid": "698db76c4a1f5c8fa49373bf" },
-      "title": "Fall of the House of Usher and Other Stories"
-    },
-    {
-      "_id": { "$oid": "698db76d4a1f5c8fa4937aef" },
-      "title": "The Raven And Other Poems"
-    },
-    {
-      "_id": { "$oid": "698db76e4a1f5c8fa49395df" },
-      "title": "The Pit and the Pendulum"
-    },
-    {
-      "_id": { "$oid": "698db76e4a1f5c8fa4939a9c" },
-      "title": "The Narrative of Arthur Gordon Pym of Nantucket"
-    },
-    {
-      "_id": { "$oid": "698db76e4a1f5c8fa493a884" },
-      "title": "Edgar Allan Poe Reader"
+      "id": "698db76b4a1f5c8fa49331a8",
+      "title": "The Fellowship of the Ring",
+      "year": 2000
     }
   ],
-  "ratings_count": 14,
-  "sum_ratings": 1234
-}
-\end{lstlisting}
-
-\subsubsection{Authors Collection}
-The authors collection is designed to facilitate quick retrieval of author profiles and their complete bibliography. It utilizes the \textbf{Extended Reference Pattern} to list published books and the \textbf{Computed Pattern} to maintain real-time aggregate statistics.
-
-\begin{lstlisting}[language=json, caption={Example Author Document (Edgar Allan Poe)}, label={lst:author_example}]
-{
-  "_id": { "$oid": "698db76c4a1f5c8fa4936c8d" },
-  "name": "Edgar Allan Poe",
-  "status": "ACTIVE",
-  "published_books": [
-    {
-      "_id": { "$oid": "698db76c4a1f5c8fa4936c8e" },
-      "title": "Tales of Mystery and Imagination"
-    },
-    {
-      "_id": { "$oid": "698db76c4a1f5c8fa49373bf" },
-      "title": "Fall of the House of Usher and Other Stories"
-    },
-    {
-      "_id": { "$oid": "698db76d4a1f5c8fa4937aef" },
-      "title": "The Raven And Other Poems"
-    },
-    {
-      "_id": { "$oid": "698db76e4a1f5c8fa49395df" },
-      "title": "The Pit and the Pendulum"
-    },
-    {
-      "_id": { "$oid": "698db76e4a1f5c8fa4939a9c" },
-      "title": "The Narrative of Arthur Gordon Pym of Nantucket"
-    },
-    {
-      "_id": { "$oid": "698db76e4a1f5c8fa493a884" },
-      "title": "Edgar Allan Poe Reader"
-    }
-  ],
-  "ratings_count": 14,
-  "sum_ratings": 1234
+  
+  "stats": {
+    "ratings_count": 25,
+    "sum_rating": 2245
+  }
 }
 \end{lstlisting}
 
 \section{Graph Store: Neo4j}
-Neo4j is utilized strictly for modeling relationships and enabling high-performance traversal queries. The graph schema is designed to be lightweight: nodes primarily contain IDs linking back to MongoDB, while relationships carry timestamp data to support temporal queries.
+Neo4j serves as the secondary database optimized for social interactions and complex traversals. The graph model naturally represents relationships between Users, Books, Authors, Genres, and Reviews through typed edges.
 
-% IMAGE COMMENTED OUT TO PREVENT ERRORS
-% \begin{figure}[h]
-%    \centering
-%    \includegraphics[width=0.8\textwidth]{neo4j_schema_diagram.png}
-%    \caption{Neo4j Graph Schema: Relationships between User, Book, Review, and Author.}
-%    \label{fig:neo4j_schema}
-% \end{figure}
+\subsection{Node Types}
+The Neo4j graph consists of the following node types:
 
-\subsection{Nodes and Labels}
-\begin{itemize}
-    \item \textbf{User:} Contains \texttt{mongoId}, \texttt{username}, \texttt{country}.
-    \item \textbf{Book:} Contains \texttt{mongoId}, \texttt{title}, \texttt{year}.
-    \item \textbf{Review:} Contains \texttt{mongoId}, \texttt{rating}, \texttt{createdAt}.
-    \item \textbf{Author/Genre:} Lightweight nodes for structural categorization.
-\end{itemize}
+\begin{enumerate}
+    \item \textbf{User:} Represents registered users with properties: \texttt{mongoId}, \texttt{username}, \texttt{country}
+    \item \textbf{Book:} Represents books with properties: \texttt{mongoId}, \texttt{title}, \texttt{year}
+    \item \textbf{Author:} Represents authors with properties: \texttt{mongoId}, \texttt{name}
+    \item \textbf{Genre:} Represents book genres with property: \texttt{name}
+    \item \textbf{Review:} Represents user reviews with properties: \texttt{mongoId}, \texttt{rating}, \texttt{createdAt}
+\end{enumerate}
 
-\subsection{Relationships}
-Specific relationships are modeled to support the recommendation engine:
+\subsection{Relationship Types}
+The following relationship types define the interactions and connections in the social graph:
 
 \begin{itemize}
-    \item \texttt{(:User)-[:FOLLOWS \{since: ...\}]->(:User)}: the social graph backbone.
-    \item \texttt{(:User)-[:LIKES \{timestamp: ...\}]->(:Book)}: a user like a book.
-    \item \texttt{(:User)-[:POSTED \{timestamp: ...\}]->(:Review)}: a user posted a review.
-    \item \texttt{(:User)-[:LIKES \{timestamp: ...\}]->(:Review)}: a user like a review of another user.
-    \item \texttt{(:User)-[:LIKES \{timestamp: ...\}]->(:Author)}: a user like an author.
-    \item \texttt{(:User)-[:LIKES \{timestamp: ...\}]->(:Genre)}: a user like a book's genre.
-    \item \texttt{(:Review)-[:REFER\_TO]->(:Book)}:connect a review with the book reviewed.
-    \item \texttt{(:Book)-[:BELONGS\_TO]->(:Genre)}: a book belongs to one ore more genres.
-    \item \texttt{(:Author)-[:WROTE]->(:Book)}: a author is the writer of a certain book.
+    \item \textbf{FOLLOWS:} (User)-[:FOLLOWS $\{$since: DateTime$\}$]->(User) - Social following relationship
+    \item \textbf{POSTED:} (User)-[:POSTED]->(Review) - User authored a review
+    \item \textbf{REFER\_TO:} (Review)-[:REFER\_TO]->(Book) - Review references a book
+    \item \textbf{LIKES:} Multiple types:
+    \begin{itemize}
+        \item (User)-[:LIKES $\{$timestamp: DateTime$\}$]->(Book)
+        \item (User)-[:LIKES $\{$timestamp: DateTime$\}$]->(Author)
+        \item (User)-[:LIKES $\{$timestamp: DateTime$\}$]->(Genre)
+        \item (User)-[:LIKES $\{$timestamp: DateTime$\}$]->(Review)
+    \end{itemize}
+    \item \textbf{WROTE:} (Author)-[:WROTE]->(Book) - Author wrote a book
+    \item \textbf{BELONGS\_TO:} (Book)-[:BELONGS\_TO]->(Genre) - Book belongs to a genre
 \end{itemize}
+
+\subsection{Graph Schema Visualization}
+The following diagram illustrates the complete graph schema with all node types and relationships:
+
+\begin{figure}[H]
+    \centering
+    % Placeholder until the actual Neo4j schema screenshot is added
+    \framebox(400, 220){\textit{[Neo4j Graph Schema Diagram]}}
+    \caption{Neo4j Graph Schema showing all node types and relationships.}
+    \label{fig:neo4j_schema}
+\end{figure}
+
+\subsection{Design Rationale}
+The graph model was designed specifically to optimize the following query patterns:
+
+\begin{itemize}
+    \item \textbf{Recommendation Queries:} Multi-hop traversals to find books liked by followed users or written by liked authors
+    \item \textbf{Social Network Queries:} Finding followers, followed users, and friend-of-friend relationships
+    \item \textbf{Analytics Queries:} Calculating internationality indices by aggregating country properties across relationship paths
+    \item \textbf{Influencer Detection:} Identifying users whose reviews receive high engagement through LIKES relationships
+\end{itemize}
+
+The \texttt{mongoId} property on User, Book, Author, and Review nodes serves as the primary key for cross-database synchronization, enabling efficient lookups when coordinating operations between MongoDB and Neo4j.
+
+\subsection{Relationship Modeling Note}
+Neo4j relationships are \textbf{not mapped} as Java entity fields. Instead, they are created and queried through custom \texttt{@Query} Cypher statements in the Neo4j repositories. This design decision was made because mapping relationships in Java caused memory issues: super-nodes like popular \texttt{Genre} nodes (connected to thousands of books) would load all adjacent nodes into the JVM heap upon access, leading to \texttt{OutOfMemoryError}. By using Cypher-only queries, we retrieve only the data needed for each specific use case.
 
 \section{Polyglot Persistence Strategy}
 \label{sec:consistency}
@@ -313,8 +313,46 @@ Specific relationships are modeled to support the recommendation engine:
 Maintaining data integrity between a Document Store and a Graph Database requires a strictly defined synchronization strategy. BookSphere prioritizes Eventual Consistency for high-frequency social features (Likes, Views) to ensure system availability, while enforcing Strict Consistency for critical Admin and Moderation operations.
 
 \subsection{Synchronization Matrix}
-The following table details how operations are propagated across the two databases:
+The following tables detail how operations are propagated across the two databases. For each API operation, we specify which actions are performed synchronously (within the same HTTP request thread) and which are deferred to asynchronous background workers.
 
+\subsubsection{User Operations}
+\begin{table}[H]
+    \centering
+    \caption{Synchronization Matrix --- User and Social Operations}
+    \label{tab:sync_matrix_user}
+    \renewcommand{\arraystretch}{1.4}
+    \begin{tabular}{@{}p{0.18\textwidth}p{0.38\textwidth}p{0.38\textwidth}@{}}
+        \toprule
+        \textbf{Operation} & \textbf{Strict Consistency (Sync)} & \textbf{Eventual Consistency (Async)} \\ \midrule
+        Create Review & Mongo: insert in \texttt{reviews}, update \texttt{books} (linking + recent embed.), update \texttt{users} (linking + year embed.). Neo4j: create Review node + POSTED/REFER\_TO relations. & Mongo: update \texttt{books} stats (month/year/all-time), update \texttt{authors} stats. \\
+        Update Review & Mongo: update \texttt{reviews}, \texttt{books} embed., \texttt{users} embed. Neo4j: update rating. & Mongo: recalculate book and author statistics. \\
+        Delete Review & Mongo: delete from \texttt{reviews}, \$pull from \texttt{books} and \texttt{users} embeds/links. Neo4j: DETACH DELETE node. & Mongo: update book and author stats. \\
+        Like Review & Mongo: increment \texttt{likes\_count}. Neo4j: create LIKES relation. & Mongo: update popular\_reviews\_snapshot in \texttt{books}. \\
+        Update Username & Mongo: update \texttt{users}. Neo4j: update User node. & Mongo: update username in \texttt{reviews} and book snapshots. \\
+        Delete Account & Mongo: set status to \textit{deleted}, nullify username. Neo4j: DETACH DELETE User node. & Mongo: remove username from reviews and book snapshots. \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsubsection{Admin Operations}
+\begin{table}[H]
+    \centering
+    \caption{Synchronization Matrix --- Admin and Catalog Operations}
+    \label{tab:sync_matrix_admin}
+    \renewcommand{\arraystretch}{1.4}
+    \begin{tabular}{@{}p{0.18\textwidth}p{0.38\textwidth}p{0.38\textwidth}@{}}
+        \toprule
+        \textbf{Operation} & \textbf{Strict Consistency (Sync)} & \textbf{Eventual Consistency (Async)} \\ \midrule
+        Add Book & Mongo: insert in \texttt{books}. Neo4j: create Book node + WROTE + BELONGS\_TO. & (None) \\
+        Update Book & Mongo: update master in \texttt{books}. Neo4j: update Book node title. & (None --- embedded copies in reviews/bookshelf are kept as historical data) \\
+        Delete Book & Mongo: set availability to \textit{ARCHIVED}. Neo4j: DETACH DELETE Book node. & (None) \\
+        Add/Update/Delete Author & Mongo: insert/update/set \textit{ARCHIVED} in \texttt{authors}. Neo4j: create/update/DETACH DELETE Author node. & (None) \\
+        Delete Review (Mod.) & Mongo: delete from \texttt{reviews}, \$pull from \texttt{books} snapshots. Neo4j: DETACH DELETE. & Mongo: update stats in \texttt{books} and \texttt{authors}, \$pull from \texttt{users}. \\
+        Ban User & Mongo: set status to \textit{BANNED}. Neo4j: set label. & Mongo: set \texttt{is\_banned} on reviews, remove from book snapshots. Neo4j: DETACH DELETE User node. \\
+        Add Genre & Neo4j: create Genre node. & (None) \\
+        \bottomrule
+    \end{tabular}
+\end{table}
 
 \subsection{Error Handling Strategy}
 To ensure robustness, we implemented a specific error handling flow:
