@@ -1,0 +1,11 @@
+<testsuite name="it.unipi.bookSphere.performance.BasicLoadTest" tests="3" errors="0" failures="0" time="0">
+  <testcase name="Global: max of response time is less than 90000.0" status="true" time="0">
+  <system-out>Global: max of response time is less than 90000.0</system-out>
+</testcase>
+<testcase name="Global: mean of response time is less than 35000.0" status="true" time="0">
+  <system-out>Global: mean of response time is less than 35000.0</system-out>
+</testcase>
+<testcase name="Global: percentage of successful events is greater than 85.0" status="true" time="0">
+  <system-out>Global: percentage of successful events is greater than 85.0</system-out>
+</testcase>
+</testsuite>
