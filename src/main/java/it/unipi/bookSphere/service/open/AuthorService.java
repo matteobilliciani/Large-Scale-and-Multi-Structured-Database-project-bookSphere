@@ -110,30 +110,9 @@ public class AuthorService {
         if (name == null || name.trim().isEmpty()) {
             authors = authorRepository.findByStatusNot("ARCHIVED", pageable);
         } else {
-            // Use text search for longer queries with complete words (better performance)
-            // Use regex match for short queries, partial words, or prefix matching (better accuracy)
+            // Always use text search for author names (optimized with text index)
             String trimmedName = name.trim();
-            boolean isPrefix = trimmedName.endsWith("_") || trimmedName.endsWith("-");
-            boolean hasCompleteWords = trimmedName.contains(" ") && trimmedName.split("\\s+").length > 1;
-            boolean isLongEnough = trimmedName.length() >= 4;
-            boolean useTextSearch = isLongEnough && (hasCompleteWords || (!isPrefix && trimmedName.matches(".*[a-zA-Z]{3,}.*")));
-            
-            if (useTextSearch) {
-                try {
-                    authors = authorRepository.searchByText(trimmedName, "ARCHIVED", pageable);
-                    // If text search returns no results for a reasonable query, try with regex as fallback
-                    if (authors.isEmpty() && trimmedName.length() <= 15) {
-                        logger.debug("Text search returned no results, falling back to regex for: {}", trimmedName);
-                        authors = authorRepository.findByNameContainingIgnoreCaseAndStatusNot(trimmedName, "ARCHIVED", pageable);
-                    }
-                } catch (Exception e) {
-                    logger.warn("Text search failed, falling back to regex: {}", e.getMessage());
-                    authors = authorRepository.findByNameContainingIgnoreCaseAndStatusNot(trimmedName, "ARCHIVED", pageable);
-                }
-            } else {
-                // For short queries, prefixes, or partial matches, use regex matching for accuracy
-                authors = authorRepository.findByNameContainingIgnoreCaseAndStatusNot(trimmedName, "ARCHIVED", pageable);
-            }
+            authors = authorRepository.searchByText(trimmedName, "ARCHIVED", pageable);
         }
         
         // Map to DTO and filter is applied by repository/database level for better performance

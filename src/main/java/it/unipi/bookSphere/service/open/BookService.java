@@ -110,30 +110,9 @@ public class BookService {
         if (title == null || title.trim().isEmpty()) {
             books = bookRepository.findByAvailabilityNot("ARCHIVED", pageable);
         } else {
-            // Use text search for longer queries with complete words (better performance)
-            // Use regex match for short queries, partial words, or prefix matching (better accuracy)
+            // Always use text search for book titles (optimized with text index)
             String trimmedTitle = title.trim();
-            boolean isPrefix = trimmedTitle.endsWith("_") || trimmedTitle.endsWith("-");
-            boolean hasCompleteWords = trimmedTitle.contains(" ") && trimmedTitle.split("\\s+").length > 1;
-            boolean isLongEnough = trimmedTitle.length() >= 4;
-            boolean useTextSearch = isLongEnough && (hasCompleteWords || (!isPrefix && trimmedTitle.matches(".*[a-zA-Z]{3,}.*")));
-            
-            if (useTextSearch) {
-                try {
-                    books = bookRepository.searchByText(trimmedTitle, "ARCHIVED", pageable);
-                    // If text search returns no results for a reasonable query, try with regex as fallback
-                    if (books.isEmpty() && trimmedTitle.length() <= 15) {
-                        logger.debug("Text search returned no results, falling back to regex for: {}", trimmedTitle);
-                        books = bookRepository.findByTitleContainingIgnoreCaseAndAvailabilityNot(trimmedTitle, "ARCHIVED", pageable);
-                    }
-                } catch (Exception e) {
-                    logger.warn("Text search failed, falling back to regex: {}", e.getMessage());
-                    books = bookRepository.findByTitleContainingIgnoreCaseAndAvailabilityNot(trimmedTitle, "ARCHIVED", pageable);
-                }
-            } else {
-                // For short queries, prefixes, or partial matches, use regex matching for accuracy
-                books = bookRepository.findByTitleContainingIgnoreCaseAndAvailabilityNot(trimmedTitle, "ARCHIVED", pageable);
-            }
+            books = bookRepository.searchByText(trimmedTitle, "ARCHIVED", pageable);
         }
         
         // Map to DTO and filter is applied by repository/database level for better performance

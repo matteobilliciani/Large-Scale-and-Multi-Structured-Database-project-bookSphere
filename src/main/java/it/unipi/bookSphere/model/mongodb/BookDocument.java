@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.index.TextIndexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
@@ -31,6 +32,8 @@ public class BookDocument {
     private Author author;
 
     // List of genres associated with the book
+    // Multi-key index for efficient genre-based queries and aggregations
+    @Indexed
     private List<String> genres;
 
 

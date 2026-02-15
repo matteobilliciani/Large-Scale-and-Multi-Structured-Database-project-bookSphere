@@ -51,6 +51,13 @@ public class DatabaseConfig {
                 mongoTemplate.indexOps(BookDocument.class).ensureIndex(bookTitleIndex);
                 logger.info("Text index created on Book.title");
                 
+                // Create multi-key index on Book.genres for efficient genre-based queries
+                mongoTemplate.indexOps(BookDocument.class).ensureIndex(
+                    new org.springframework.data.mongodb.core.index.Index().on("genres", 
+                        org.springframework.data.domain.Sort.Direction.ASC)
+                );
+                logger.info("Multi-key index created on Book.genres");
+                
                 // Create text index on Author.name
                 TextIndexDefinition authorNameIndex = TextIndexDefinition.builder()
                         .onField("name")

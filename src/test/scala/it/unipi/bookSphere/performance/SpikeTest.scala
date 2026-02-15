@@ -17,9 +17,9 @@ import scala.concurrent.duration._
 class SpikeTest extends Simulation {
 
   val baseUrl = System.getProperty("baseUrl", "http://localhost:8080")
-  val normalLoad = Integer.getInteger("normalLoad", 5).intValue()
-  val spikeLoad = Integer.getInteger("spikeLoad", 20).intValue()
-  val spikeDuration = Integer.getInteger("spikeDuration", 15).intValue().seconds
+  val normalLoad = Integer.getInteger("normalLoad", 10).intValue()  // Increased from 5 to 10
+  val spikeLoad = Integer.getInteger("spikeLoad", 100).intValue()  // Increased from 20 to 100 for dramatic spike
+  val spikeDuration = Integer.getInteger("spikeDuration", 30).intValue().seconds  // Increased from 15 to 30
 
   val httpProtocol = http
     .baseUrl(baseUrl)
@@ -27,31 +27,49 @@ class SpikeTest extends Simulation {
     .contentTypeHeader("application/json")
     .userAgentHeader("Gatling Spike Test")
 
+  val random = new scala.util.Random
+  
+  // Search terms for text search stress
+  val searchTerms = List("Alice", "Harry", "Lord", "Chronicles", "the", "book")
+  val searchFeeder = Iterator.continually(Map(
+    "searchTerm" -> searchTerms(random.nextInt(searchTerms.length))
+  ))
+
   val quickBrowsingScenario = scenario("Quick Spike User")
     .exec(http("Quick Browse Books")
-      .get("/api/v1/books?page=0&size=20")
+      .get("/api/v1/books?page=0&size=50")  // Increased size from 20 to 50
       .check(status.is(200))
-      .check(responseTimeInMillis.lte(5000)))
-    .pause(500.milliseconds)
-    .exec(http("Search Popular Book")
-      .get("/api/v1/books?title=Alice&page=0&size=20")
-      .check(status.in(200, 404)))
-    .pause(300.milliseconds)
+      .check(responseTimeInMillis.lte(8000)))  // Relaxed timeout for spike
+    .pause(200.milliseconds, 400.milliseconds)  // Reduced pause for more stress
+    .feed(searchFeeder)
+    .exec(http("Text Search During Spike")  // NEW: Text search operation
+      .get("/api/v1/books?title=${searchTerm}&page=0&size=30")
+      .check(status.is(200)))
+    .pause(200.milliseconds)
+    .exec(http("Browse More Books")
+      .get("/api/v1/books?page=1&size=50")
+      .check(status.is(200)))
+    .pause(200.milliseconds)
     .exec(http("Browse Authors")
-      .get("/api/v1/authors?page=0&size=20")
+      .get("/api/v1/authors?page=0&size=30")  // Increased size
+      .check(status.is(200)))
+    .pause(200.milliseconds)
+    .feed(searchFeeder)
+    .exec(http("Text Search Authors")
+      .get("/api/v1/authors?author_name=${searchTerm}&page=0&size=20")
       .check(status.is(200)))
 
   setUp(
     quickBrowsingScenario.inject(
-      constantUsersPerSec(normalLoad) during 15.seconds,    // Carico normale
-      atOnceUsers(spikeLoad),                               // SPIKE improvviso!
-      constantUsersPerSec(spikeLoad) during spikeDuration,  // Mantiene il picco
-      rampUsers(normalLoad) during 15.seconds               // Ritorno alla normalità
+      constantUsersPerSec(normalLoad) during 20.seconds,    // Normal load phase
+      atOnceUsers(spikeLoad),                               // DRAMATIC SPIKE! 10 -> 100 users
+      constantUsersPerSec(spikeLoad / 2) during spikeDuration,  // Sustained high load
+      rampUsers(normalLoad) during 20.seconds               // Return to normal
     )
   ).protocols(httpProtocol)
     .assertions(
-      global.responseTime.max.lt(10000),   // Anche sotto spike, max < 10s
-      global.successfulRequests.percent.gt(85)  // Almeno 85% di successo
+      global.responseTime.max.lt(15000),   // Relaxed from 10s to 15s for bigger spike
+      global.successfulRequests.percent.gt(80)  // Relaxed from 85 to 80 due to extreme spike
     )
 }
 
