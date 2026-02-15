@@ -4,6 +4,7 @@ import it.unipi.bookSphere.model.mongodb.BookDocument;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.mongodb.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -66,4 +67,15 @@ public interface BookRepository extends MongoRepository<BookDocument, String> {
      * @return Page of matching books
      */
     Page<BookDocument> findByAvailabilityNot(String availability, Pageable pageable);
+    
+    /**
+     * Search books using MongoDB text search (optimized for partial matching)
+     * 
+     * @param searchText Text to search in title
+     * @param availability Availability to exclude (e.g., "ARCHIVED")
+     * @param pageable Pagination parameters
+     * @return Page of matching books
+     */
+    @Query("{ $text: { $search: ?0 }, availability: { $ne: ?1 } }")
+    Page<BookDocument> searchByText(String searchText, String availability, Pageable pageable);
 }

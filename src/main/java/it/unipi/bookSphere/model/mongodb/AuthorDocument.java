@@ -5,6 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.index.TextIndexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
@@ -20,6 +21,7 @@ public class AuthorDocument {
     private String id;
 
     @Indexed(unique = true)
+    @TextIndexed
     private String name;
 
     // PATTERN: Extended Reference (List of published books)

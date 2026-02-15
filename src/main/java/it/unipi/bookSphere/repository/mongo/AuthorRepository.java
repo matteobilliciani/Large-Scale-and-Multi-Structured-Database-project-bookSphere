@@ -5,6 +5,7 @@ import it.unipi.bookSphere.model.mongodb.AuthorDocument;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
+import org.springframework.data.mongodb.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -75,4 +76,15 @@ public interface AuthorRepository extends MongoRepository<AuthorDocument, String
      * @return true if author exists
      */
     boolean existsByName(String name);
+    
+    /**
+     * Search authors using MongoDB text search (optimized for partial matching)
+     * 
+     * @param searchText Text to search in name
+     * @param status Status to exclude (e.g., "ARCHIVED")
+     * @param pageable Pagination parameters
+     * @return Page of matching authors
+     */
+    @Query("{ $text: { $search: ?0 }, status: { $ne: ?1 } }")
+    Page<AuthorDocument> searchByText(String searchText, String status, Pageable pageable);
 }
