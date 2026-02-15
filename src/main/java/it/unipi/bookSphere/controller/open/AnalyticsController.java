@@ -87,29 +87,6 @@ public class AnalyticsController {
     }
 
     @Operation(
-        summary = "Get book rankings by an author V2",
-        description = "Restituisce le classifiche. NOTA: Puoi filtrare per 'author' O per 'genre', ma non entrambi contemporaneamente."
-    )
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Classifica restituita con successo"),
-        @ApiResponse(responseCode = "400", description = "Errore: Non puoi specificare sia autore che genere")
-    })
-    @GetMapping("/booksAuthorV2")
-    public ResponseEntity<?> getBookRankingsAuthorV2( // Uso <?> o <Object> per poter ritornare sia la lista che un messaggio di errore stringa
-            
-            @Parameter(description = "Anno della classifica (opzionale)")
-            @RequestParam(required = false) Integer year,
-
-            @Parameter(description = "Filtra per ID autore")
-            @RequestParam(required = true) String author
-    ) {
-
-        List<RankingDTO> rankings = analyticsService.getBookRankingsAuthorV2(year, author);
-        
-        return ResponseEntity.ok(rankings);
-    }
-
-    @Operation(
             summary = "Get book rankings by book IDs",
             description = "Retrieve book rankings for a specific list of book IDs, optionally filtered by year"
     )

@@ -338,23 +338,12 @@ public class AnalyticsControllerTest {
         System.out.println("Retrieved " + revaluation.size() + " revaluated books");
     }
 
+
     @Test
     @Order(11)
-    @DisplayName("11. Get book rankings by author V2 - Success")
-    void test11_GetBookRankingsAuthorV2() {
-        System.out.println("\n=== TEST 11: Get Book Rankings Author V2 ===");
-
-        List<RankingDTO> rankings = analyticsService.getBookRankingsAuthorV2(null, testAuthorId);
-
-        assertNotNull(rankings);
-        System.out.println("Retrieved " + rankings.size() + " book rankings for author (V2)");
-    }
-
-    @Test
-    @Order(12)
-    @DisplayName("12. Get book rankings by book IDs - All-time")
-    void test12_GetBookRankingsByIds_AllTime() {
-        System.out.println("\n=== TEST 12: Get Book Rankings by IDs (All-time) ===");
+    @DisplayName("11. Get book rankings by book IDs - All-time")
+    void test11_GetBookRankingsByIds_AllTime() {
+        System.out.println("\n=== TEST 11: Get Book Rankings by IDs (All-time) ===");
 
         List<String> bookIds = List.of(testBookId1, testBookId2);
         List<RankingDTO> rankings = analyticsService.getBookRankingsByIds(null, bookIds);
@@ -367,10 +356,10 @@ public class AnalyticsControllerTest {
     }
 
     @Test
-    @Order(13)
-    @DisplayName("13. Get book rankings by book IDs - By year")
-    void test13_GetBookRankingsByIds_ByYear() {
-        System.out.println("\n=== TEST 13: Get Book Rankings by IDs (Year: 2024) ===");
+    @Order(12)
+    @DisplayName("12. Get book rankings by book IDs - By year")
+    void test12_GetBookRankingsByIds_ByYear() {
+        System.out.println("\n=== TEST 12: Get Book Rankings by IDs (Year: 2024) ===");
 
         List<String> bookIds = List.of(testBookId1, testBookId2);
         List<RankingDTO> rankings = analyticsService.getBookRankingsByIds(2024, bookIds);
@@ -383,10 +372,10 @@ public class AnalyticsControllerTest {
     }
 
     @Test
-    @Order(14)
-    @DisplayName("14. Get book rankings by book IDs - Empty list")
-    void test14_GetBookRankingsByIds_EmptyList() {
-        System.out.println("\n=== TEST 14: Get Book Rankings by IDs (Empty List) ===");
+    @Order(13)
+    @DisplayName("13. Get book rankings by book IDs - Empty list")
+    void test13_GetBookRankingsByIds_EmptyList() {
+        System.out.println("\n=== TEST 13: Get Book Rankings by IDs (Empty List) ===");
 
         List<String> emptyBookIds = new ArrayList<>();
         List<RankingDTO> rankings = analyticsService.getBookRankingsByIds(null, emptyBookIds);
@@ -397,10 +386,10 @@ public class AnalyticsControllerTest {
     }
 
     @Test
-    @Order(15)
-    @DisplayName("15. Calculate internationality - Book")
-    void test15_CalculateInternationality_Book() {
-        System.out.println("\n=== TEST 12: Calculate Internationality for Book ===");
+    @Order(14)
+    @DisplayName("14. Calculate internationality - Book")
+    void test14_CalculateInternationality_Book() {
+        System.out.println("\n=== TEST 14: Calculate Internationality for Book ===");
 
         try {
             List<InternationalityDTO> internationality = 
@@ -414,10 +403,10 @@ public class AnalyticsControllerTest {
     }
 
     @Test
-    @Order(16)
-    @DisplayName("16. Calculate internationality - Author")
-    void test16_CalculateInternationality_Author() {
-        System.out.println("\n=== TEST 13: Calculate Internationality for Author ===");
+    @Order(15)
+    @DisplayName("15. Calculate internationality - Author")
+    void test15_CalculateInternationality_Author() {
+        System.out.println("\n=== TEST 15: Calculate Internationality for Author ===");
 
         try {
             List<InternationalityDTO> internationality = 
@@ -431,10 +420,10 @@ public class AnalyticsControllerTest {
     }
 
     @Test
-    @Order(17)
-    @DisplayName("17. Get influencers - All genres")
-    void test17_GetInfluencers_AllGenres() {
-        System.out.println("\n=== TEST 14: Get Influencers (All Genres) ===");
+    @Order(16)
+    @DisplayName("16. Get influencers - All genres")
+    void test16_GetInfluencers_AllGenres() {
+        System.out.println("\n=== TEST 16: Get Influencers (All Genres) ===");
 
         List<InfluencerDTO> influencers = analyticsService.getInfluencers(null, 10);
 
@@ -443,10 +432,10 @@ public class AnalyticsControllerTest {
     }
 
     @Test
-    @Order(18)
-    @DisplayName("18. Get influencers - Specific genre")
-    void test18_GetInfluencers_SpecificGenre() {
-        System.out.println("\n=== TEST 15: Get Influencers (Fantasy Genre) ===");
+    @Order(17)
+    @DisplayName("17. Get influencers - Specific genre")
+    void test17_GetInfluencers_SpecificGenre() {
+        System.out.println("\n=== TEST 17: Get Influencers (Fantasy Genre) ===");
 
         List<InfluencerDTO> influencers = analyticsService.getInfluencers("Fantasy", 5);
 
@@ -455,10 +444,10 @@ public class AnalyticsControllerTest {
     }
 
     @Test
-    @Order(19)
-    @DisplayName("19. Get influencers - Custom limit")
-    void test19_GetInfluencers_CustomLimit() {
-        System.out.println("\n=== TEST 16: Get Influencers with Custom Limit ===");
+    @Order(18)
+    @DisplayName("18. Get influencers - Custom limit")
+    void test18_GetInfluencers_CustomLimit() {
+        System.out.println("\n=== TEST 18: Get Influencers with Custom Limit ===");
 
         List<InfluencerDTO> influencers = analyticsService.getInfluencers(null, 3);
 
