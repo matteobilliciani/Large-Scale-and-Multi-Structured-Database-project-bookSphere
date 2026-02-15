@@ -94,14 +94,13 @@ public class AnalyticsController {
             @ApiResponse(responseCode = "200", description = "Classifica restituita con successo"),
             @ApiResponse(responseCode = "400", description = "Errore: lista di IDs vuota o non valida")
     })
-    @PostMapping("/rankings/byBookIds")
+    @GetMapping("/rankings/byBookIds")
     public ResponseEntity<List<RankingDTO>> getBookRankingsByIds(
             @Parameter(description = "Anno della classifica (opzionale)")
             @RequestParam(required = false) Integer year,
-            
-            @RequestBody BookIdsRequestDTO request
+            @RequestParam(name = "book", required = true) List<String> bookIds
     ) {
-        List<RankingDTO> rankings = analyticsService.getBookRankingsByIds(year, request.getBookIds());
+        List<RankingDTO> rankings = analyticsService.getBookRankingsByIds(year, bookIds);
         return ResponseEntity.ok(rankings);
     }
 
