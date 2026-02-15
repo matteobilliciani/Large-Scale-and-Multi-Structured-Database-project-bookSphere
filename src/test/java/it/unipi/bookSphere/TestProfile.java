@@ -15,6 +15,6 @@ import java.lang.annotation.*;
 @Target(ElementType.TYPE)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
-@ActiveProfiles("clusterWSL")  // <-- CHANGE THIS SINGLE LINE to switch profile for all tests
+@ActiveProfiles("")  // <-- CHANGE THIS SINGLE LINE to switch profile for all tests
 public @interface TestProfile {
 }

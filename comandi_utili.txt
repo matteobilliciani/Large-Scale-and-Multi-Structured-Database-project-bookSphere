@@ -1,0 +1,52 @@
+CLUSTER
+
+ssh root@10.1.1.77
+
+mongod --replSet rs0 --port 27018 --bind_ip 0.0.0.0 --dbpath c:\MongoDB\data\r1  --oplogSize 200
+
+
+
+ssh root@10.1.1.78
+
+sudo systemctl start neo4j
+
+mongod --replSet rs0 --port 27019 --bind_ip 0.0.0.0 --dbpath c:\MongoDB\data\r2  --oplogSize 200
+
+
+
+ssh root@10.1.1.80
+
+mongod --replSet rs0 --port 27020 --bind_ip 0.0.0.0 --dbpath c:\MongoDB\data\r3  --oplogSize 200
+
+
+
+
+
+mongosh --host 10.1.1.77 --port 27018
+
+
+LOCAL CLUSTER
+
+sudo systemctl stop mongod
+
+mongod --replSet "myReplicaSet" --port 27017 --dbpath ~/mongo-cluster/data1 --bind_ip localhost
+
+mongod --replSet "myReplicaSet" --port 27018 --dbpath ~/mongo-cluster/data2 --bind_ip localhost
+
+mongod --replSet "myReplicaSet" --port 27019 --dbpath ~/mongo-cluster/data3 --bind_ip localhost
+
+mongosh --port 27017
+
+
+TEST RUN 
+
+GATLING
+
+start application
+
+.\mvnw.cmd gatling:test "-Dgatling.simulationClass=it.unipi.bookSphere.performance.BasicLoadTest"
+
+
+
+NEWMAN
+
