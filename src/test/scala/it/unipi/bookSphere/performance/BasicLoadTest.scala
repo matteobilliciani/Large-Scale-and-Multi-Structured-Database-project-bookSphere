@@ -15,11 +15,11 @@ import scala.concurrent.duration._
  */
 class BasicLoadTest extends Simulation {
 
-  // Configuration
+  // Configuration - IMPROVED for better stress testing
   val baseUrl = System.getProperty("baseUrl", "http://localhost:8080")
-  val users = Integer.getInteger("users", 20).intValue()
-  val rampDuration = Integer.getInteger("rampDuration", 10).intValue().seconds
-  val testDuration = Integer.getInteger("testDuration", 30).intValue().seconds
+  val users = Integer.getInteger("users", 100).intValue()  // Increased from 20 to 100
+  val rampDuration = Integer.getInteger("rampDuration", 20).intValue().seconds  // Increased from 10 to 20
+  val testDuration = Integer.getInteger("testDuration", 60).intValue().seconds  // Increased from 30 to 60
 
   // HTTP Protocol Configuration
   val httpProtocol = http
@@ -42,37 +42,53 @@ class BasicLoadTest extends Simulation {
     "surname" -> s"TestSurname${randomString(5)}"
   ))
 
-  // Scenario 1: Public API Access (no authentication)
+  // Search terms for text search stress testing
+  val searchTerms = List("Alice", "the", "Harry", "Lord", "Chronicles", "book", "story")
+  val searchFeeder = Iterator.continually(Map(
+    "searchTerm" -> searchTerms(random.nextInt(searchTerms.length))
+  ))
+
+  // Scenario 1: Public API Access (no authentication) - IMPROVED with more operations
   val publicScenario = scenario("Public API Access")
     .exec(http("Browse Books - Page 1")
-      .get("/api/v1/books?page=0&size=20")
+      .get("/api/v1/books?page=0&size=50")  // Increased page size
       .check(status.is(200))
       .check(jsonPath("$.content").exists)
-      .check(responseTimeInMillis.lt(2000)))
-    .pause(1, 3)
+      .check(responseTimeInMillis.lt(3000)))
+    .pause(500.milliseconds, 1.second)  // Reduced pause for more stress
     .exec(http("Browse Books - Page 2")
-      .get("/api/v1/books?page=1&size=20")
+      .get("/api/v1/books?page=1&size=50")
       .check(status.is(200)))
-    .pause(1, 2)
-    .exec(http("Search Book by Title")
-      .get("/api/v1/books?title=Alice&page=0&size=20")
+    .pause(500.milliseconds)
+    .feed(searchFeeder)
+    .exec(http("Text Search Books")
+      .get("/api/v1/books?title=${searchTerm}&page=0&size=30")  // Text search query
       .check(status.is(200)))
-    .pause(1, 2)
+    .pause(500.milliseconds)
+    .exec(http("Browse Books - Page 3")
+      .get("/api/v1/books?page=2&size=50")
+      .check(status.is(200)))
+    .pause(500.milliseconds)
     .exec(http("Get Authors List")
-      .get("/api/v1/authors?page=0&size=10")
+      .get("/api/v1/authors?page=0&size=30")  // Increased page size
+      .check(status.is(200)))
+    .pause(500.milliseconds)
+    .feed(searchFeeder)
+    .exec(http("Text Search Authors")
+      .get("/api/v1/authors?author_name=${searchTerm}&page=0&size=20")  // Text search query
       .check(status.is(200)))
 
-  // Load Profile Setup - Solo scenari pubblici per ora
+  // Load Profile Setup - IMPROVED with more aggressive load
   setUp(
     publicScenario.inject(
       rampUsers(users) during rampDuration,
-      constantUsersPerSec(10) during testDuration
+      constantUsersPerSec(25) during testDuration  // Increased from 10 to 25
     )
   ).protocols(httpProtocol)
     .assertions(
-      global.responseTime.max.lt(5000),
-      global.responseTime.mean.lt(2000),
-      global.successfulRequests.percent.gt(95)
+      global.responseTime.max.lt(8000),  // Relaxed from 5000 to 8000 for heavier load
+      global.responseTime.mean.lt(3000),  // Relaxed from 2000 to 3000
+      global.successfulRequests.percent.gt(90)  // Relaxed from 95 to 90
     )
 }
 

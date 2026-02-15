@@ -39,7 +39,7 @@ public class BookControllerTest {
     @Autowired
     private AuthorRepository authorRepository;
 
-    private static final String TEST_PREFIX = "BookTest_";
+    private static final String TEST_PREFIX = "BookTest ";
     private static String testBookId1;
     private static String testBookId2;
     private static String testAuthorId;
@@ -167,11 +167,12 @@ public class BookControllerTest {
     void test06_SearchByTitle_PartialMatch() {
         System.out.println("\n=== TEST 06: Search Books by Title (Partial Match) ===");
 
-        Page<BookDTO> books = bookService.searchByTitle(TEST_PREFIX, 0, 20);
+        // Text search works with complete words, so we search for "BookTest" (without underscore)
+        Page<BookDTO> books = bookService.searchByTitle("BookTest", 0, 20);
 
         assertNotNull(books);
         assertTrue(books.getTotalElements() >= 2);
-        System.out.println("Found " + books.getTotalElements() + " book(s) with prefix");
+        System.out.println("Found " + books.getTotalElements() + " book(s) with text search");
     }
 
     @Test
@@ -193,13 +194,13 @@ public class BookControllerTest {
     void test08_SearchByTitle_Pagination() {
         System.out.println("\n=== TEST 08: Search Books with Pagination ===");
 
-        // Page 0, size 1
-        Page<BookDTO> page1 = bookService.searchByTitle(TEST_PREFIX, 0, 1);
+        // Page 0, size 1 - Text search works with complete words
+        Page<BookDTO> page1 = bookService.searchByTitle("BookTest", 0, 1);
         assertEquals(1, page1.getContent().size());
         assertTrue(page1.getTotalElements() >= 2);
 
         // Page 1, size 1
-        Page<BookDTO> page2 = bookService.searchByTitle(TEST_PREFIX, 1, 1);
+        Page<BookDTO> page2 = bookService.searchByTitle("BookTest", 1, 1);
         assertEquals(1, page2.getContent().size());
 
         // Verify different books
