@@ -487,6 +487,83 @@ public class AnalyticsService {
         return rankingMapper.toRankingDTOList(mappedResults, year);
     }
 
+    /**
+     * Get book rankings from a direct list of MongoDB book IDs.
+     * Allows direct querying without needing to fetch author information.
+     * Optionally filter by year or get all-time rankings.
+     * Performs complex aggregation, so retry is valuable for transient failures
+     */
+    @Retryable(
+        retryFor = {RuntimeException.class},
+        maxAttempts = 3,
+        backoff = @Backoff(delay = 1000, multiplier = 2)
+    )
+    public List<RankingDTO> getBookRankingsByIds(Integer year, List<String> bookIdStrings) {
+        logger.info("Starting ranking calculation for {} book IDs, year: {}", bookIdStrings.size(), year);
+
+        // 1. Validate input
+        if (bookIdStrings == null || bookIdStrings.isEmpty()) {
+            logger.info("Book IDs list is empty or null.");
+            return Collections.emptyList();
+        }
+
+        // 2. Convert String IDs to ObjectId
+        List<ObjectId> bookIds = bookIdStrings.stream()
+                .map(ObjectId::new)
+                .collect(Collectors.toList());
+
+        logger.info("Converted to {} ObjectIds. Proceeding with aggregation.", bookIds.size());
+
+        // 3. Setup Pipeline on BOOKS collection using IDs
+        List<AggregationOperation> pipeline = new ArrayList<>();
+
+        // MATCH by IDs (Primary Key) AND ensure availability is ACTIVE
+        pipeline.add(Aggregation.match(Criteria.where("_id").in(bookIds).and("availability").is("ACTIVE")));
+
+        if (year != null) {
+            // Year context: Filter the array first to isolate the target year
+            pipeline.add(Aggregation.project("title", "author")
+                    .and(ArrayOperators.Filter.filter("stats_per_year")
+                            .as("stat")
+                            .by(ComparisonOperators.Eq.valueOf("stat.year").equalToValue(year)))
+                    .as("targetStat"));
+
+            // Sum the filtered array
+            pipeline.add(Aggregation.project("title", "author")
+                    .and(AccumulatorOperators.Sum.sumOf("targetStat.ratings_count")).as("totalRatings")
+                    .and(AccumulatorOperators.Sum.sumOf("targetStat.sum_rating")).as("sumRating"));
+
+        } else {
+            // All-time context: Sum over the entire array
+            pipeline.add(Aggregation.project("title", "author")
+                    .and(AccumulatorOperators.Sum.sumOf("stats_per_year.ratings_count")).as("totalRatings")
+                    .and(AccumulatorOperators.Sum.sumOf("stats_per_year.sum_rating")).as("sumRating"));
+        }
+
+        // Threshold Filter
+        pipeline.add(Aggregation.match(Criteria.where("totalRatings").gt(5)));
+
+        // Calculate Average & Format Output
+        pipeline.add(Aggregation.project("totalRatings")
+                .and("title").as("name")
+                .and("author.name").as("additionalInfo")
+                .and(ArithmeticOperators.Divide.valueOf("sumRating").divideBy("totalRatings")).as("averageRating"));
+
+        // Sort & Limit
+        pipeline.add(Aggregation.sort(Sort.Direction.DESC, "averageRating"));
+        pipeline.add(Aggregation.limit(25));
+
+        // Execute Aggregation
+        AggregationResults<RankingProjection> results = mongoTemplate.aggregate(
+                Aggregation.newAggregation(pipeline), "books", RankingProjection.class
+        );
+
+        List<RankingProjection> mappedResults = results.getMappedResults();
+        logger.info("Aggregation finished. Found {} ranked books matching criteria.", mappedResults.size());
+
+        return rankingMapper.toRankingDTOList(mappedResults, year);
+    }
+
     // Helper method to map BookDocument to BookDTO
     private BookDTO mapBookDocumentToDTO(BookDocument doc) {
         BookDTO bookDTO = new BookDTO();

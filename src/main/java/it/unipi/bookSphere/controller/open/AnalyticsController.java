@@ -110,6 +110,25 @@ public class AnalyticsController {
     }
 
     @Operation(
+            summary = "Get book rankings by book IDs",
+            description = "Retrieve book rankings for a specific list of book IDs, optionally filtered by year"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Classifica restituita con successo"),
+            @ApiResponse(responseCode = "400", description = "Errore: lista di IDs vuota o non valida")
+    })
+    @PostMapping("/rankings/byBookIds")
+    public ResponseEntity<List<RankingDTO>> getBookRankingsByIds(
+            @Parameter(description = "Anno della classifica (opzionale)")
+            @RequestParam(required = false) Integer year,
+            
+            @RequestBody BookIdsRequestDTO request
+    ) {
+        List<RankingDTO> rankings = analyticsService.getBookRankingsByIds(year, request.getBookIds());
+        return ResponseEntity.ok(rankings);
+    }
+
+    @Operation(
             summary = "Calculate Internationality Index",
             description = "Measure how far a book or author travels across the globe. Specify the entity type (BOOK or AUTHOR) and its MongoDB ObjectId."
     )
