@@ -25,6 +25,9 @@ class EnduranceTest extends Simulation {
     .userAgentHeader("Gatling Endurance Test")
 
   val random = new scala.util.Random
+  val pageFeeder = Iterator.continually(Map(
+    "randomPage" -> random.nextInt(5)
+  ))
 
   // Scenario realistico di un utente che usa l'app ripetutamente
   val enduranceScenario = scenario("Long Running User Session")
@@ -39,8 +42,9 @@ class EnduranceTest extends Simulation {
             .get("/api/v1/books?title=The&page=0&size=20")
             .check(status.is(200))),
           
-          35.0 -> exec(http("Browse Random Page")
-            .get(s"/api/v1/books?page=${random.nextInt(5)}&size=20")
+          35.0 -> feed(pageFeeder) 
+            .exec(http("Browse Random Page")
+            .get(s"/api/v1/books?page=#{randomPage}&size=20")
             .check(status.is(200))),
           
           35.0 -> exec(http("Search Authors")

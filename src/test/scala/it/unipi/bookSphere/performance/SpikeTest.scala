@@ -42,7 +42,7 @@ class SpikeTest extends Simulation {
     .pause(200.milliseconds, 400.milliseconds)
     .feed(searchFeeder)
     .exec(http("Text Search Books")
-      .get("/api/v1/books?title=${searchTerm}&page=0&size=30")
+      .get("/api/v1/books?title=#{searchTerm}&page=0&size=30")
       .check(status.is(200)))
     .pause(200.milliseconds)
     .exec(http("Browse More Books")

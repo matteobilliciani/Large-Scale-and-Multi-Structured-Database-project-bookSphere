@@ -42,7 +42,7 @@ class DatabaseIntensiveTest extends Simulation {
     .pause(500.milliseconds)
     .feed(searchFeeder)
     .exec(http("Text Search Books - MongoDB Index")  // NEW: Text search on indexed field
-      .get("/api/v1/books?title=${searchTerm}&page=0&size=50")
+      .get("/api/v1/books?title=#{searchTerm}&page=0&size=50")
       .check(status.is(200)))
     .pause(500.milliseconds)
     .exec(http("Browse Large Result Set")
@@ -63,7 +63,7 @@ class DatabaseIntensiveTest extends Simulation {
     .pause(500.milliseconds)
     .feed(searchFeeder)
     .exec(http("Text Search Authors - MongoDB Index")  // NEW: Text search on indexed field
-      .get("/api/v1/authors?author_name=${searchTerm}&page=0&size=30")
+      .get("/api/v1/authors?author_name=#{searchTerm}&page=0&size=30")
       .check(status.is(200)))
     .pause(500.milliseconds)
     .exec(http("Browse More Authors")
@@ -83,7 +83,7 @@ class DatabaseIntensiveTest extends Simulation {
     .pause(300.milliseconds)
     .feed(searchFeeder)
     .exec(http("Text Search Books")
-      .get("/api/v1/books?title=${searchTerm}&page=0&size=30")
+      .get("/api/v1/books?title=#{searchTerm}&page=0&size=30")
       .check(status.is(200)))
     .pause(300.milliseconds)
     .exec(http("Get Authors from Neo4j")
@@ -92,7 +92,7 @@ class DatabaseIntensiveTest extends Simulation {
     .pause(300.milliseconds)
     .feed(searchFeeder)
     .exec(http("Text Search Authors")
-      .get("/api/v1/authors?author_name=${searchTerm}&page=0&size=20")
+      .get("/api/v1/authors?author_name=#{searchTerm}&page=0&size=20")
       .check(status.is(200)))
     .pause(300.milliseconds)
 

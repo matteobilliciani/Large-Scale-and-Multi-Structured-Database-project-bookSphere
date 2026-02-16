@@ -31,15 +31,15 @@ class BasicLoadTest extends Simulation {
   // Random data generators
   val random = new scala.util.Random
   def randomString(length: Int): String = random.alphanumeric.take(length).mkString
-  def randomEmail(): String = s"user${randomString(8)}@test.com"
+  def randomEmail(): String = s"user#{randomString(8)}@test.com"
 
   // Feeders for test data
   val userFeeder = Iterator.continually(Map(
-    "username" -> s"user_${randomString(10)}",
+    "username" -> s"user_#{randomString(10)}",
     "password" -> "Test123!@#",
     "email" -> randomEmail(),
-    "name" -> s"TestUser${randomString(5)}",
-    "surname" -> s"TestSurname${randomString(5)}"
+    "name" -> s"TestUser#{randomString(5)}",
+    "surname" -> s"TestSurname#{randomString(5)}"
   ))
 
   // Search terms for text search stress testing
@@ -61,7 +61,7 @@ class BasicLoadTest extends Simulation {
     .pause(500.milliseconds)
     .feed(searchFeeder)
     .exec(http("Text Search Books")
-      .get("/api/v1/books?title=${searchTerm}&page=0&size=30")  // Text search query
+      .get("/api/v1/books?title=#{searchTerm}&page=0&size=30")  // Text search query
       .check(status.is(200)))
     .pause(500.milliseconds)
     .exec(http("Browse Books - Page 3")
@@ -74,7 +74,7 @@ class BasicLoadTest extends Simulation {
     .pause(500.milliseconds)
     .feed(searchFeeder)
     .exec(http("Text Search Authors")
-      .get("/api/v1/authors?author_name=${searchTerm}&page=0&size=20")  // Text search query
+      .get("/api/v1/authors?author_name=#{searchTerm}&page=0&size=20")  // Text search query
       .check(status.is(200)))
 
   // Load Profile Setup - Realistic concurrent users
