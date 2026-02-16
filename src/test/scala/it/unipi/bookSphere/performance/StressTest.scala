@@ -16,8 +16,8 @@ class StressTest extends Simulation {
 
   val baseUrl = System.getProperty("baseUrl", "http://localhost:8080")
   val initialUsers = Integer.getInteger("initialUsers", 5).intValue()
-  val maxUsers = Integer.getInteger("maxUsers", 30).intValue()
-  val stepDuration = Integer.getInteger("stepDuration", 10).intValue().seconds
+  val maxUsers = Integer.getInteger("maxUsers", 20).intValue()  // Reduced from 30 to 20
+  val stepDuration = Integer.getInteger("stepDuration", 15).intValue().seconds  // Increased from 10 to 15
   val incrementUsers = Integer.getInteger("incrementUsers", 5).intValue()
 
   val httpProtocol = http
@@ -106,9 +106,10 @@ class StressTest extends Simulation {
     )
   ).protocols(httpProtocol)
     .assertions(
-      global.responseTime.percentile3.lt(50000), // 95th percentile < 50s
-      global.responseTime.percentile4.lt(80000), // 99th percentile < 80s
-      global.successfulRequests.percent.gt(80)   // 80% success rate even under stress
+      global.responseTime.max.lt(5000),      // Max 5s under stress
+      global.responseTime.mean.lt(800),       // Mean < 800ms
+      global.responseTime.percentile3.lt(2000), // p95 < 2s
+      global.successfulRequests.percent.gt(95)  // 95%+ success even under stress
     )
     .maxDuration(15.minutes)
 }

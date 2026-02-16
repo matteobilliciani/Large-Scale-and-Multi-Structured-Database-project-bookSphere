@@ -62,10 +62,10 @@ class EnduranceTest extends Simulation {
     )
   ).protocols(httpProtocol)
     .assertions(
-      global.responseTime.mean.lt(30000),                // Media < 30s per tutta la durata
-      global.responseTime.percentile3.lt(50000),         // 95th percentile < 50s
-      global.successfulRequests.percent.gt(90),         // > 90% successo
-      global.responseTime.max.lt(100000)                 // Max < 100s anche dopo test prolungato
+      global.responseTime.mean.lt(600),              // Mean < 600ms sustained
+      global.responseTime.percentile3.lt(1500),      // p95 < 1.5s
+      global.successfulRequests.percent.gt(98),      // 98%+ success
+      global.responseTime.max.lt(4000)               // Max < 4s even after prolonged test
     )
     .throttle(
       reachRps(constantUsers * 2) in 1.minute,         // Limitiamo le RPS per evitare sovraccarico

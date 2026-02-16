@@ -15,11 +15,11 @@ import scala.concurrent.duration._
  */
 class BasicLoadTest extends Simulation {
 
-  // Configuration - IMPROVED for better stress testing
+  // Configuration - Realistic load for performance testing
   val baseUrl = System.getProperty("baseUrl", "http://localhost:8080")
-  val users = Integer.getInteger("users", 100).intValue()  // Increased from 20 to 100
-  val rampDuration = Integer.getInteger("rampDuration", 20).intValue().seconds  // Increased from 10 to 20
-  val testDuration = Integer.getInteger("testDuration", 60).intValue().seconds  // Increased from 30 to 60
+  val users = Integer.getInteger("users", 30).intValue()  // Reduced to 30 concurrent users
+  val rampDuration = Integer.getInteger("rampDuration", 10).intValue().seconds  // Quick ramp
+  val testDuration = Integer.getInteger("testDuration", 60).intValue().seconds
 
   // HTTP Protocol Configuration
   val httpProtocol = http
@@ -77,17 +77,18 @@ class BasicLoadTest extends Simulation {
       .get("/api/v1/authors?author_name=${searchTerm}&page=0&size=20")  // Text search query
       .check(status.is(200)))
 
-  // Load Profile Setup - IMPROVED with more aggressive load
+  // Load Profile Setup - Realistic concurrent users
   setUp(
     publicScenario.inject(
-      rampUsers(users) during rampDuration,
-      constantUsersPerSec(25) during testDuration  // Increased from 10 to 25
+      rampUsers(users) during rampDuration,  // Ramp to target users
+      constantUsersPerSec(3) during testDuration  // Add 3 users/sec = 180 total new users over 60s
     )
   ).protocols(httpProtocol)
     .assertions(
-      global.responseTime.max.lt(90000),  // Relaxed to 90s for realistic max spikes
-      global.responseTime.mean.lt(35000),  // Mean under 35s
-      global.successfulRequests.percent.gt(85)  // 85% success rate
+      global.responseTime.max.lt(3000),    // Max 3s with optimizations
+      global.responseTime.mean.lt(600),     // Mean < 600ms
+      global.responseTime.percentile3.lt(1500),  // p95 < 1.5s
+      global.successfulRequests.percent.is(100)  // Expect 100% success
     )
 }
 

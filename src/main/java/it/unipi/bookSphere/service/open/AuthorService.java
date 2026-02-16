@@ -38,20 +38,17 @@ public class AuthorService {
      * @return AuthorDTO with author information
      * @throws AuthorNotFoundException if author is not found
      */
-    @Retryable(
-        retryFor = {RuntimeException.class},
-        noRetryFor = {AuthorNotFoundException.class, AuthorArchivedException.class},    
-        maxAttempts = 3,
-        backoff = @Backoff(delay = 1000, multiplier = 2)
-    )
     public AuthorDTO findById(String id) {
-        logger.info("Finding author by id: {}", id);
+        long startTime = System.currentTimeMillis();
+        logger.debug("[PERF] Finding author by id: {}", id);
         
+        long dbStartTime = System.currentTimeMillis();
         AuthorDocument author = authorRepository.findById(id)
                 .orElseThrow(() -> {
                     logger.warn("Author not found with id: {}", id);
                     return new AuthorNotFoundException("Author not found with id: " + id);
                 });
+        long dbTime = System.currentTimeMillis() - dbStartTime;
 
         if(author.getStatus().equals("ARCHIVED")){
             logger.warn("Author ARCHIVED with id: {}", id);
@@ -59,7 +56,8 @@ public class AuthorService {
         }
         
         AuthorDTO authorDTO = authorMapper.toDTO(author);
-        logger.info("Author found: {}", author.getName());
+        long totalTime = System.currentTimeMillis() - startTime;
+        logger.info("[PERF] Author found in {}ms (DB: {}ms): {}", totalTime, dbTime, author.getName());
         return authorDTO;
     }
 
@@ -69,13 +67,9 @@ public class AuthorService {
      * @param name Author name to search
      * @return List of matching authors
      */
-    @Retryable(
-        retryFor = {RuntimeException.class},
-        maxAttempts = 3,
-        backoff = @Backoff(delay = 1000, multiplier = 2)
-    )
     public List<AuthorDTO> searchByName(String name) {
-        logger.info("Searching authors by name: {}", name);
+        long startTime = System.currentTimeMillis();
+        logger.debug("[PERF] Searching authors by name: {}", name);
         
         List<AuthorDocument> authors = authorRepository.findByNameContainingIgnoreCase(name);
 
@@ -95,17 +89,14 @@ public class AuthorService {
      * @param size Page size
      * @return Page of matching authors
      */
-    @Retryable(
-        retryFor = {RuntimeException.class},
-        maxAttempts = 3,
-        backoff = @Backoff(delay = 1000, multiplier = 2)
-    )
     public Page<AuthorDTO> searchByName(String name, int page, int size) {
-        logger.info("Searching authors by name: {} (page: {}, size: {})", name, page, size);
+        long startTime = System.currentTimeMillis();
+        logger.debug("[PERF] Searching authors by name: {} (page: {}, size: {})", name, page, size);
         
         Pageable pageable = PageRequest.of(page, size);
         Page<AuthorDocument> authors;
         
+        long dbStartTime = System.currentTimeMillis();
         // If name is null or empty, return all active authors
         if (name == null || name.trim().isEmpty()) {
             authors = authorRepository.findByStatusNot("ARCHIVED", pageable);
@@ -114,11 +105,18 @@ public class AuthorService {
             String trimmedName = name.trim();
             authors = authorRepository.searchByText(trimmedName, "ARCHIVED", pageable);
         }
+        long dbTime = System.currentTimeMillis() - dbStartTime;
         
         // Map to DTO and filter is applied by repository/database level for better performance
+        long mappingStartTime = System.currentTimeMillis();
         Page<AuthorDTO> result = authors.map(authorMapper::toDTO);
+        long mappingTime = System.currentTimeMillis() - mappingStartTime;
         
-        logger.info("Found {} authors matching '{}' on page {}", result.getNumberOfElements(), name, page);
+        long totalTime = System.currentTimeMillis() - startTime;
+        logger.info("[PERF] Found {} authors for '{}' in {}ms (DB: {}ms, Mapping: {}ms)", 
+                result.getNumberOfElements(), name, totalTime, dbTime, mappingTime);
         return result;
     }
 }
+
+

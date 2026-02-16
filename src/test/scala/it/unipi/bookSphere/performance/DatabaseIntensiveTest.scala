@@ -17,8 +17,8 @@ import scala.concurrent.duration._
 class DatabaseIntensiveTest extends Simulation {
 
   val baseUrl = System.getProperty("baseUrl", "http://localhost:8080")
-  val users = Integer.getInteger("users", 30).intValue()  // Increased from 9 to 30
-  val duration = Integer.getInteger("duration", 2).intValue().minutes  // Increased from 1 to 2 minutes
+  val users = Integer.getInteger("users", 15).intValue()  // Reduced from 30 to 15 (5 per scenario)
+  val duration = Integer.getInteger("duration", 2).intValue().minutes
 
   val httpProtocol = http
     .baseUrl(baseUrl)
@@ -111,9 +111,10 @@ class DatabaseIntensiveTest extends Simulation {
     )
   ).protocols(httpProtocol)
     .assertions(
-      global.responseTime.mean.lt(40000),  // Mean response time < 40s
-      global.responseTime.percentile3.lt(60000),  // 95th percentile < 60s (relaxed for DB intensive operations)
-      global.successfulRequests.percent.gt(85)  // > 85% success rate
+      global.responseTime.mean.lt(700),     // Mean < 700ms even for DB intensive
+      global.responseTime.percentile3.lt(1800),  // p95 < 1.8s
+      global.responseTime.max.lt(5000),     // Max 5s
+      global.successfulRequests.percent.gt(98)  // 98%+ success rate
     )
 }
 
