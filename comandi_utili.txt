@@ -50,3 +50,4 @@ start application
 
 NEWMAN
 
+newman run postman_newman/bookSphere_storytelling_enhanced.postman_collection.json --reporters "cli,json" --reporter-json-export postman_newman/newman-report.json
