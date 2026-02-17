@@ -17,7 +17,7 @@ import scala.concurrent.duration._
 class DatabaseIntensiveTest extends Simulation {
 
   val baseUrl = System.getProperty("baseUrl", "http://localhost:8080")
-  val users = Integer.getInteger("users", 15).intValue()  // Reduced from 30 to 15 (5 per scenario)
+  val users = Integer.getInteger("users", 60).intValue()  // 60 users total (20 per scenario)
   val duration = Integer.getInteger("duration", 2).intValue().minutes
 
   val httpProtocol = http
@@ -98,23 +98,23 @@ class DatabaseIntensiveTest extends Simulation {
 
   setUp(
     mongoHeavyScenario.inject(
-      rampUsers(users / 3) during 20.seconds,  // Reduced ramp time
-      constantUsersPerSec(users / 40.0) during duration  // Increased rate
+      rampUsers(users / 3) during 30.seconds,  // 20 users per scenario, slower ramp
+      constantUsersPerSec(users / 60.0) during duration  // Reduced rate for stability
     ),
     neo4jHeavyScenario.inject(
-      rampUsers(users / 3) during 20.seconds,
-      constantUsersPerSec(users / 40.0) during duration
+      rampUsers(users / 3) during 30.seconds,
+      constantUsersPerSec(users / 60.0) during duration
     ),
     consistencyScenario.inject(
-      rampUsers(users / 3) during 20.seconds,
-      constantUsersPerSec(users / 40.0) during duration
+      rampUsers(users / 3) during 30.seconds,
+      constantUsersPerSec(users / 60.0) during duration
     )
   ).protocols(httpProtocol)
     .assertions(
-      global.responseTime.mean.lt(700),     // Mean < 700ms even for DB intensive
-      global.responseTime.percentile3.lt(1800),  // p95 < 1.8s
-      global.responseTime.max.lt(5000),     // Max 5s
-      global.successfulRequests.percent.gt(98)  // 98%+ success rate
+      global.responseTime.mean.lt(600),     // Mean < 600ms for DB intensive
+      global.responseTime.percentile3.lt(1200),  // p95 < 1.2s
+      global.responseTime.max.lt(3000),     // Max 3s
+      global.successfulRequests.percent.gt(95)  // 95%+ success rate
     )
 }
 

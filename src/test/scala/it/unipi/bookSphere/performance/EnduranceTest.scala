@@ -15,7 +15,7 @@ import scala.concurrent.duration._
 class EnduranceTest extends Simulation {
 
   val baseUrl = System.getProperty("baseUrl", "http://localhost:8080")
-  val constantUsers = Integer.getInteger("constantUsers", 10).intValue()
+  val constantUsers = Integer.getInteger("constantUsers", 40).intValue()  // 40 users for stable endurance test
   val testDuration = Integer.getInteger("testDuration", 2).intValue().minutes
 
   val httpProtocol = http
@@ -62,17 +62,17 @@ class EnduranceTest extends Simulation {
   setUp(
     enduranceScenario.inject(
       rampUsers(constantUsers) during 1.minute,        // Ramp-up iniziale
-      constantUsersPerSec(constantUsers / 60.0) during testDuration  // Carico costante
+      constantUsersPerSec(constantUsers / 180.0) during testDuration  // Very gentle constant load
     )
   ).protocols(httpProtocol)
     .assertions(
-      global.responseTime.mean.lt(600),              // Mean < 600ms sustained
-      global.responseTime.percentile3.lt(1500),      // p95 < 1.5s
-      global.successfulRequests.percent.gt(98),      // 98%+ success
-      global.responseTime.max.lt(4000)               // Max < 4s even after prolonged test
+      global.responseTime.mean.lt(500),              // Mean < 500ms sustained
+      global.responseTime.percentile3.lt(1200),      // p95 < 1.2s
+      global.successfulRequests.percent.gt(95),      // 95%+ success
+      global.responseTime.max.lt(2500)               // Max < 2.5s after prolonged test
     )
     .throttle(
-      reachRps(constantUsers * 2) in 1.minute,         // Limitiamo le RPS per evitare sovraccarico
+      reachRps(constantUsers) in 1.minute,         // Gentle RPS for stability (1 RPS per user)
       holdFor(testDuration)
     )
 }

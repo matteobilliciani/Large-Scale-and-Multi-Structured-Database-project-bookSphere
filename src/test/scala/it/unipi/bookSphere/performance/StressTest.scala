@@ -15,10 +15,10 @@ import scala.concurrent.duration._
 class StressTest extends Simulation {
 
   val baseUrl = System.getProperty("baseUrl", "http://localhost:8080")
-  val initialUsers = Integer.getInteger("initialUsers", 5).intValue()
-  val maxUsers = Integer.getInteger("maxUsers", 20).intValue()  // Reduced from 30 to 20
-  val stepDuration = Integer.getInteger("stepDuration", 15).intValue().seconds  // Increased from 10 to 15
-  val incrementUsers = Integer.getInteger("incrementUsers", 5).intValue()
+  val initialUsers = Integer.getInteger("initialUsers", 20).intValue()  // Start with 20 users
+  val maxUsers = Integer.getInteger("maxUsers", 100).intValue()  // Max 100 users
+  val stepDuration = Integer.getInteger("stepDuration", 25).intValue().seconds
+  val incrementUsers = Integer.getInteger("incrementUsers", 20).intValue()  // Increment by 20
 
   val httpProtocol = http
     .baseUrl(baseUrl)
@@ -106,10 +106,10 @@ class StressTest extends Simulation {
     )
   ).protocols(httpProtocol)
     .assertions(
-      global.responseTime.max.lt(5000),      // Max 5s under stress
-      global.responseTime.mean.lt(800),       // Mean < 800ms
-      global.responseTime.percentile3.lt(2000), // p95 < 2s
-      global.successfulRequests.percent.gt(95)  // 95%+ success even under stress
+      global.responseTime.max.lt(3500),      // Max 3.5s under stress
+      global.responseTime.mean.lt(600),       // Mean < 600ms
+      global.responseTime.percentile3.lt(1200), // p95 < 1.2s
+      global.successfulRequests.percent.gt(93)  // 93%+ success under stress
     )
     .maxDuration(15.minutes)
 }

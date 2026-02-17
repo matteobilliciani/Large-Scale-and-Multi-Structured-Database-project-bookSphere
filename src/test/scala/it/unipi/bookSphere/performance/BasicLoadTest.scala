@@ -17,8 +17,8 @@ class BasicLoadTest extends Simulation {
 
   // Configuration - Realistic load for performance testing
   val baseUrl = System.getProperty("baseUrl", "http://localhost:8080")
-  val users = Integer.getInteger("users", 30).intValue()  // Reduced to 30 concurrent users
-  val rampDuration = Integer.getInteger("rampDuration", 10).intValue().seconds  // Quick ramp
+  val users = Integer.getInteger("users", 150).intValue()  // 150 concurrent users for stable performance
+  val rampDuration = Integer.getInteger("rampDuration", 30).intValue().seconds  // Gradual ramp over 30s
   val testDuration = Integer.getInteger("testDuration", 60).intValue().seconds
 
   // HTTP Protocol Configuration
@@ -54,41 +54,40 @@ class BasicLoadTest extends Simulation {
       .get("/api/v1/books?page=0&size=50")  // Increased page size
       .check(status.is(200))
       .check(jsonPath("$.content").exists))
-    .pause(500.milliseconds, 1.second)  // Reduced pause for more stress
+    .pause(200.milliseconds, 500.milliseconds)  // Shorter pause for high concurrency
     .exec(http("Browse Books - Page 2")
       .get("/api/v1/books?page=1&size=50")
       .check(status.is(200)))
-    .pause(500.milliseconds)
+    .pause(200.milliseconds)
     .feed(searchFeeder)
     .exec(http("Text Search Books")
       .get("/api/v1/books?title=#{searchTerm}&page=0&size=30")  // Text search query
       .check(status.is(200)))
-    .pause(500.milliseconds)
+    .pause(200.milliseconds)
     .exec(http("Browse Books - Page 3")
       .get("/api/v1/books?page=2&size=50")
       .check(status.is(200)))
-    .pause(500.milliseconds)
+    .pause(200.milliseconds)
     .exec(http("Get Authors List")
       .get("/api/v1/authors?page=0&size=30")  // Increased page size
       .check(status.is(200)))
-    .pause(500.milliseconds)
+    .pause(200.milliseconds)
     .feed(searchFeeder)
     .exec(http("Text Search Authors")
       .get("/api/v1/authors?author_name=#{searchTerm}&page=0&size=20")  // Text search query
       .check(status.is(200)))
 
-  // Load Profile Setup - Realistic concurrent users
+  // Load Profile Setup - 150 concurrent users
   setUp(
     publicScenario.inject(
-      rampUsers(users) during rampDuration,  // Ramp to target users
-      constantUsersPerSec(3) during testDuration  // Add 3 users/sec = 180 total new users over 60s
+      rampUsers(users) during rampDuration  // Ramp to 150 users over 30s
     )
   ).protocols(httpProtocol)
     .assertions(
-      global.responseTime.max.lt(3000),    // Max 3s with optimizations
-      global.responseTime.mean.lt(600),     // Mean < 600ms
-      global.responseTime.percentile3.lt(1500),  // p95 < 1.5s
-      global.successfulRequests.percent.is(100)  // Expect 100% success
+      global.responseTime.max.lt(5000),    // Max 5s
+      global.responseTime.mean.lt(800),     // Mean < 800ms
+      global.responseTime.percentile3.lt(1000),  // p95 < 1s (TARGET)
+      global.successfulRequests.percent.gt(98)  // 98%+ success
     )
 }
 

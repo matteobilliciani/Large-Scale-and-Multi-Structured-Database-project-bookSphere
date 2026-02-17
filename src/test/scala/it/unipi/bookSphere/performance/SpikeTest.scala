@@ -72,5 +72,3 @@ class SpikeTest extends Simulation {
       global.successfulRequests.percent.is(100)  // Expect 100% success rate
     )
 }
-
-

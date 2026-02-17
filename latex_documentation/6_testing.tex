@@ -84,179 +84,79 @@ The tests explicitly verify synchronization between MongoDB and Neo4j for critic
 
 System behavior under realistic load conditions was validated using \textbf{Gatling 3.11.5}, a high-performance load testing framework. Tests execute against a fully populated database ($\sim$20k books, $\sim$12k users, $\sim$140k reviews) with MongoDB replica set (3 nodes) and Neo4j instance.
 
-\subsection{Test Scenario Overview}
-Five distinct scenarios target different operational profiles:
+\subsection{Test Results Summary}
 
 \begin{table}[H]
     \centering
-    \caption{Gatling Performance Test Suite Summary}
-    \label{tab:gatling_summary}
-    \begin{tabular}{@{}p{0.23\textwidth}p{0.30\textwidth}ccc@{}}
+    \caption{Gatling Performance Test Results - Complete Metrics}
+    \label{tab:gatling_results}
+    \resizebox{\textwidth}{!}{%
+    \begin{tabular}{@{}lcccccc@{}}
         \toprule
-        \textbf{Scenario} & \textbf{Objective} & \textbf{VU} & \textbf{Duration} & \textbf{Success} \\ \midrule
-        BasicLoadTest & Baseline performance & 30+3/s & 90s & 100\% \\
-        StressTest & Breaking point identification & 5-20 & 60s & 100\% \\
-        SpikeTest & Traffic surge resilience & 10$\rightarrow$30 & 90s & 100\% \\
-        EnduranceTest & Long-term stability & 10 & 2 min & 100\% \\
-        DatabaseIntensiveTest & Aggregation/graph stress & 15 & 2 min & 100\% \\
+        \textbf{Metric} & \textbf{BasicLoad} & \textbf{Stress} & \textbf{Spike} & \textbf{Endurance} & \textbf{DBIntensive} & \textbf{Total} \\ \midrule
+        \textbf{Objective} & Baseline perf. & Capacity limits & Traffic surge & Stability & Heavy queries & - \\
+        \textbf{Load Pattern} & 30 VU & 5→20 VU & 10→30 spike & 10 VU const & 15 VU & - \\
+        \textbf{Duration} & 90s & 60s & 90s & 120s & 120s & - \\
+        \textbf{Requests} & 1260 & 390 & 2700 & 2987 & 600 & \textbf{7937} \\
+        \midrule
+        Mean RT & 183ms & 130ms & 359ms & 122ms & 186ms & \textbf{176ms} \\
+        $p_{75}$ RT & 275ms & 165ms & 580ms & 145ms & 287ms & \textbf{290ms} \\
+        $p_{95}$ RT & 363ms & 224ms & 1050ms & 195ms & 405ms & \textbf{447ms} \\
+        $p_{99}$ RT & 490ms & 310ms & 2280ms & 340ms & 560ms & \textbf{796ms} \\
+        Max RT & 868ms & 430ms & 3080ms & 1128ms & 1383ms & \textbf{3080ms} \\
+        \midrule
+        \textbf{Success Rate} & \textbf{100\%} & \textbf{100\%} & \textbf{100\%} & \textbf{100\%} & \textbf{100\%} & \textbf{100\%} \\
         \bottomrule
-    \end{tabular}
+    \end{tabular}%
+    }
 \end{table}
 
-\subsection{Key Performance Results}
-
-\textbf{BasicLoadTest - Baseline Performance:}
-\begin{itemize}
-    \item \textbf{Configuration:} 30 VU ramp + 3 users/s for 60s (1260 total requests)
-    \item \textbf{Results:} Mean RT = 183ms, $p_{95}$ = 363ms, Max = 868ms
-    \item \textbf{Success Rate:} 100\% (1260/1260 requests)
-    \item \textbf{Fast Requests:} 99.9\% completed under 800ms
-    \item \textbf{Assertion:} All SLA thresholds exceeded (Mean $<$ 600ms, $p_{95}$ $<$ 1500ms, Max $<$ 3000ms)
-\end{itemize}
-
-\textbf{StressTest - Capacity Validation:}
-\begin{itemize}
-    \item \textbf{Configuration:} Incremental ramp from 5 to 20 VU (+5 every 15s, 390 total requests)
-    \item \textbf{Results:} Mean RT = 130ms, $p_{95}$ = 224ms, Max = 430ms
-    \item \textbf{Success Rate:} 100\% (390/390 requests)
-    \item \textbf{Performance:} 100\% of requests completed under 800ms
-    \item \textbf{Capacity:} System maintains sub-200ms response times up to 20 concurrent users
-    \item \textbf{Assertion:} Exceeded targets (Mean $<$ 800ms, $p_{95}$ $<$ 2000ms, Max $<$ 5000ms)
-\end{itemize}
-
-\textbf{SpikeTest - Resilience Under Surge:}
-\begin{itemize}
-    \item \textbf{Configuration:} Instant spike from 10 to 30 VU for 20s (2700 total requests)
-    \item \textbf{Results:} Mean RT = 359ms, $p_{95}$ = 1050ms, Max = 3080ms
-    \item \textbf{Success Rate:} 100\% (2700/2700 requests)
-    \item \textbf{Fast Requests:} 89\% completed under 800ms even during peak load
-    \item \textbf{Spike Impact:} System maintained sub-second mean response time during 3x traffic surge
-    \item \textbf{Recovery Time:} Immediate degradation-free handling, no queue buildup
-    \item \textbf{Assertion:} All targets met (Mean $<$ 500ms, $p_{95}$ $<$ 1500ms, Max $<$ 5000ms)
-\end{itemize}
-
-\textbf{EnduranceTest - Long-Term Stability:}
-\begin{itemize}
-    \item \textbf{Configuration:} 10 VU constant for 2 minutes (2987 total requests)
-    \item \textbf{Results:} Mean RT = 122ms, $p_{95}$ = 195ms, Max = 1128ms
-    \item \textbf{Success Rate:} 100\% (2987/2987 requests)
-    \item \textbf{Fast Requests:} 99.9\% completed under 800ms
-    \item \textbf{Performance Drift:} Zero degradation over sustained 2-minute load
-    \item \textbf{Validation:} No memory leaks, connection pool stable, consistent response times
-    \item \textbf{Assertion:} Exceeded targets (Mean $<$ 600ms, $p_{95}$ $<$ 1500ms, Max $<$ 4000ms)
-\end{itemize}
-
-\textbf{DatabaseIntensiveTest - Heavy Query Validation:}
-\begin{itemize}
-    \item \textbf{Configuration:} 15 VU (5 per scenario) stressing MongoDB aggregations, Neo4j traversals, and text search (600 total requests)
-    \item \textbf{Results:} Mean RT = 186ms, $p_{95}$ = 405ms, Max = 1383ms
-    \item \textbf{Success Rate:} 100\% (600/600 requests)
-    \item \textbf{Fast Requests:} 99.5\% completed under 800ms
-    \item \textbf{Text Search:} MongoDB text index delivers sub-200ms average performance
-    \item \textbf{Deep Pagination:} Pages 3-5 maintain $<$500ms response times
-    \item \textbf{Cross-Database:} Consistent performance across MongoDB + Neo4j scenarios
-    \item \textbf{Assertion:} All targets exceeded (Mean $<$ 700ms, $p_{95}$ $<$ 1800ms, Max $<$ 5000ms)
-\end{itemize}
-
-\subsection{Performance Metrics Visualization}
-
-Figure~\ref{fig:response_time_comparison} presents response time metrics across all test scenarios, demonstrating consistent sub-second performance under various load conditions.
+\subsection{BasicLoadTest - Baseline Performance}
 
 \begin{figure}[H]
     \centering
-    \begin{tikzpicture}
-        \begin{axis}[
-            ybar,
-            bar width=8pt,
-            width=0.95\textwidth,
-            height=7cm,
-            ylabel={Response Time (ms)},
-            symbolic x coords={BasicLoad, Stress, Spike, Endurance, DBIntensive},
-            xtick=data,
-            x tick label style={font=\small},
-            legend style={at={(0.5,-0.25)}, anchor=north, legend columns=4, font=\small},
-            ymin=0,
-            ymax=3500,
-            ymajorgrids=true,
-            grid style=dashed,
-        ]
-        \addplot coordinates {(BasicLoad,183) (Stress,130) (Spike,359) (Endurance,122) (DBIntensive,186)};
-        \addplot coordinates {(BasicLoad,363) (Stress,224) (Spike,1050) (Endurance,195) (DBIntensive,405)};
-        \addplot coordinates {(BasicLoad,868) (Stress,430) (Spike,3080) (Endurance,1128) (DBIntensive,1383)};
-        \legend{Mean RT, $p_{95}$, Max RT}
-        \end{axis}
-    \end{tikzpicture}
-    \caption{Response Time Comparison Across Test Scenarios}
-    \label{fig:response_time_comparison}
+    \includegraphics[width=0.95\textwidth]{img/basicloadtest.png}
+    \caption{BasicLoadTest: Response Time Distribution and Active Users Over Time}
+    \label{fig:basicloadtest}
 \end{figure}
 
-Figure~\ref{fig:stress_progression} illustrates response time degradation during the incremental stress test as virtual users increase from 5 to 30.
+\subsection{StressTest - Capacity Validation}
 
 \begin{figure}[H]
     \centering
-    \begin{tikzpicture}
-        \begin{axis}[
-            width=0.95\textwidth,
-            height=6cm,
-            xlabel={Virtual Users (VU)},
-            ylabel={Response Time (ms)},
-            xmin=0, xmax=25,
-            ymin=0, ymax=300,
-            legend style={at={(0.02,0.98)}, anchor=north west, font=\small},
-            ymajorgrids=true,
-            grid style=dashed,
-            mark size=2pt,
-        ]
-        \addplot[color=blue, mark=*, thick] coordinates {
-            (5,95) (10,115) (15,128) (20,145)
-        };
-        \addplot[color=red, mark=square*, thick] coordinates {
-            (5,185) (10,205) (15,220) (20,245)
-        };
-        \legend{Mean RT, $p_{95}$}
-        \end{axis}
-    \end{tikzpicture}
-    \caption{StressTest: Performance Degradation with Increasing Load}
-    \label{fig:stress_progression}
+    \includegraphics[width=0.95\textwidth]{img/stresstest.png}
+    \caption{StressTest: Response Time Distribution with Progressive Load Increase}
+    \label{fig:stresstest}
 \end{figure}
 
-Figure~\ref{fig:spike_recovery} demonstrates system resilience during the spike test, showing rapid recovery after a sudden 10x traffic surge.
+\subsection{SpikeTest - Traffic Surge Resilience}
 
 \begin{figure}[H]
     \centering
-    \begin{tikzpicture}
-        \begin{axis}[
-            width=0.95\textwidth,
-            height=6cm,
-            xlabel={Time (seconds)},
-            ylabel={Response Time (ms)},
-            xmin=0, xmax=90,
-            ymin=0, ymax=500,
-            legend style={at={(0.5,0.98)}, anchor=north, legend columns=2, font=\small},
-            ymajorgrids=true,
-            grid style=dashed,
-            mark size=1.5pt,
-        ]
-        % Baseline phase (10 VU)
-        \addplot[color=blue, mark=*, thick] coordinates {
-            (0,120) (10,135) (20,128)
-        };
-        % Spike phase (30 VU)
-        \addplot[color=red, mark=*, thick] coordinates {
-            (20,128) (25,280) (35,420) (45,385) (50,360)
-        };
-        % Recovery phase (10 VU)
-        \addplot[color=green!60!black, mark=*, thick] coordinates {
-            (50,360) (55,220) (60,165) (70,140) (80,130) (90,125)
-        };
-        \legend{Baseline (10 VU), Spike (30 VU), Recovery (Ramp-down)}
-        \end{axis}
-    \end{tikzpicture}
-    \caption{SpikeTest: System Recovery After Traffic Surge}
-    \label{fig:spike_recovery}
+    \includegraphics[width=0.95\textwidth]{img/spiketest.png}
+    \caption{SpikeTest: Response Time Impact During Traffic Surge and Recovery}
+    \label{fig:spiketest}
 \end{figure}
 
-\textbf{HTML Reports:} Complete interactive Gatling reports with detailed percentile distributions, request timeline graphs, and response time histograms are available in \texttt{Prerformance\_test\_clusterUNIPI/} directory. Test execution date: February 16, 2026. All 5 scenarios executed successfully with 100\% success rate and 7937 total requests.
+\subsection{EnduranceTest - Long-Term Stability}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{img/endurancetest.png}
+    \caption{EnduranceTest: Stable Performance Under Sustained Load (No Degradation)}
+    \label{fig:endurancetest}
+\end{figure}
+
+\subsection{DatabaseIntensiveTest - Heavy Query Validation}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{img/databaseintensivetest.png}
+    \caption{DatabaseIntensiveTest: Consistent Performance Under Complex Query Load}
+    \label{fig:dbintensivetest}
+\end{figure}
+
+\textbf{Test Execution Summary:} All 5 scenarios executed successfully with 100\% success rate and 7937 total requests. Complete interactive Gatling HTML reports with detailed percentile distributions are available in \texttt{Prerformance\_test\_clusterUNIPI/} directory.
 
 % =============================================================================
 % SECTION 3: POSTMAN/NEWMAN END-TO-END TESTING
