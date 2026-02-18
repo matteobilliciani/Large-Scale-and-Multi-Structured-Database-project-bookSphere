@@ -95,9 +95,15 @@ public class SecurityConfig {
                 
                 // Public endpoints - Open controllers (GET only for most)
                 .requestMatchers(HttpMethod.GET, "/api/v1/books/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/books").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/authors/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/authors").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/users/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/users").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/v1/analytics/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/analytics").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/reviews").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/v1/reviews/**").permitAll()
                 
                 // Protected endpoints - Registered users
                 .requestMatchers("/api/v1/me/**").hasRole("USER")

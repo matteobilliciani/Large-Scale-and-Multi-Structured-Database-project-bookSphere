@@ -45,8 +45,8 @@ public class UserService {
                     return new UserNotFoundException("User not found with username: " + username);
                 });
         
-        // Verify that the user has active status
-        if (!"active".equals(user.getStatus())) {
+        // Verify that the user has active or admin status
+        if (!"active".equals(user.getStatus()) && !"ADMIN".equals(user.getStatus())) {
             logger.warn("User {} is not active (status: {})", username, user.getStatus());
             throw new UserNotFoundException("User not found with username: " + username);
         }
@@ -77,8 +77,8 @@ public class UserService {
                     return new UserNotFoundException("User not found with id: " + id);
                 });
         
-        // Verify that the user has active status
-        if (!"active".equals(user.getStatus())) {
+        // Verify that the user has active or admin status
+        if (!"active".equals(user.getStatus()) && !"ADMIN".equals(user.getStatus())) {
             logger.warn("User with id {} is not active (status: {})", id, user.getStatus());
             throw new UserNotFoundException("User not found with id: " + id);
         }

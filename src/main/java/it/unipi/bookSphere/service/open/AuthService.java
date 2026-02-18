@@ -140,10 +140,13 @@ public class AuthService {
             throw new InvalidCredentialsException("Invalid username/email or password");
         }
 
-        // Check if user is active
-        if (!"active".equals(user.getStatus())) {
+        // Check if user is active or is an admin (ADMIN status bypasses active check)
+        if (!"active".equals(user.getStatus()) && !"ADMIN".equals(user.getStatus())) {
             logger.warn("Login failed: user {} is not active (status: {})", user.getUsername(), user.getStatus());
-            throw new InvalidCredentialsException("Account is not active");
+            String msg = "banned".equalsIgnoreCase(user.getStatus())
+                    ? "Account is banned"
+                    : "Account is not active (status: " + user.getStatus() + ")";
+            throw new InvalidCredentialsException(msg);
         }
 
         // 3. Convert to DTO using mapper

@@ -51,13 +51,16 @@ public class AuthController {
     public ResponseEntity<AuthResponseDTO> login(
             @Valid @RequestBody LoginDTO loginDTO
     ) {
-        // Authenticate user (AuthService verifies status is "active")
+        // Authenticate user (AuthService verifies status is "active" or "ADMIN")
         UserDTO user = authService.login(loginDTO);
-        
+
+        // Derive role from status: ADMIN status -> ADMIN role, otherwise USER role
+        String role = "ADMIN".equals(user.getStatus()) ? "ADMIN" : "USER";
+
         // Generate JWT token with status
-        String token = jwtUtil.generateToken(user.getId(), user.getUsername(), "USER", user.getStatus());
+        String token = jwtUtil.generateToken(user.getId(), user.getUsername(), role, user.getStatus());
         
         // Return response with token and user info
-        return ResponseEntity.ok(new AuthResponseDTO(token, user.getId(), user.getUsername(), "USER"));
+        return ResponseEntity.ok(new AuthResponseDTO(token, user.getId(), user.getUsername(), role));
     }
 }

@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import it.unipi.bookSphere.dto.BookDTO;
 import it.unipi.bookSphere.service.open.BookService;
+import it.unipi.bookSphere.validation.ValidationUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
@@ -29,6 +30,7 @@ public class BookController {
             @Parameter(description = "MongoDB ObjectId of the book", example = "65b3f...")
             @PathVariable String id
     ) {
+        ValidationUtils.validateObjectId(id, "id");
         BookDTO book = bookService.findById(id);
         return ResponseEntity.ok(book);
     }

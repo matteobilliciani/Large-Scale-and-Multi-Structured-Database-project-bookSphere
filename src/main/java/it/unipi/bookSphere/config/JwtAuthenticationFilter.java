@@ -51,16 +51,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 String role = jwtUtil.extractRole(jwt);
                 String status = jwtUtil.extractStatus(jwt);
 
-                // SECURITY: Only allow ACTIVE users with USER role to access registered APIs
-                // ADMIN and BANNED users should not be accepted in registered user APIs
-                if (!"USER".equals(role)) {
-                    logger.warn("Access denied: user {} has role {} (only USER role is allowed)", username, role);
+                // SECURITY: Allow USER (active) and ADMIN roles only
+                if (!"USER".equals(role) && !"ADMIN".equals(role)) {
+                    logger.warn("Access denied: user {} has unknown role {}", username, role);
                     filterChain.doFilter(request, response);
                     return;
                 }
-                
-                if (!"active".equals(status)) {
-                    logger.warn("Access denied: user {} has status {} (only active status is allowed)", username, status);
+
+                // For USER role, enforce active status
+                if ("USER".equals(role) && !"active".equals(status)) {
+                    logger.warn("Access denied: user {} has status {} (only active status is allowed for USER role)", username, status);
                     filterChain.doFilter(request, response);
                     return;
                 }

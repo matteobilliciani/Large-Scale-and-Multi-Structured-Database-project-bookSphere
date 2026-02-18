@@ -33,7 +33,7 @@ public class RegisteredUser {
     @Field("joined_at")
     private Instant joinedAt;
 
-    private String status; // "active", "banned", etc.
+    private String status; // "active", "banned", "ADMIN"
 
     // PATTERN: Bucket (Bookshelf managed as array of status objects)
     private List<BookshelfItem> bookshelf;

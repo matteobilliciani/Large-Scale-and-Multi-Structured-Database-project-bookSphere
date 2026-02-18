@@ -1,0 +1,1153 @@
+{
+  "info": {
+    "name": "bookSphere – Live Demo (Complementary)",
+    "_postman_id": "bsphere-live-demo-complementary-2026",
+    "description": "Complementary Postman collection for the bookSphere Live Demo.\n\nCovers every REST endpoint NOT already exercised by the storytelling collection, plus systematic error-scenario testing for all endpoint categories.\n\nSections:\n  A – Setup (Admin login, dynamic IDs harvest)\n  B – Browse / Catalogue (Open API)\n  C – User Management (profile, bookshelf, follow)\n  D – Reviews (registered – CRUD cycle)\n  E – Likes (all four entity types, full cycle)\n  F – Admin Panel (books, authors, genres, moderation)\n  G – Error Scenarios (4xx validation, 401/403, 404, edge-cases)\n\nPre-requisite: the storytelling collection has already been run so that real data\n(books, reviews, users) exist in the database.\n\nVariable {{base_url}} = http://localhost:8080\nVariables populated by tests: {{admin_token}}, {{user_token}}, {{book_id}}, {{author_id}}, {{review_id}}, {{admin_user_id}}, {{target_user_id}}",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url",       "value": "http://localhost:8080", "type": "string" },
+    { "key": "admin_token",    "value": "",  "type": "string" },
+    { "key": "user_token",     "value": "",  "type": "string" },
+    { "key": "book_id",        "value": "",  "type": "string" },
+    { "key": "author_id",      "value": "",  "type": "string" },
+    { "key": "new_book_id",    "value": "",  "type": "string" },
+    { "key": "new_author_id",  "value": "",  "type": "string" },
+    { "key": "review_id",      "value": "",  "type": "string" },
+    { "key": "target_user_id",  "value": "",  "type": "string" },
+    { "key": "follow_target_id","value": "",  "type": "string" },
+    { "key": "demo_user_id",    "value": "",  "type": "string" },
+    { "key": "target_username", "value": "",  "type": "string" },
+    { "key": "target_email",    "value": "",  "type": "string" },
+    { "key": "demo_genre_name", "value": "",  "type": "string" },
+    { "key": "demo_username",   "value": "DemoUser_Live01", "type": "string" }
+  ],
+  "item": [
+
+    {
+      "name": "A – Setup & Login",
+      "description": "Register a fresh demo user and login as admin.  Auto-harvest IDs for later requests.",
+      "item": [
+
+        {
+          "name": "A0 – Register Demo Target User (for follow tests)",
+          "event": [
+            { "listen": "prerequest", "script": { "exec": [
+              "var suffix = 'T' + Date.now().toString().slice(-6);",
+              "pm.collectionVariables.set('target_username', 'DemoTarget_' + suffix);",
+              "pm.collectionVariables.set('target_email', 'target' + suffix + '@booksphere.test');"
+            ], "type": "text/javascript" }},
+            { "listen": "test", "script": { "exec": [
+              "pm.test('Status 201', () => pm.response.to.have.status(201));",
+              "var j = pm.response.json();",
+              "if (j && j.userId) {",
+              "  pm.collectionVariables.set('follow_target_id', j.userId);",
+              "}"
+            ], "type": "text/javascript" }}
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/auth/register", "host": ["{{base_url}}"], "path": ["api","v1","auth","register"] },
+            "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{target_username}}\",\n  \"email\": \"{{target_email}}\",\n  \"password\": \"DemoPass1\",\n  \"country\": \"IT\"\n}" }
+          }
+        },
+
+        {
+          "name": "A1 – Register Demo User",
+          "event": [
+            { "listen": "prerequest", "script": { "exec": [
+              "var suffix = Date.now().toString().slice(-6);",
+              "pm.collectionVariables.set('demo_username', 'DemoUser_' + suffix);",
+              "pm.collectionVariables.set('demo_email', 'demo' + suffix + '@booksphere.test');"
+            ], "type": "text/javascript" }},
+            { "listen": "test", "script": { "exec": [
+            "pm.test('Status 201', () => pm.response.to.have.status(201));",
+            "var j = pm.response.json();",
+            "pm.collectionVariables.set('user_token', j.token);",
+            "pm.collectionVariables.set('target_user_id', j.userId);",
+            "pm.collectionVariables.set('demo_user_id', j.userId);",
+            "pm.test('Token present', () => pm.expect(j.token).to.be.a('string').and.not.empty);"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/auth/register", "host": ["{{base_url}}"], "path": ["api","v1","auth","register"] },
+            "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{demo_username}}\",\n  \"email\": \"{{demo_email}}\",\n  \"password\": \"DemoPass1\",\n  \"country\": \"IT\"\n}" }
+          }
+        },
+
+        {
+          "name": "A2 – Login as Demo User (JWT harvest)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "var j = pm.response.json();",
+            "pm.collectionVariables.set('user_token', j.token);",
+            "pm.test('Token set', () => pm.expect(pm.collectionVariables.get('user_token')).not.empty);"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/auth/login", "host": ["{{base_url}}"], "path": ["api","v1","auth","login"] },
+            "body": { "mode": "raw", "raw": "{\n  \"usernameOrEmail\": \"{{demo_email}}\",\n  \"password\": \"DemoPass1\"\n}" }
+          }
+        },
+
+        {
+          "name": "A3 – Login as ADMIN",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "var j = pm.response.json();",
+            "pm.collectionVariables.set('admin_token', j.token);",
+            "pm.test('Admin token set', () => pm.expect(j.token).not.empty);"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/auth/login", "host": ["{{base_url}}"], "path": ["api","v1","auth","login"] },
+            "body": { "mode": "raw", "raw": "{\n  \"usernameOrEmail\": \"admin\",\n  \"password\": \"Admin1234!\"\n}" }
+          }
+        },
+
+        {
+          "name": "A4 – Harvest: Pick first Book ID from search",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "var j = pm.response.json();",
+            "var books = j.content || j;",
+            "if (Array.isArray(books) && books.length > 0) {",
+            "  pm.collectionVariables.set('book_id', books[0].id);",
+            "  pm.collectionVariables.set('author_id', books[0].author ? books[0].author.id : '');",
+            "}",
+            "pm.test('Book ID harvested', () => pm.expect(pm.collectionVariables.get('book_id')).not.empty);"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/books?page=0&size=1", "host": ["{{base_url}}"], "path": ["api","v1","books"], "query": [{"key":"page","value":"0"},{"key":"size","value":"1"}] }
+          }
+        },
+
+        {
+          "name": "A5 – Harvest: Pick first Author ID from search",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "var j = pm.response.json();",
+            "var authors = j.content || j;",
+            "if (Array.isArray(authors) && authors.length > 0) {",
+            "  pm.collectionVariables.set('author_id', authors[0].id);",
+            "}",
+            "pm.test('Author ID harvested', () => pm.expect(pm.collectionVariables.get('author_id')).not.empty);"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/authors?author_name=Stephen&page=0&size=1", "host": ["{{base_url}}"], "path": ["api","v1","authors"], "query": [{"key":"author_name","value":"Stephen"},{"key":"page","value":"0"},{"key":"size","value":"1"}] }
+          }
+        }
+
+      ]
+    },
+
+    {
+      "name": "B – Browse / Catalogue (Open API)",
+      "description": "All public read endpoints: books, authors, users, reviews.  No auth required.",
+      "item": [
+
+        {
+          "name": "B1 – Get Book by ID",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "var j = pm.response.json();",
+            "pm.test('Has id field', () => pm.expect(j).to.have.property('id'));",
+            "pm.test('Has title field', () => pm.expect(j.title).to.be.a('string'));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/books/{{book_id}}", "host": ["{{base_url}}"], "path": ["api","v1","books","{{book_id}}"] }
+          }
+        },
+
+        {
+          "name": "B2 – Search Books (no filter – browse all)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "var j = pm.response.json();",
+            "pm.test('Paginated response', () => pm.expect(j).to.have.property('content'));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/books?page=0&size=10", "host": ["{{base_url}}"], "path": ["api","v1","books"], "query": [{"key":"page","value":"0"},{"key":"size","value":"10"}] }
+          }
+        },
+
+        {
+          "name": "B3 – Search Books by title (partial match)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "var j = pm.response.json();",
+            "pm.test('Paginated', () => pm.expect(j).to.have.property('content'));",
+            "pm.test('Non-empty result', () => pm.expect(j.content.length).greaterThan(0));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/books?title=Harry&page=0&size=5", "host": ["{{base_url}}"], "path": ["api","v1","books"], "query": [{"key":"title","value":"Harry"},{"key":"page","value":"0"},{"key":"size","value":"5"}] }
+          }
+        },
+
+        {
+          "name": "B4 – Get Author by ID",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "var j = pm.response.json();",
+            "pm.test('Has name', () => pm.expect(j.name).to.be.a('string'));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/authors/{{author_id}}", "host": ["{{base_url}}"], "path": ["api","v1","authors","{{author_id}}"] }
+          }
+        },
+
+        {
+          "name": "B5 – Search Authors by name",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "var j = pm.response.json();",
+            "pm.test('Paginated', () => pm.expect(j).to.have.property('content'));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/authors?author_name=King&page=0&size=5", "host": ["{{base_url}}"], "path": ["api","v1","authors"], "query": [{"key":"author_name","value":"King"},{"key":"page","value":"0"},{"key":"size","value":"5"}] }
+          }
+        },
+
+        {
+          "name": "B6 – Search Authors (no filter – browse all)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/authors?page=0&size=10", "host": ["{{base_url}}"], "path": ["api","v1","authors"], "query": [{"key":"page","value":"0"},{"key":"size","value":"10"}] }
+          }
+        },
+
+        {
+          "name": "B7 – Get User by Username",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Has username', () => pm.expect(pm.response.json().username).to.be.a('string'));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/users/username/{{demo_username}}", "host": ["{{base_url}}"], "path": ["api","v1","users","username","{{demo_username}}"] }
+          }
+        },
+
+        {
+          "name": "B8 – Get User by ID",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Has id', () => pm.expect(pm.response.json().id).to.be.a('string'));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/users/id/{{target_user_id}}", "host": ["{{base_url}}"], "path": ["api","v1","users","id","{{target_user_id}}"] }
+          }
+        },
+
+        {
+          "name": "B9 – Get Reviews by IDs (bulk fetch)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200 or 400', () => pm.expect(pm.response.code).to.be.oneOf([200, 400]));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/reviews?review={{review_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api","v1","reviews"],
+              "query": [{"key":"review","value":"{{review_id}}"}]
+            }
+          }
+        },
+
+        {
+          "name": "B10 – Analytics: Book Rankings filtered by year",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/analytics/books?year=2024", "host": ["{{base_url}}"], "path": ["api","v1","analytics","books"], "query": [{"key":"year","value":"2024"}] }
+          }
+        },
+
+        {
+          "name": "B11 – Analytics: Book Rankings filtered by genre",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/analytics/books?genre=Fantasy", "host": ["{{base_url}}"], "path": ["api","v1","analytics","books"], "query": [{"key":"genre","value":"Fantasy"}] }
+          }
+        },
+
+        {
+          "name": "B12 – Analytics: Book Rankings filtered by author ID",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/analytics/books?author={{author_id}}", "host": ["{{base_url}}"], "path": ["api","v1","analytics","books"], "query": [{"key":"author","value":"{{author_id}}"}] }
+          }
+        },
+
+        {
+          "name": "B13 – Analytics: Influencers filtered by genre",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/analytics/influencers?genre=Fantasy&limit=5", "host": ["{{base_url}}"], "path": ["api","v1","analytics","influencers"], "query": [{"key":"genre","value":"Fantasy"},{"key":"limit","value":"5"}] }
+          }
+        }
+
+      ]
+    },
+
+    {
+      "name": "C – User Profile & Social",
+      "description": "Profile management (username update, delete account), bookshelf CRUD, and follow/unfollow cycle.",
+      "item": [
+
+        {
+          "name": "C1 – Update Username",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "var j = pm.response.json();",
+            "pm.test('New username echoed', () => pm.expect(j.newUsername).to.eql('DemoUserUpdated01'));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{user_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/me/username", "host": ["{{base_url}}"], "path": ["api","v1","me","username"] },
+            "body": { "mode": "raw", "raw": "{\n  \"username\": \"DemoUserUpdated01\"\n}" }
+          }
+        },
+
+        {
+          "name": "C2 – Add Book to Bookshelf (status: to_read)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Success message present', () => pm.expect(pm.response.json().message).to.include('added'));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{user_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/me/bookshelf", "host": ["{{base_url}}"], "path": ["api","v1","me","bookshelf"] },
+            "body": { "mode": "raw", "raw": "{\n  \"bookId\": \"{{book_id}}\",\n  \"status\": \"to_read\"\n}" }
+          }
+        },
+
+        {
+          "name": "C3 – Update Bookshelf Status (to_read → reading)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{user_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/me/bookshelf/{{book_id}}", "host": ["{{base_url}}"], "path": ["api","v1","me","bookshelf","{{book_id}}"] },
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"reading\"\n}" }
+          }
+        },
+
+        {
+          "name": "C4 – Update Bookshelf Status (reading → read)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{user_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/me/bookshelf/{{book_id}}", "host": ["{{base_url}}"], "path": ["api","v1","me","bookshelf","{{book_id}}"] },
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"read\"\n}" }
+          }
+        },
+
+        {
+          "name": "C5 – Remove Book from Bookshelf",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 204', () => pm.response.to.have.status(204));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{user_token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/me/bookshelf/{{book_id}}", "host": ["{{base_url}}"], "path": ["api","v1","me","bookshelf","{{book_id}}"] }
+          }
+        },
+
+        {
+          "name": "C6 – Follow a User",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Follow message', () => pm.expect(pm.response.json().message).to.include('followed'));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{user_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/me/follow", "host": ["{{base_url}}"], "path": ["api","v1","me","follow"] },
+            "body": { "mode": "raw", "raw": "{\n  \"userId\": \"{{follow_target_id}}\"\n}" }
+          }
+        },
+
+        {
+          "name": "C7 – Get Followed Users (friends list)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Paginated', () => pm.expect(pm.response.json()).to.have.property('content'));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{user_token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/me/friends?page=0&size=20", "host": ["{{base_url}}"], "path": ["api","v1","me","friends"], "query": [{"key":"page","value":"0"},{"key":"size","value":"20"}] }
+          }
+        },
+
+        {
+          "name": "C8 – Unfollow a User",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{user_token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/me/unfollow/{{follow_target_id}}", "host": ["{{base_url}}"], "path": ["api","v1","me","unfollow","{{follow_target_id}}"] }
+          }
+        },
+
+        {
+          "name": "C9 – Get Personalized Recommendations",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Is array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{user_token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/me/recommendations?limit=10", "host": ["{{base_url}}"], "path": ["api","v1","me","recommendations"], "query": [{"key":"limit","value":"10"}] }
+          }
+        },
+
+        {
+          "name": "C10 – Get Yearly Wrapped",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "var j = pm.response.json();",
+            "pm.test('Has year', () => pm.expect(j.year).to.be.a('number'));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{user_token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/me/wrapped", "host": ["{{base_url}}"], "path": ["api","v1","me","wrapped"] }
+          }
+        }
+
+      ]
+    },
+
+    {
+      "name": "D – Reviews (Registered CRUD)",
+      "description": "Full CREATE → READ → UPDATE → DELETE cycle for user-authored reviews.",
+      "item": [
+
+        {
+          "name": "D1 – Create Review",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 201', () => pm.response.to.have.status(201));",
+            "var j = pm.response.json();",
+            "pm.collectionVariables.set('review_id', j.id);",
+            "pm.test('Review ID saved', () => pm.expect(pm.collectionVariables.get('review_id')).not.empty);"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{user_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/me/reviews", "host": ["{{base_url}}"], "path": ["api","v1","me","reviews"] },
+            "body": { "mode": "raw", "raw": "{\n  \"bookId\": \"{{book_id}}\",\n  \"rating\": 78,\n  \"text\": \"A truly captivating read that kept me up all night.\",\n  \"summary\": \"Highly recommended\"\n}" }
+          }
+        },
+
+        {
+          "name": "D2 – Fetch Created Review (Open API)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "var j = pm.response.json();",
+            "pm.test('One review returned', () => pm.expect(j.length).to.eql(1));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/reviews?review={{review_id}}", "host": ["{{base_url}}"], "path": ["api","v1","reviews"], "query": [{"key":"review","value":"{{review_id}}"}] }
+          }
+        },
+
+        {
+          "name": "D3 – Update Review (change rating + text)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Rating updated', () => pm.expect(pm.response.json().rating).to.eql(92));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{user_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/me/reviews/{{review_id}}", "host": ["{{base_url}}"], "path": ["api","v1","me","reviews","{{review_id}}"] },
+            "body": { "mode": "raw", "raw": "{\n  \"bookId\": \"{{book_id}}\",\n  \"rating\": 92,\n  \"text\": \"After a re-read I appreciate this book even more.\",\n  \"summary\": \"Instant classic\"\n}" }
+          }
+        },
+
+        {
+          "name": "D4 – Like the Review",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{user_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/me/like/review", "host": ["{{base_url}}"], "path": ["api","v1","me","like","review"] },
+            "body": { "mode": "raw", "raw": "{\n  \"reviewId\": \"{{review_id}}\"\n}" }
+          }
+        },
+
+        {
+          "name": "D5 – Get Liked Reviews",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Paginated', () => pm.expect(pm.response.json()).to.have.property('content'));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{user_token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/me/liked/review?page=0&size=20", "host": ["{{base_url}}"], "path": ["api","v1","me","liked","review"], "query": [{"key":"page","value":"0"},{"key":"size","value":"20"}] }
+          }
+        },
+
+        {
+          "name": "D6 – Unlike the Review",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{user_token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/me/unlikes/review/{{review_id}}", "host": ["{{base_url}}"], "path": ["api","v1","me","unlikes","review","{{review_id}}"] }
+          }
+        },
+
+        {
+          "name": "D7 – Delete Review (own)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 204', () => pm.response.to.have.status(204));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{user_token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/me/reviews/{{review_id}}", "host": ["{{base_url}}"], "path": ["api","v1","me","reviews","{{review_id}}"] }
+          }
+        }
+
+      ]
+    },
+
+    {
+      "name": "E – Likes (all entity types)",
+      "description": "Like and unlike books, authors, and genres; retrieve each liked-list.",
+      "item": [
+
+        {
+          "name": "E1 – Like a Book",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{user_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/me/like/book", "host": ["{{base_url}}"], "path": ["api","v1","me","like","book"] },
+            "body": { "mode": "raw", "raw": "{\n  \"bookId\": \"{{book_id}}\"\n}" }
+          }
+        },
+
+        {
+          "name": "E2 – Get Liked Books",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Paginated', () => pm.expect(pm.response.json()).to.have.property('content'));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{user_token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/me/liked/book?page=0&size=20", "host": ["{{base_url}}"], "path": ["api","v1","me","liked","book"], "query": [{"key":"page","value":"0"},{"key":"size","value":"20"}] }
+          }
+        },
+
+        {
+          "name": "E3 – Unlike a Book",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{user_token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/me/unlike/book/{{book_id}}", "host": ["{{base_url}}"], "path": ["api","v1","me","unlike","book","{{book_id}}"] }
+          }
+        },
+
+        {
+          "name": "E4 – Like an Author",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{user_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/me/likes/authors", "host": ["{{base_url}}"], "path": ["api","v1","me","likes","authors"] },
+            "body": { "mode": "raw", "raw": "{\n  \"authorId\": \"{{author_id}}\"\n}" }
+          }
+        },
+
+        {
+          "name": "E5 – Get Liked Authors",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{user_token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/me/liked/author?page=0&size=20", "host": ["{{base_url}}"], "path": ["api","v1","me","liked","author"], "query": [{"key":"page","value":"0"},{"key":"size","value":"20"}] }
+          }
+        },
+
+        {
+          "name": "E6 – Unlike an Author",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{user_token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/me/unlike/authors/{{author_id}}", "host": ["{{base_url}}"], "path": ["api","v1","me","unlike","authors","{{author_id}}"] }
+          }
+        },
+
+        {
+          "name": "E7 – Like a Genre",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{user_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/me/likes/genres", "host": ["{{base_url}}"], "path": ["api","v1","me","likes","genres"] },
+            "body": { "mode": "raw", "raw": "{\n  \"genreName\": \"Fantasy\"\n}" }
+          }
+        },
+
+        {
+          "name": "E8 – Get Liked Genres",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{user_token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/me/liked/genre?page=0&size=20", "host": ["{{base_url}}"], "path": ["api","v1","me","liked","genre"], "query": [{"key":"page","value":"0"},{"key":"size","value":"20"}] }
+          }
+        },
+
+        {
+          "name": "E9 – Unlike a Genre",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{user_token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/me/unlike/genres/Fantasy", "host": ["{{base_url}}"], "path": ["api","v1","me","unlike","genres","Fantasy"] }
+          }
+        }
+
+      ]
+    },
+
+    {
+      "name": "F – Admin Panel",
+      "description": "Full admin CRUD for books, authors, genres and moderation tools (ban, delete review, list users/reviews). All requests use {{admin_token}}.",
+      "item": [
+
+        {
+          "name": "F1 – Admin: Add New Author",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 201', () => pm.response.to.have.status(201));",
+            "var j = pm.response.json();",
+            "pm.collectionVariables.set('new_author_id', j.id);",
+            "pm.test('Author ID saved', () => pm.expect(j.id).not.empty);"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/admin/authors", "host": ["{{base_url}}"], "path": ["api","v1","admin","authors"] },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Ada Lovelace Demo\"\n}" }
+          }
+        },
+
+        {
+          "name": "F2 – Admin: Update Author",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/admin/authors/{{new_author_id}}", "host": ["{{base_url}}"], "path": ["api","v1","admin","authors","{{new_author_id}}"] },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Ada Lovelace Demo [updated]\"\n}" }
+          }
+        },
+
+        {
+          "name": "F3 – Admin: Add New Genre",
+          "event": [
+            { "listen": "prerequest", "script": { "exec": [
+              "var gs = 'Genre-' + Date.now().toString().slice(-8);",
+              "pm.collectionVariables.set('demo_genre_name', gs);"
+            ], "type": "text/javascript" }},
+            { "listen": "test", "script": { "exec": [
+              "pm.test('Status 201', () => pm.response.to.have.status(201));"
+            ], "type": "text/javascript" }}
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/admin/genres", "host": ["{{base_url}}"], "path": ["api","v1","admin","genres"] },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"{{demo_genre_name}}\"\n}" }
+          }
+        },
+
+        {
+          "name": "F4 – Admin: Add New Book",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 201', () => pm.response.to.have.status(201));",
+            "var j = pm.response.json();",
+            "pm.collectionVariables.set('new_book_id', j.id);",
+            "pm.test('Book ID saved', () => pm.expect(j.id).not.empty);"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/admin/books", "host": ["{{base_url}}"], "path": ["api","v1","admin","books"] },
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"The Demo Book 2026\",\n  \"publicationYear\": 2026,\n  \"description\": \"A book added during live demo for testing purposes.\",\n  \"author\": {\n    \"id\": \"{{new_author_id}}\",\n    \"name\": \"Ada Lovelace Demo [updated]\"\n  },\n  \"genres\": [\"{{demo_genre_name}}\"],\n  \"isbns\": [\"9999000000001\"]\n}" }
+          }
+        },
+
+        {
+          "name": "F5 – Admin: Update Book",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/admin/books/{{new_book_id}}", "host": ["{{base_url}}"], "path": ["api","v1","admin","books","{{new_book_id}}"] },
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"The Demo Book 2026 [revised edition]\",\n  \"publicationYear\": 2026,\n  \"description\": \"Revised description after admin update.\",\n  \"author\": {\n    \"id\": \"{{new_author_id}}\",\n    \"name\": \"Ada Lovelace Demo [updated]\"\n  },\n  \"genres\": [\"Demo-Genre-2026\"]\n}" }
+          }
+        },
+
+        {
+          "name": "F6 – Admin: List All Users (paginated)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Paginated', () => pm.expect(pm.response.json()).to.have.property('content'));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/admin/users?page=0&size=20", "host": ["{{base_url}}"], "path": ["api","v1","admin","users"], "query": [{"key":"page","value":"0"},{"key":"size","value":"20"}] }
+          }
+        },
+
+        {
+          "name": "F7 – Admin: List All Reviews (paginated)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Paginated', () => pm.expect(pm.response.json()).to.have.property('content'));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/admin/reviews?page=0&size=20", "host": ["{{base_url}}"], "path": ["api","v1","admin","reviews"], "query": [{"key":"page","value":"0"},{"key":"size","value":"20"}] }
+          }
+        },
+
+        {
+          "name": "F8 – Admin: Ban a User",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 200', () => pm.response.to.have.status(200));",
+            "pm.test('Ban message', () => pm.expect(pm.response.text()).to.include('banned'));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/admin/users/{{target_user_id}}/ban", "host": ["{{base_url}}"], "path": ["api","v1","admin","users","{{target_user_id}}","ban"] }
+          }
+        },
+
+        {
+          "name": "F9 – Admin: Delete Book (cleanup)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 204', () => pm.response.to.have.status(204));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/admin/books/{{new_book_id}}", "host": ["{{base_url}}"], "path": ["api","v1","admin","books","{{new_book_id}}"] }
+          }
+        },
+
+        {
+          "name": "F10 – Admin: Delete Author (cleanup)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 204', () => pm.response.to.have.status(204));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/admin/authors/{{new_author_id}}", "host": ["{{base_url}}"], "path": ["api","v1","admin","authors","{{new_author_id}}"] }
+          }
+        }
+
+      ]
+    },
+
+    {
+      "name": "G – Error Scenarios",
+      "description": "Systematic verification of error handling: 400 Bad Request, 401 Unauthorized, 403 Forbidden, 404 Not Found, and endpoint-specific edge cases.",
+      "item": [
+
+        {
+          "name": "G1 – [400] Register: duplicate username",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400 or 409', () => pm.expect(pm.response.code).to.be.oneOf([400, 409]));",
+            "pm.test('Error body present', () => pm.expect(pm.response.text()).not.empty);"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/auth/register", "host": ["{{base_url}}"], "path": ["api","v1","auth","register"] },
+            "body": { "mode": "raw", "raw": "{\n  \"username\": \"{{demo_username}}\",\n  \"email\": \"anotherone@booksphere.test\",\n  \"password\": \"DemoPass1\",\n  \"country\": \"IT\"\n}" }
+          }
+        },
+
+        {
+          "name": "G2 – [400] Register: missing required fields",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400', () => pm.response.to.have.status(400));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/auth/register", "host": ["{{base_url}}"], "path": ["api","v1","auth","register"] },
+            "body": { "mode": "raw", "raw": "{\n  \"username\": \"OnlyUsername\"\n}" }
+          }
+        },
+
+        {
+          "name": "G3 – [400] Register: invalid country code",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400', () => pm.response.to.have.status(400));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/auth/register", "host": ["{{base_url}}"], "path": ["api","v1","auth","register"] },
+            "body": { "mode": "raw", "raw": "{\n  \"username\": \"BadCountryUser\",\n  \"email\": \"bad@booksphere.test\",\n  \"password\": \"DemoPass1\",\n  \"country\": \"XX\"\n}" }
+          }
+        },
+
+        {
+          "name": "G4 – [400] Register: weak password (no uppercase)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400', () => pm.response.to.have.status(400));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/auth/register", "host": ["{{base_url}}"], "path": ["api","v1","auth","register"] },
+            "body": { "mode": "raw", "raw": "{\n  \"username\": \"WeakPassUser\",\n  \"email\": \"weak@booksphere.test\",\n  \"password\": \"weakpass1\",\n  \"country\": \"IT\"\n}" }
+          }
+        },
+
+        {
+          "name": "G5 – [401] Login: wrong credentials",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 401', () => pm.response.to.have.status(401));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/auth/login", "host": ["{{base_url}}"], "path": ["api","v1","auth","login"] },
+            "body": { "mode": "raw", "raw": "{\n  \"usernameOrEmail\": \"notexist@booksphere.test\",\n  \"password\": \"WrongPass99\"\n}" }
+          }
+        },
+
+        {
+          "name": "G6 – [401] Access protected endpoint without token",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 401', () => pm.response.to.have.status(401));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/me/reviews", "host": ["{{base_url}}"], "path": ["api","v1","me","reviews"] },
+            "body": { "mode": "raw", "raw": "{\n  \"bookId\": \"{{book_id}}\",\n  \"rating\": 80,\n  \"text\": \"No token test\"\n}" }
+          }
+        },
+
+        {
+          "name": "G7 – [401] Access admin endpoint with USER token",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 401 or 403', () => pm.expect(pm.response.code).to.be.oneOf([401, 403]));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{user_token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/admin/users?page=0&size=10", "host": ["{{base_url}}"], "path": ["api","v1","admin","users"], "query": [{"key":"page","value":"0"},{"key":"size","value":"10"}] }
+          }
+        },
+
+        {
+          "name": "G8 – [403] Banned user tries to login",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 401 or 403', () => pm.expect(pm.response.code).to.be.oneOf([401, 403]));",
+            "pm.test('Contains banned message', () => pm.expect(pm.response.text().toLowerCase()).to.include('ban'));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/api/v1/auth/login", "host": ["{{base_url}}"], "path": ["api","v1","auth","login"] },
+            "body": { "mode": "raw", "raw": "{\n  \"usernameOrEmail\": \"{{demo_email}}\",\n  \"password\": \"DemoPass1\"\n}" }
+          }
+        },
+
+        {
+          "name": "G9 – [404] Get non-existent Book by ID",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 404', () => pm.response.to.have.status(404));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/books/000000000000000000000000", "host": ["{{base_url}}"], "path": ["api","v1","books","000000000000000000000000"] }
+          }
+        },
+
+        {
+          "name": "G10 – [404] Get non-existent Author by ID",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 404', () => pm.response.to.have.status(404));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/authors/000000000000000000000000", "host": ["{{base_url}}"], "path": ["api","v1","authors","000000000000000000000000"] }
+          }
+        },
+
+        {
+          "name": "G11 – [404] Get non-existent User by username",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 404', () => pm.response.to.have.status(404));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/users/username/ThisUserDoesNotExistAtAll99", "host": ["{{base_url}}"], "path": ["api","v1","users","username","ThisUserDoesNotExistAtAll99"] }
+          }
+        },
+
+        {
+          "name": "G12 – [400] Create Review: rating out of range (101)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400', () => pm.response.to.have.status(400));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{user_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/me/reviews", "host": ["{{base_url}}"], "path": ["api","v1","me","reviews"] },
+            "body": { "mode": "raw", "raw": "{\n  \"bookId\": \"{{book_id}}\",\n  \"rating\": 101,\n  \"text\": \"Rating too high test\"\n}" }
+          }
+        },
+
+        {
+          "name": "G13 – [400] Create Review: missing bookId",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400', () => pm.response.to.have.status(400));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{user_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/me/reviews", "host": ["{{base_url}}"], "path": ["api","v1","me","reviews"] },
+            "body": { "mode": "raw", "raw": "{\n  \"rating\": 75,\n  \"text\": \"Missing book ID\"\n}" }
+          }
+        },
+
+        {
+          "name": "G14 – [400] Add Book to Bookshelf: invalid status value",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400', () => pm.response.to.have.status(400));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{user_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/me/bookshelf", "host": ["{{base_url}}"], "path": ["api","v1","me","bookshelf"] },
+            "body": { "mode": "raw", "raw": "{\n  \"bookId\": \"{{book_id}}\",\n  \"status\": \"INVALID_STATUS\"\n}" }
+          }
+        },
+
+        {
+          "name": "G15 – [400] Analytics: author AND genre simultaneously (mutually exclusive)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400', () => pm.response.to.have.status(400));",
+            "pm.test('Error message in body', () => pm.expect(pm.response.text()).not.empty);"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/v1/analytics/books?author={{author_id}}&genre=Fantasy",
+              "host": ["{{base_url}}"],
+              "path": ["api","v1","analytics","books"],
+              "query": [{"key":"author","value":"{{author_id}}"},{"key":"genre","value":"Fantasy"}]
+            }
+          }
+        },
+
+        {
+          "name": "G16 – [400] Book ID path param: malformed ObjectId",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400', () => pm.response.to.have.status(400));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/books/not-a-valid-objectid", "host": ["{{base_url}}"], "path": ["api","v1","books","not-a-valid-objectid"] }
+          }
+        },
+
+        {
+          "name": "G17 – [400] Admin Ban: non-existent user ID",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 404 or 400', () => pm.expect(pm.response.code).to.be.oneOf([400, 404]));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/admin/users/000000000000000000000000/ban", "host": ["{{base_url}}"], "path": ["api","v1","admin","users","000000000000000000000000","ban"] }
+          }
+        },
+
+        {
+          "name": "G18 – [400] Like book: invalid ObjectId in body",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400', () => pm.response.to.have.status(400));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{user_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/me/like/book", "host": ["{{base_url}}"], "path": ["api","v1","me","like","book"] },
+            "body": { "mode": "raw", "raw": "{\n  \"bookId\": \"not-valid\"\n}" }
+          }
+        },
+
+        {
+          "name": "G19 – [400] Admin Add Book: publication year in the future",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400', () => pm.response.to.have.status(400));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
+            ],
+            "url": { "raw": "{{base_url}}/api/v1/admin/books", "host": ["{{base_url}}"], "path": ["api","v1","admin","books"] },
+            "body": { "mode": "raw", "raw": "{\n  \"title\": \"Future Book\",\n  \"publicationYear\": 2099,\n  \"author\": {\n    \"name\": \"Future Author\"\n  }\n}" }
+          }
+        },
+
+        {
+          "name": "G20 – [400] Reviews: get reviews with empty review param list",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 400', () => pm.response.to.have.status(400));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/api/v1/reviews", "host": ["{{base_url}}"], "path": ["api","v1","reviews"] }
+          }
+        }
+
+      ]
+    },
+
+    {
+      "name": "Z – Cleanup",
+      "description": "Final teardown: delete the demo user's account (self-deletion).",
+      "item": [
+        {
+          "name": "Z1 – Delete Demo Account (self)",
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('Status 204', () => pm.response.to.have.status(204));"
+          ], "type": "text/javascript" }}],
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{user_token}}" }],
+            "url": { "raw": "{{base_url}}/api/v1/me/account", "host": ["{{base_url}}"], "path": ["api","v1","me","account"] }
+          }
+        }
+      ]
+    }
+
+  ]
+}
