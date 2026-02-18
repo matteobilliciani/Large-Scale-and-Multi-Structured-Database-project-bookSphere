@@ -57,6 +57,16 @@ public class ValidationUtils {
             throw new ValidationException("Username can only contain letters, numbers, underscores and hyphens");
         }
     }
+
+    public static void validateEmail(String email) {
+        if (email == null || email.isBlank()) {
+            throw new ValidationException("Email is required");
+        }
+        
+        if (!email.matches("^[\\w.-]+@[\\w.-]+\\.\\w{2,}$")) {
+            throw new ValidationException("Email must be a valid email address");
+        }
+    }
     
     /**
      * Validate that a genre name is valid

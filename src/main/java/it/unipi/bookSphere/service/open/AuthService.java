@@ -64,6 +64,7 @@ public class AuthService {
             throw new UserAlreadyExistsException("Username already exists");
         }
         
+        ValidationUtils.validateEmail(registerDTO.getEmail());
         if (userRepository.existsByEmail(registerDTO.getEmail())) {
             logger.warn("Registration failed: email {} already exists", registerDTO.getEmail());
             throw new UserAlreadyExistsException("Email already exists");
